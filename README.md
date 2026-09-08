@@ -46,8 +46,7 @@
 3. `synced-comments`는 현재 파일 전부를 hash해서 변경 사항을 감지한다. 사용자가 편한 방식으로 튜닝해도 되지만, 개인적으로 한 파일은 작게 유지하는 것을 권장한다.
 4. `ADR`은 반드시 사람이 관리한다. LLM의 설명 가득한 의사 결정 문서를 믿지 않는다.
 5. 테스트는 implement / test-verifier를 별개로 운영한다. 기능 및 토큰 소모 감소를 위해 툴을 제한한다. (READ only, no mcp)
-6. `contracts`는 문서가 아니라 세션 작업물이다. 낡을 위험 자체를 없애기 위해 보관하지 않는다. `.gitignore`에 넣으면 agent가 읽지 않으므로, merge hook이 지우고 commit hook이 경고한다.
-7. 서브에이전트는 상세 내용을 파일에 쓰고 main agent에는 요약과 경로만 반환한다. main agent가 컨텍스트 유입량을 사후에 통제한다.
+6. (실험 중) sub-agent 최적화: 기능별 동작 개선, main agent / sub agent context 격차 해소 (context rot과 지식 부족 사이에 균형 잡기)
 
 ## 사용법
 `README.md`를 제거하고 사용하면 된다.
