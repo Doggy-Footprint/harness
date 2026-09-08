@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# AGENTS.md Contract rule 4: a merge deletes contracts/.
+# Installed via scripts/install-hooks.sh (git config core.hooksPath .githooks).
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+
+if [ -d "$repo_root/contracts" ]; then
+  rm -rf "$repo_root/contracts"
+  echo "post-merge: removed session-scoped contracts/" >&2
+fi

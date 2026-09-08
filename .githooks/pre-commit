@@ -5,6 +5,15 @@ set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
 
+# Contracts are session-scoped. Committing one is allowed (a task may be split
+# across commits) but never silent.
+staged_contracts="$(git diff --cached --name-only --diff-filter=d | grep '^contracts/' || true)"
+if [ -n "$staged_contracts" ]; then
+  echo "pre-commit: WARNING — session-scoped contract files are staged:" >&2
+  echo "$staged_contracts" | sed 's/^/  - /' >&2
+  echo "  contracts/ is deleted on merge and at session end. Commit only if this task spans commits." >&2
+fi
+
 if ! command -v python3 >/dev/null 2>&1; then
   echo "pre-commit: python3 not found, skipping AGENTS.md rule verification" >&2
   exit 0

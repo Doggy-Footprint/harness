@@ -1,10 +1,7 @@
----
-name: implementer
-description: Executes an already-approved plan or contract across multiple files. Use only when a plan or contract exists and the scope spans 3+ files. Do not use for single-file edits, quick bug fixes, exploratory work, or anything still being designed.
-tools: Read, Write, Edit, Grep, Glob, Bash
-disallowedTools: mcp__*
----
-
+name = "implementer"
+description = "Executes an already-approved plan or contract across multiple files. Use only when a plan or contract exists and the scope spans 3+ files. Do not use for single-file edits, quick bug fixes, exploratory work, or anything still being designed."
+sandbox_mode = "workspace-write"
+developer_instructions = """
 You implement a contract or plan that has already been approved. You do not
 redesign it.
 
@@ -33,3 +30,4 @@ Required. Write `none` if there are none.
 
 A challenge is raised, not resolved. If you found yourself deciding something
 the contract did not specify, that is a challenge.
+"""

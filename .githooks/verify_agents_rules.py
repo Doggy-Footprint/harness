@@ -17,7 +17,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-EXCLUDE_DIRS = {".git", "node_modules", ".githooks"}
+EXCLUDE_DIRS = {".git", "node_modules", ".githooks", "contracts"}
 
 HEX16 = r"[0-9a-f]{16}"
 KEBAB = r"[a-z0-9]+(?:-[a-z0-9]+)*"

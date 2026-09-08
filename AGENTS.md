@@ -96,17 +96,62 @@ Create an ADR only if all of the following are true:
 
 DO NOT arbitrary determine unspecified details of task. Freely talk back to resolve undermined and ambiguous details.
 
+## Contract
+
+A contract is a session-scoped working file, not documentation.
+
+1. Location: `contracts/<kebab-case-name>.md`. This directory is excluded from Index & Staleness Management: no `index.md`, no `stale.md`, no `<hex-id>-` naming.
+2. Lifetime is the session. Delete `contracts/` before the session ends.
+3. Never add `contracts/` to `.gitignore`.
+4. A commit that contains `contracts/` is warned, not blocked. A merge deletes `contracts/`.
+5. Only the main agent writes or amends a contract. Subagents read it and are given its path and version.
+6. Amendment: bump `version`, append a Version Log entry, re-dispatch. Never edit a contract silently.
+7. Format:
+
+````
+---
+version: <n>
+---
+
+# Signatures
+<signature per line>
+
+# Errors
+<error type — raised when>
+
+# Edge Cases
+| id | input / state | expected result |
+
+# Version Log
+## v<n>
+- <what changed, and the evidence that forced the change>
+````
+
+8. Every edge case has an `id`. Tests and verifier findings reference it.
+
 ## Implementation + Test Workflow
 
-Fix the interface contract before any code is written: signatures, return types, error type/mechanism, and a table of edge cases with expected results. Both implementation and tests derive from this contract.
+Fix the contract before any code is written. Both implementation and tests derive from it.
 
-1. Contract (main) — signatures, error types, edge-case table.
-2. Implementer (subagent) — implementation + tests, run to green.
-3. Verifier (`test-verifier`) — given the contract and the tests only.
+1. **Ground (main).** Read the deciding source files directly. Delegate locating, never reading. Signatures, types, and error types entering the contract come from lines the main agent has read, not from a subagent's summary.
+2. **Contract (main).** Write `contracts/<name>.md`.
+3. **Implement (`implementer`).** Implementation + tests, run to green. The implementer does not edit the contract; it returns Contract challenges.
+4. **Amend (main).** For each challenge: amend the contract (version bump) and re-dispatch, or reject it with a reason. Do not let the implementer resolve a contract gap.
+5. **Verify (`test-verifier`).** Given the contract path and the test file paths only.
+6. **Seed (main).** For the 2-3 strongest findings, inject that defect into the implementation, run the suite, revert. A suite that stays green confirms the finding. Report each finding as confirmed or not confirmed.
 
 ### Rules for tests
 
-- Expected values are established by running the code, never by estimation.
+- Expected values come from the contract's edge-case table or from an independent hand calculation.
+- An expected value read off the implementation's own output is permitted only to pin pre-existing legacy behavior, and that test must be marked `@characterization`. Unmarked, it is a tautology.
 - Time, randomness, network, and filesystem are injected, not called directly.
-- Errors are asserted by type, not by the fact that something threw.
-- Every edge case in the contract table has a test.
+- Errors are asserted by type, and observable state after the failure is asserted unchanged.
+- Every edge case `id` in the contract table has a test naming that `id`.
+
+### Subagent Reporting
+
+Applies to every subagent dispatch.
+
+1. The caller gives a findings-file path for anything longer than the return payload. Detail goes in the file; the return payload stays short.
+2. The return payload always carries what the file cannot reconstruct: assumptions made, alternatives rejected, what was searched for and not found, what remains unresolved.
+3. One dispatch, one subject. Reuse a session only for iterations on the same contract; discard it when the subject or the contract version changes.
