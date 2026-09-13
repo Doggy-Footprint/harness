@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# contract-workflow skill, Contract rule 4: a merge deletes contracts/.
+# contracts/ is session-scoped: a merge deletes it.
 # Installed via scripts/install-hooks.sh (git config core.hooksPath .githooks).
 set -euo pipefail
 

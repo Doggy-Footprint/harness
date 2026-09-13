@@ -47,7 +47,7 @@
 2. `synced-comments`는 낡았을 때 특히 위험할 수 있기에 별도로 관리한다.
 3. `synced-comments`는 현재 파일 전부를 hash해서 변경 사항을 감지한다. 사용자가 편한 방식으로 튜닝해도 되지만, 개인적으로 한 파일은 작게 유지하는 것을 권장한다.
 4. `ADR`은 반드시 사람이 관리한다. LLM의 설명 가득한 의사 결정 문서를 믿지 않는다.
-5. 테스트는 implement / test-verifier를 별개로 운영한다. 기능 및 토큰 소모 감소를 위해 툴을 제한한다. (READ only, no mcp)
+5. implementer / test-implementer / test-verifier를 별개로 운영한다.  test-implementer는 contract의 Intent(유저 원문)까지 달성 대상으로 삼는다. 기능 및 토큰 소모 감소를 위해 툴을 제한한다. (verifier는 READ only, 모두 no mcp)
 6. (실험 중) sub-agent 최적화: 기능별 동작 개선, main agent / sub agent context 격차 해소 (context rot과 지식 부족 사이에 균형 잡기)
 
 ## 사용법
