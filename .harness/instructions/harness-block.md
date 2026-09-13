@@ -1,11 +1,3 @@
-# Project Definition
-
-AI agent harness for Claude Code and Codex, installable into any git repository.
-It ships documentation rules (the managed block below), the contract-workflow skill, sub-agents, agent hooks, git hooks, and a CI comment check.
-Source: `harness/` (payload), `installer/harness.py` (install / upgrade / doctor), `tests/`. This repo installs itself into `.harness/` for dogfooding.
-Edit `harness/`, never `.harness/` or the generated `.claude/`, `.codex/`, `.agents/` files; then run `python3 installer/harness.py upgrade .`.
-
-<!-- harness:begin 0.1.0 -->
 # Documentation Guide
 
 "Documentation" refers to standalone docs, inline comments, and docstrings.
@@ -139,4 +131,3 @@ When the task completes, append the file to `stale.md`.
 ## User Decision
 
 DO NOT arbitrarily determine unspecified details of task. Freely talk back to resolve undetermined and ambiguous details.
-<!-- harness:end -->

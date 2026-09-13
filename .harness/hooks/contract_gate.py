@@ -4,8 +4,12 @@ import re
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-CONTRACTS_DIR = REPO_ROOT / "contracts"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+import config  # noqa: E402
+
+PATHS = config.load_paths()
+REPO_ROOT = config.REPO_ROOT
+CONTRACTS_DIR = PATHS.contracts
 RUNNING_DIR = CONTRACTS_DIR / ".running"
 GATED_AGENTS = {"implementer", "test-implementer"}
 TEST_COMMAND_PREFIX = "Test command:"

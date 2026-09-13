@@ -1,0 +1,21 @@
+{
+  "hooks": [
+    {
+      "event": "SessionEnd",
+      "command": "python3 \"{root}/.harness/hooks/session_end.py\""
+    },
+    {
+      "event": "SubagentStart",
+      "command": "python3 \"{root}/.harness/hooks/contract_gate.py\""
+    },
+    {
+      "event": "SubagentStop",
+      "command": "python3 \"{root}/.harness/hooks/contract_gate.py\""
+    },
+    {
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "command": "python3 \"{root}/.harness/hooks/contract_gate.py\""
+    }
+  ]
+}

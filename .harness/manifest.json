@@ -1,0 +1,32 @@
+{
+  "version": "0.1.0",
+  "files": {
+    ".harness/config.default.json": "c21d7705713f2a9bc8cd9527d87b8964b58c7ae1b5e63e83446371b2c68a4dbd",
+    ".harness/VERSION": "e9dd8507f4bf0c6f42458e41aea833ad0bd3f6127272335eee9bf4d58541ed67",
+    ".harness/instructions/harness-block.md": "3b10beab5b75af9ec0c9934df7a6c371f41833be087dc9a62487a2f9d1b83963",
+    ".harness/ci/harness-comment-warning.yml": "b1baf0b786612e52762ea4666b449ff89f745c54a553097ee00d0a113feb63d0",
+    ".harness/agents/code-explorer.md": "1406de347319ad27187ec41c69b30a9a504a1633fbc5e6cb286008c47d6f9c38",
+    ".harness/agents/test-implementer.md": "4186ca4f8f98c73b6013933340db8beee274ec6ce3092859ace24028ba0e017e",
+    ".harness/agents/implementer.md": "d5e96bb22b43197369ed1962451faf2d2e8b9961d4b5c42078a937b290cc8d93",
+    ".harness/agents/test-verifier.md": "8ff6da5f6b6275ec1750da8af0d5753c5b449ee2ad585430f1013a2d104a11a5",
+    ".harness/hooks/hooks.spec.json": "4e011d8fd8b4b66edd754510eeaf43eb74f8e1d83bf05b1c75852a76d14e4166",
+    ".harness/hooks/contract_gate.py": "290e58768b06b287edb154d5caca4a72cec7ded9f175174786c157b5997b775e",
+    ".harness/hooks/session_end.py": "2bdd8cf2e69e9080d4894a11437c6ea8dce4e20cb8c023114aafe17d627fa69f",
+    ".harness/lib/config.py": "726fdae749adccd1c5fde786fc9150b8a901d9feb4139094664f66539080a12a",
+    ".harness/git/warn_new_comments.py": "0feef0063473a6279153eff875d08251a45e2265cd82f78295c0f8f83d4c0b8c",
+    ".harness/git/post-merge": "4ef774bd91e56ed1b27b4f738dc5d4d88bc9999fa36665433bf4c3ced288ff6c",
+    ".harness/git/pre-commit": "7b1cfdc9e80f7ca2511ffe6bd3f0c08b37694b11fdcf0a57617572f3dd7fe792",
+    ".harness/git/verify_rules.py": "9584a0b45382199022a23addbb76916958089cf9a7d7670d6cce0f0a2dd61f6b",
+    ".harness/skills/contract-workflow/SKILL.md": "bd56be98a9d29058f297f38c97dacfab7128ed92e51752a4bdc27b5d6ee9ddd1",
+    ".claude/agents/code-explorer.md": "0e9254fd4a05275171793fdc7c6680bfab3fc3b93c7e7267df04da9eddab2ff9",
+    ".codex/agents/code-explorer.toml": "a2ed015ff8a257127f22c90b0d542df956dfcd521d190b0838238cd9e52fd400",
+    ".claude/agents/implementer.md": "586e3dcc82f44955174c07fe50255317a7f01125884b80d1150e307d3fe34aeb",
+    ".codex/agents/implementer.toml": "81530484fa8c074f76f63c74bc1ee8487679a46b2aa2462315dfd4c62c2eeb63",
+    ".claude/agents/test-implementer.md": "69fcff7960c8d109fcae8974c1638d1f083717e2f66ec981b276617b75b431af",
+    ".codex/agents/test-implementer.toml": "e835849ec603bc4aa52f1763f35a1ca32472d35f51df75bfbd03fb32715e0f4d",
+    ".claude/agents/test-verifier.md": "c53ad88ddd0a8bdb0d291e6e3f7ff7d3ab5608a4049f1344865d650c6cc22171",
+    ".codex/agents/test-verifier.toml": "d445b3b61b54e68575bfbcefb1546fc8a3f2e74c32068770041f5554081e648a",
+    ".agents/skills/contract-workflow/SKILL.md": "bd56be98a9d29058f297f38c97dacfab7128ed92e51752a4bdc27b5d6ee9ddd1",
+    ".github/workflows/harness-comment-warning.yml": "b1baf0b786612e52762ea4666b449ff89f745c54a553097ee00d0a113feb63d0"
+  }
+}

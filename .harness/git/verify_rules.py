@@ -1,23 +1,30 @@
 #!/usr/bin/env python3
-"""Deterministic checks for the mechanical rules in AGENTS.md.
+"""Deterministic checks for the mechanical rules in the harness instruction
+block (see harness/instructions/harness-block.md).
 
 Covers only rules that can be verified without judgement calls:
   - Index & Staleness Management (file naming, index.md/stale.md presence
-    and structure)
+    and structure), scoped to docs_root
   - Shared Comment & Docstring Synchronization (synced id / version / count
-    consistency between code and synced-comments/<id>.md, plus checking the
-    tracking file's code_hash against participating files' non-comment content)
+    consistency between code and <docs_root>/synced-comments/<id>.md, plus
+    checking the tracking file's code_hash against participating files'
+    non-comment content), scanned over `git ls-files` only
+  - Required headings for rejections/ and handoff/ managed files
 
 Exit code is non-zero if any rule is violated.
 """
 import hashlib
 import re
+import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+import config  # noqa: E402
 
-EXCLUDE_DIRS = {".git", "node_modules", ".githooks", "contracts"}
+PATHS = config.load_paths()
+REPO_ROOT = config.REPO_ROOT
+EXCLUDE_DIRS = PATHS.exclude_dirs
 
 HEX16 = r"[0-9a-f]{16}"
 KEBAB = r"[a-z0-9]+(?:-[a-z0-9]+)*"
@@ -35,9 +42,33 @@ TEXT_FILE_EXTS = {
     ".sh", ".yaml", ".yml", ".json", ".toml",
 }
 
+REQUIRED_HEADINGS = {
+    PATHS.rejections: [
+        "## Context",
+        "## Rejected Alternative",
+        "## Reason",
+        "## Revisit Condition",
+        "## Chosen Instead",
+    ],
+    PATHS.handoff: [
+        "## Goal",
+        "## State",
+        "## Failed Attempts",
+        "## Next Step",
+        "## Open Questions",
+        "## Contract Snapshot",
+    ],
+}
 
-def iter_files():
-    for path in REPO_ROOT.rglob("*"):
+
+def rel(path: Path) -> str:
+    return str(path.relative_to(REPO_ROOT))
+
+
+def iter_docs_root_files():
+    if not PATHS.docs_root.is_dir():
+        return
+    for path in PATHS.docs_root.rglob("*"):
         if not path.is_file():
             continue
         if any(part in EXCLUDE_DIRS for part in path.relative_to(REPO_ROOT).parts):
@@ -45,13 +76,19 @@ def iter_files():
         yield path
 
 
-def rel(path: Path) -> str:
-    return str(path.relative_to(REPO_ROOT))
+def git_tracked_files():
+    result = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "ls-files"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return [REPO_ROOT / line for line in result.stdout.splitlines() if line]
 
 
 def check_index_and_staleness(errors: list):
     managed_dirs = {}
-    for path in iter_files():
+    for path in iter_docs_root_files():
         if MANAGED_FILENAME_RE.match(path.name):
             managed_dirs.setdefault(path.parent, []).append(path)
 
@@ -99,8 +136,9 @@ def check_index_and_staleness(errors: list):
 
 
 # Line-comment markers by extension, used to strip comments before hashing
-# a file's content (AGENTS.md rule 2: code_hash fingerprints the non-comment
-# code). Extensions without a known marker are hashed as-is.
+# a file's content (Shared Comment & Docstring Synchronization rule 2:
+# code_hash fingerprints the non-comment code). Extensions without a known
+# marker are hashed as-is.
 HASH_COMMENT_EXTS = {".py", ".sh", ".yaml", ".yml", ".toml", ".rb"}
 SLASH_COMMENT_EXTS = {
     ".js", ".jsx", ".ts", ".tsx", ".go", ".rs", ".java", ".kt",
@@ -146,10 +184,23 @@ def parse_synced_frontmatter(text: str):
 
 def check_synced_comments(errors: list):
     occurrences = {}  # id -> list[(file, version, count)]
-    for path in iter_files():
+    try:
+        tracked = git_tracked_files()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        tracked = []
+
+    synced_dir_rel = None
+    try:
+        synced_dir_rel = rel(PATHS.synced_comments)
+    except ValueError:
+        pass
+
+    for path in tracked:
         if path.suffix not in TEXT_FILE_EXTS:
             continue
-        if rel(path).startswith("synced-comments/"):
+        if any(part in EXCLUDE_DIRS for part in path.relative_to(REPO_ROOT).parts):
+            continue
+        if synced_dir_rel and rel(path).startswith(synced_dir_rel + "/"):
             continue
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
@@ -159,14 +210,14 @@ def check_synced_comments(errors: list):
             sid, version, count = m.group(1), int(m.group(2)), int(m.group(3))
             occurrences.setdefault(sid, []).append((rel(path), version, count))
 
-    synced_dir = REPO_ROOT / "synced-comments"
+    synced_dir = PATHS.synced_comments
 
     for sid, locs in occurrences.items():
         tracking_file = synced_dir / f"{sid}.md"
         if not tracking_file.exists():
             errors.append(
                 f"synced id {sid}: referenced in {[l[0] for l in locs]} but "
-                f"synced-comments/{sid}.md does not exist"
+                f"{rel(synced_dir)}/{sid}.md does not exist"
             )
             continue
 
@@ -175,7 +226,7 @@ def check_synced_comments(errors: list):
         )
         if fm is None or "version" not in fm or "count" not in fm or "code_hash" not in fm:
             errors.append(
-                f"synced-comments/{sid}.md: missing/invalid frontmatter "
+                f"{rel(tracking_file)}: missing/invalid frontmatter "
                 f"(version, count, code_hash)"
             )
             continue
@@ -186,7 +237,7 @@ def check_synced_comments(errors: list):
 
         if is_obsolete and locs:
             errors.append(
-                f"synced id {sid}: marked obsolete in synced-comments/{sid}.md "
+                f"synced id {sid}: marked obsolete in {rel(tracking_file)} "
                 f"but still referenced in {[l[0] for l in locs]}"
             )
         elif not is_obsolete:
@@ -196,9 +247,8 @@ def check_synced_comments(errors: list):
                 errors.append(
                     f"synced id {sid}: underlying (non-comment) code in "
                     f"{[l[0] for l in locs]} no longer matches code_hash "
-                    f"{fm['code_hash']} in synced-comments/{sid}.md (recomputed "
-                    f"{expected_hash}); bump the version and update code_hash "
-                    f"per AGENTS.md rule 4"
+                    f"{fm['code_hash']} in {rel(tracking_file)} (recomputed "
+                    f"{expected_hash}); bump the version and update code_hash"
                 )
 
         actual_count = len(locs)
@@ -206,28 +256,45 @@ def check_synced_comments(errors: list):
             if version != fm_version:
                 errors.append(
                     f"{file_name}: synced id {sid} has version {version}, "
-                    f"expected {fm_version} (from synced-comments/{sid}.md)"
+                    f"expected {fm_version} (from {rel(tracking_file)})"
                 )
             if tagged_count != fm_count:
                 errors.append(
                     f"{file_name}: synced id {sid} tag has count {tagged_count}, "
-                    f"expected {fm_count} (from synced-comments/{sid}.md)"
+                    f"expected {fm_count} (from {rel(tracking_file)})"
                 )
         if fm_count != actual_count:
             errors.append(
-                f"synced-comments/{sid}.md: declares count {fm_count} but "
+                f"{rel(tracking_file)}: declares count {fm_count} but "
                 f"{actual_count} code location(s) actually reference it "
                 f"({[l[0] for l in locs]})"
             )
+
+
+def check_required_headings(errors: list):
+    for directory, headings in REQUIRED_HEADINGS.items():
+        if not directory.is_dir():
+            continue
+        for path in sorted(directory.glob("*.md")):
+            if not MANAGED_FILENAME_RE.match(path.name):
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+            missing = [
+                h for h in headings
+                if not re.search(rf"(?m)^{re.escape(h)}\s*$", text)
+            ]
+            if missing:
+                errors.append(f"{rel(path)}: missing required heading(s) {missing}")
 
 
 def main() -> int:
     errors: list = []
     check_index_and_staleness(errors)
     check_synced_comments(errors)
+    check_required_headings(errors)
 
     if errors:
-        print("AGENTS.md rule violations found:\n", file=sys.stderr)
+        print("harness rule violations found:\n", file=sys.stderr)
         for e in errors:
             print(f"  - {e}", file=sys.stderr)
         print(f"\n{len(errors)} violation(s). Commit blocked.", file=sys.stderr)
