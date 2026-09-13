@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AGENTS.md Contract rule 4: a merge deletes contracts/.
+# contract-workflow skill, Contract rule 4: a merge deletes contracts/.
 # Installed via scripts/install-hooks.sh (git config core.hooksPath .githooks).
 set -euo pipefail
 
