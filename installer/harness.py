@@ -19,6 +19,7 @@ REPORT_SECTIONS = ["write", "merge", "skip", "conflict", "manual review", "info"
 GITIGNORE_LINES = [
     "agent-docs/contracts/.running/",
     "agent-docs/contracts/.seed/",
+    ".harness/sessions/.running/",
     ".harness/**/__pycache__",
 ]
 HOOK_MANAGER_FILES = [

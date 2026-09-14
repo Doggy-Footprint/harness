@@ -7,3 +7,4 @@ tmp/
 agent-docs/contracts/.running/
 agent-docs/contracts/.seed/
 .harness/**/__pycache__
+.harness/sessions/.running/

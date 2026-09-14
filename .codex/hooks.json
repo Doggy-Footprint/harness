@@ -8,6 +8,14 @@
             "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/hooks/cleanup.py\""
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/hooks/session_lock.py\""
+          }
+        ]
       }
     ],
     "SubagentStart": [
@@ -48,6 +56,14 @@
           {
             "type": "command",
             "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/hooks/cleanup.py\""
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/hooks/session_lock.py\""
           }
         ]
       }

@@ -328,7 +328,10 @@ class TestCodexClearContractCleanup(InstallerTestCase):
     def test_i2_e2_codex_clear_hook_is_absent_from_claude_and_present_in_codex(self):
         claude, codex = self.install_hook_configs()
 
-        self.assertEqual(claude.get("SessionStart", []), [])
+        self.assertEqual(
+            [group for group in claude.get("SessionStart", []) if group.get("matcher") == "clear"],
+            [],
+        )
         self.assertEqual(
             len([group for group in codex["SessionStart"] if group.get("matcher") == "clear"]),
             1,
@@ -340,7 +343,9 @@ class TestCodexClearContractCleanup(InstallerTestCase):
         clear_commands = self.commands(
             [group for group in codex["SessionStart"] if group.get("matcher") == "clear"]
         )
-        self.assertEqual(clear_commands, self.commands(codex["SessionEnd"]))
+        session_end_commands = self.commands(codex["SessionEnd"])
+        for command in clear_commands:
+            self.assertIn(command, session_end_commands)
 
     def test_i1_session_start_clear_removes_contracts(self):
         repo = self.make_repo()
@@ -359,6 +364,78 @@ class TestCodexClearContractCleanup(InstallerTestCase):
 
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertFalse(contracts.exists())
+
+    def test_i4_session_lock_hook_is_present_without_matcher_for_both_targets(self):
+        claude, codex = self.install_hook_configs()
+
+        for hooks in (claude, codex):
+            unmatched = [group for group in hooks["SessionStart"] if "matcher" not in group]
+            self.assertEqual(
+                len([g for g in unmatched if "session_lock.py" in self.commands([g])[0]]), 1
+            )
+            self.assertIn("session_lock.py", "\n".join(self.commands(hooks["SessionEnd"])))
+
+
+class TestSessionLockConcurrencyWarning(InstallerTestCase):
+    def run_session_lock(self, repo, event, extra_payload=None):
+        payload = {"hook_event_name": event}
+        payload.update(extra_payload or {})
+        return subprocess.run(
+            [sys.executable, str(repo / ".harness" / "hooks" / "session_lock.py")],
+            input=json.dumps(payload),
+            capture_output=True,
+            text=True,
+        )
+
+    def install(self):
+        repo = self.make_repo()
+        result = run_installer("install", str(repo))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        return repo
+
+    def test_warns_when_another_live_process_holds_a_marker(self):
+        repo = self.install()
+        running_dir = repo / ".harness" / "sessions" / ".running"
+        running_dir.mkdir(parents=True)
+
+        other = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(5)"])
+        try:
+            (running_dir / str(other.pid)).write_text("startup", encoding="utf-8")
+
+            proc = self.run_session_lock(repo, "SessionStart")
+
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            self.assertIn(str(other.pid), proc.stderr)
+        finally:
+            other.terminate()
+            other.wait()
+
+    def test_sweeps_stale_marker_without_warning(self):
+        repo = self.install()
+        running_dir = repo / ".harness" / "sessions" / ".running"
+        running_dir.mkdir(parents=True)
+
+        dead = subprocess.Popen([sys.executable, "-c", "pass"])
+        dead.wait()
+        (running_dir / str(dead.pid)).write_text("startup", encoding="utf-8")
+
+        proc = self.run_session_lock(repo, "SessionStart")
+
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(proc.stderr, "")
+        self.assertFalse((running_dir / str(dead.pid)).exists())
+
+    def test_session_end_removes_own_marker(self):
+        repo = self.install()
+        running_dir = repo / ".harness" / "sessions" / ".running"
+
+        start = self.run_session_lock(repo, "SessionStart")
+        self.assertEqual(start.returncode, 0, start.stdout + start.stderr)
+        self.assertEqual(len(list(running_dir.iterdir())), 1)
+
+        end = self.run_session_lock(repo, "SessionEnd")
+        self.assertEqual(end.returncode, 0, end.stdout + end.stderr)
+        self.assertEqual(list(running_dir.iterdir()), [])
 
 
 if __name__ == "__main__":

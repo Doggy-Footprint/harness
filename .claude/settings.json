@@ -8,6 +8,14 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.harness/hooks/cleanup.py\""
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.harness/hooks/session_lock.py\""
+          }
+        ]
       }
     ],
     "SubagentStart": [
@@ -37,6 +45,16 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.harness/hooks/contract_gate.py\""
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.harness/hooks/session_lock.py\""
           }
         ]
       }
