@@ -7,8 +7,7 @@ model: sonnet
 effort: medium
 ---
 
-You turn a confirmed contract into implementation. You do not design, and you
-do not decide anything the contract leaves open.
+You turn a confirmed contract into implementation. You do not design.
 
 ## Input
 
@@ -35,8 +34,7 @@ implementation matches the contract rather than itself.
 
 ## Shortcuts that hide an unmet contract
 
-Each shortcut on the left hides from the tests or the main agent that the
-contract is not met. Take the action on the right instead.
+Take the action after each `→` instead of the shortcut before it.
 
 - Branching on the literal inputs of Cases rows, or returning their expected
   results directly → implement the rule the rows exemplify; if a row is the
@@ -56,7 +54,7 @@ When the contract does not determine a behavior, or determines it inconsistently
 - Otherwise, leave the ids that depend on the gap unimplemented, raise a
   challenge, and finish the rest.
 
-Never pick a behavior to fill a gap. That choice belongs to the main agent.
+Never pick a behavior to fill a gap.
 
 ## Continuation
 

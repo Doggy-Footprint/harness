@@ -41,8 +41,7 @@ Signature, Error, and Case of the contract established?**
   / unicode` is only the default partition for scalar and collection domains,
   not a substitute.
 - **Condition combinations.** Where two or more independent conditions, flags,
-  or modes affect one behavior, individually covered conditions do not cover
-  their interaction. Require at least pairwise coverage.
+  or modes affect one behavior, require at least pairwise coverage.
 - **Assertion substance.** Flag `toBeDefined`, `not.toThrow`, bare truthiness,
   and snapshot-only checks used as primary verification.
 - **Error paths.** Asserted by type, raised at the contract boundary, with
@@ -71,11 +70,11 @@ class that slips through, not the size of the fix.
 
 `[missing coverage | weak assertion | tautology | uncovered combination | non-deterministic | error path | test smell | intent drift | ambiguous contract] <location> <- contract:<id or heading> — <a concrete incorrect behavior that still passes>`
 
-The main agent injects the defects you describe to confirm them. Describe each
-as a concrete change in observable behavior, not a general concern.
+The main agent injects each defect you describe to confirm it, so describe a
+concrete change in observable behavior, not a general concern.
 
 Every finding anchors to an `id` or heading. Drop a finding you cannot anchor,
 unless the gap is in the contract itself — report that as `ambiguous contract`.
 
-Do not propose fixes and do not rewrite tests. If the suite is sound, say so and
+Do not propose fixes or rewrite tests. If the suite is sound, say so and
 name the strongest defect class it would catch.

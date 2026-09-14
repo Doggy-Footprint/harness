@@ -1,14 +1,14 @@
 ---
 name: contract-workflow
-description: Contract-first implementation and test workflow with implementer, test-implementer, and test-verifier subagents. Use this skill before feature/fix level implementation or debugging. Do not use for simple typo fixes, renames, config or doc edits, or local bug fixes that keep interfaces unchanged.
+description: Contract-first implementation and test workflow with implementer, test-implementer, and test-verifier subagents. Use before feature/fix level implementation or debugging. Not for typo fixes, renames, config or doc edits, or local bug fixes that keep interfaces unchanged.
 ---
 
 # Contract
 
 A contract is a session-scoped working file, not documentation.
 
-1. Location: `agent-docs/contracts/<kebab-case-name>.md`. This directory is excluded from Index & Staleness Management: no `index.md`, no `stale.md`, no `<hex-id>-` naming.
-2. Lifetime is the session. Delete `agent-docs/contracts/` before the session ends.
+1. Location: `agent-docs/contracts/<kebab-case-name>.md`. Excluded from Index & Staleness Management: no `index.md`, `stale.md`, or `<hex-id>-` naming.
+2. Delete `agent-docs/contracts/` before the session ends.
 3. Only the main agent writes or amends a contract. Subagents read it and are given its path and version.
 4. Amendment: bump `version`, append a Version Log entry, re-dispatch. Never edit a contract silently.
 5. Format:
@@ -53,7 +53,7 @@ Use the model and effort set in each agent definition (`.claude/agents/`, `.code
 
 Contract before code. Implementation and tests both derive from the contract, never from each other.
 
-1. **Ground (main).** The main agent reads the deciding source files itself. It may delegate locating them (e.g. `code-explorer` returning `path:line`), never reading them: signatures, types, and error types enter the contract only from lines the main agent has read, not from a subagent's summary.
+1. **Ground (main).** Read the deciding source files yourself. Delegate only locating them (e.g. `code-explorer` returning `path:line`): signatures, types, and error types enter the contract only from lines you have read.
 2. **Contract (main).** Write `agent-docs/contracts/<name>.md`, including `# Paths`. Confirm User Intent (Contract rule 9).
 3. **Implement + Test (parallel).** Dispatch both in one message on the same contract version. Neither prompt contains the other's output.
    - `implementer`: contract path and version.
@@ -65,11 +65,11 @@ Contract before code. Implementation and tests both derive from the contract, ne
    - contract gap → step 4.
 6. **Verify (`test-verifier`).** Once the suite passes. Give it the contract path only.
 7. **Seed (main).** For the 2-3 strongest findings, one at a time:
-   1. `python3 .harness/bin/seed.py backup <every file you will edit>`. It refuses while an earlier seed is unrestored; run `restore` first.
+   1. `python3 .harness/bin/seed.py backup <every file you will edit>`.
    2. Inject the finding's defect and run `Test command`.
-   3. `python3 .harness/bin/seed.py restore`. It verifies each `sha256`. If it exits non-zero, stop and report to the user. Never restore with `git checkout` or `git stash`: they discard the uncommitted implementation.
+   3. `python3 .harness/bin/seed.py restore`. If it exits non-zero, stop and report to the user. Never restore with `git checkout` or `git stash`: they discard the uncommitted implementation.
 
-   While `.seed/` holds files, session cleanup keeps `agent-docs/contracts/`. `python3 .harness/bin/seed.py status` lists an unrestored seed.
+   While `.seed/` holds files, session cleanup keeps `agent-docs/contracts/`; `python3 .harness/bin/seed.py status` lists an unrestored seed.
 
    A suite that stays green confirms the finding.
 8. **Close (main).**

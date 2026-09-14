@@ -48,7 +48,8 @@ contract keeps; mark that test `characterization` in its name or tag.
 - Cover every level of the Cases table:
   - `normal` — a representative input of each valid class, exact result.
   - `boundary` — an on-point and an off-point for each limit.
-  - `error` — the error type from Errors, and observable state unchanged.
+  - `error` — the error type from Errors, raised at the contract boundary,
+    with observable state unchanged after the failure.
   - `edge` — the unusual state exactly as the row describes it.
   A `none — <reason>` row gets no test; list it in the Coverage map. A level
   with no row at all is a challenge.
@@ -56,8 +57,6 @@ contract keeps; mark that test `characterization` in its name or tag.
   Each class gets a test; each boundary gets an on-point and an off-point.
 - Where two or more independent conditions, flags, or modes affect one
   behavior, cover them at least pairwise.
-- Assert errors by type, raised at the contract boundary, with observable state
-  unchanged after the failure.
 
 ## Construction
 
@@ -82,8 +81,7 @@ contract keeps; mark that test `characterization` in its name or tag.
 
 ## Tests that pass without verifying
 
-Each shortcut on the left lets a test pass while verifying nothing. Take the
-action on the right instead.
+Take the action after each `→` instead of the shortcut before it.
 
 - Skipping, `xfail`-ing, commenting out, or deleting a test to avoid a failure
   → keep the test as the contract requires it; if you believe it is wrong,
