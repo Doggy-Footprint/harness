@@ -7,7 +7,7 @@ repo_root="$(git rev-parse --show-toplevel)"
 harness_dir="$repo_root/.harness"
 
 if command -v python3 >/dev/null 2>&1; then
-  echo '{"hook_event_name":"PostMerge"}' | python3 "$harness_dir/hooks/session_end.py"
+  echo '{"hook_event_name":"PostMerge"}' | python3 "$harness_dir/hooks/cleanup.py"
 fi
 
 common_dir="$(git rev-parse --git-common-dir)"

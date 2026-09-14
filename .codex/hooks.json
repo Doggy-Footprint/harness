@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/hooks/session_end.py\""
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/hooks/cleanup.py\""
           }
         ]
       }
@@ -47,7 +47,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/hooks/session_end.py\""
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/hooks/cleanup.py\""
           }
         ]
       }

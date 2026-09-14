@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SessionEnd hook: deletes only the configured contracts dir. Refuses if the
+"""Cleanup hook: deletes only the configured contracts dir. Refuses if the
 resolved contracts path escapes docs_root or the repo root, since docs_root is
 user-configurable and a bad config must not become an arbitrary rm -rf.
 """
@@ -33,7 +33,7 @@ def main() -> int:
 
     if not is_strictly_inside(contracts_dir, docs_root) or not is_strictly_inside(docs_root, repo_root):
         print(
-            f"session_end: refusing to delete {contracts_dir} — it is not strictly inside "
+            f"cleanup: refusing to delete {contracts_dir} — it is not strictly inside "
             f"{docs_root} inside {repo_root}",
             file=sys.stderr,
         )

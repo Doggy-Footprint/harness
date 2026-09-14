@@ -197,7 +197,7 @@ class TestScenarios(InstallerTestCase):
         (repo / "agent-docs" / "contracts" / "c.md").write_text("c")
 
         proc = subprocess.run(
-            [sys.executable, str(repo / ".harness" / "hooks" / "session_end.py")],
+            [sys.executable, str(repo / ".harness" / "hooks" / "cleanup.py")],
             input=json.dumps({"hook_event_name": "SessionEnd"}),
             capture_output=True,
             text=True,
@@ -295,7 +295,7 @@ class TestPhaseBFixes(InstallerTestCase):
         import harness as installer_module
 
         owned = installer_module.render_owned_files(no_ci=False)
-        relpath = ".harness/hooks/session_end.py"
+        relpath = ".harness/hooks/cleanup.py"
         new_content = owned[relpath]
 
         gate = repo / relpath
@@ -322,8 +322,8 @@ class TestCodexClearContractCleanup(InstallerTestCase):
     def test_e1_characterization_shared_session_end_cleanup_is_in_both_configs(self):
         claude, codex = self.install_hook_configs()
 
-        self.assertIn(".harness/hooks/session_end.py", "\n".join(self.commands(claude["SessionEnd"])))
-        self.assertIn(".harness/hooks/session_end.py", "\n".join(self.commands(codex["SessionEnd"])))
+        self.assertIn(".harness/hooks/cleanup.py", "\n".join(self.commands(claude["SessionEnd"])))
+        self.assertIn(".harness/hooks/cleanup.py", "\n".join(self.commands(codex["SessionEnd"])))
 
     def test_i2_e2_codex_clear_hook_is_absent_from_claude_and_present_in_codex(self):
         claude, codex = self.install_hook_configs()
@@ -351,7 +351,7 @@ class TestCodexClearContractCleanup(InstallerTestCase):
         (contracts / "contract.md").write_text("contract")
 
         proc = subprocess.run(
-            [sys.executable, str(repo / ".harness" / "hooks" / "session_end.py")],
+            [sys.executable, str(repo / ".harness" / "hooks" / "cleanup.py")],
             input=json.dumps({"hook_event_name": "SessionStart", "source": "clear"}),
             capture_output=True,
             text=True,

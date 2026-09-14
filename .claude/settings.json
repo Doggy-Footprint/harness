@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/.harness/hooks/session_end.py\""
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.harness/hooks/cleanup.py\""
           }
         ]
       }

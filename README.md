@@ -23,7 +23,7 @@
 │   ├── agents/<name>.md             # sub-agent 단일 소스 (공통 본문 + claude.*/codex.* frontmatter)
 │   ├── skills/contract-workflow/SKILL.md
 │   ├── hooks/hooks.spec.json        # 논리적 hook 선언 → Claude/Codex 설정 생성
-│   ├── hooks/contract_gate.py, session_end.py
+│   ├── hooks/contract_gate.py, cleanup.py
 │   ├── git/pre-commit, post-merge, verify_rules.py, warn_new_comments.py
 │   ├── ci/harness-comment-warning.yml
 │   └── lib/config.py                # repo root, config 로드, 경로 해석
@@ -69,7 +69,7 @@ harness를 설치한 대상 repo의 구조:
 5. implementer / test-implementer / test-verifier를 별개로 운영한다. test-implementer는 contract의 Intent(유저 원문)까지 달성 대상으로 삼는다. 기능 및 토큰 소모 감소를 위해 툴을 제한한다. (verifier는 READ only, 모두 no mcp)
 6. (실험 중) sub-agent 최적화: 기능별 동작 개선, main agent / sub agent context 격차 해소 (context rot과 지식 부족 사이에 균형 잡기)
 7. sub-agent 정의(Claude md / Codex toml)는 `harness/agents/<name>.md` 하나의 소스에서 생성한다. 두 플랫폼 파일을 각각 손으로 맞추다 생기는 drift를 없앤다.
-8. 문서 루트를 `agent-docs/`로 네임스페이스한다. 대상 repo에 원래 있던 `contracts/`(예: Solidity) 같은 디렉터리와 충돌하지 않기 위해서다. `session_end.py`는 삭제 대상 경로가 `docs_root` 안에 엄격히 포함되는지 확인한 뒤에만 지운다.
+8. 문서 루트를 `agent-docs/`로 네임스페이스한다. 대상 repo에 원래 있던 `contracts/`(예: Solidity) 같은 디렉터리와 충돌하지 않기 위해서다. `cleanup.py`는 삭제 대상 경로가 `docs_root` 안에 엄격히 포함되는지 확인한 뒤에만 지운다.
 9. upgrade는 `.harness/manifest.json`의 파일별 sha256과 현재 디스크 상태를 비교해, 사용자가 수정한 파일은 덮어쓰지 않고 건너뛴다(`skip`으로 보고). 건너뛴 파일은 manifest에 이전 sha가 유지되므로, 이후 `doctor`가 계속 문제로 잡아낸다.
 10. 설치 대상에 같은 이름의 agent나 skill이 이미 있으면 install/upgrade를 중단하고 충돌 목록만 보고한다. 자동으로 병합하거나 덮어쓰지 않는다.
 

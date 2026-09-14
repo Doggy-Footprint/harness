@@ -2,13 +2,14 @@
   "hooks": [
     {
       "event": "SessionEnd",
-      "command": "python3 \"{root}/.harness/hooks/session_end.py\""
+      "command": "python3 \"{root}/.harness/hooks/cleanup.py\""
     },
     {
       "event": "SessionStart",
       "matcher": "clear",
       "targets": ["codex"],
-      "command": "python3 \"{root}/.harness/hooks/session_end.py\""
+      "_note": "/clear in codex trigger this",
+      "command": "python3 \"{root}/.harness/hooks/cleanup.py\""
     },
     {
       "event": "SubagentStart",
