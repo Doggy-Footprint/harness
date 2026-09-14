@@ -30,6 +30,21 @@ implementation matches the contract rather than itself.
   not call for.
 - Do not edit the contract.
 
+## Shortcuts that hide an unmet contract
+
+Each shortcut on the left hides from the tests or the main agent that the
+contract is not met. Take the action on the right instead.
+
+- Branching on the literal inputs of Cases rows, or returning their expected
+  results directly → implement the rule the rows exemplify; if a row is the
+  only statement of its rule, raise an `uncovered` challenge.
+- Catching broad exceptions and swallowing them, or converting them to a type
+  Errors does not name → let them propagate, or raise the type Errors names.
+- Leaving a stub, `TODO`, `pass`, or `NotImplementedError` for an `id` → list
+  that `id` under Blocked with its challenge.
+- Reporting a check as passed without running it → report the command and its
+  actual result; if it cannot run, write `not run` and why.
+
 ## Gaps
 
 When the contract does not determine a behavior, or determines it inconsistently:

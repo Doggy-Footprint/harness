@@ -77,25 +77,27 @@ contract keeps; mark that test `characterization` in its name or tag.
 - Use the existing framework, helpers, and conventions. A new test dependency
   is a challenge.
 
-## Known LLM failure modes
+## Tests that pass without verifying
 
-These are the ways generated tests most often pass while verifying nothing.
-None is allowed.
+Each shortcut on the left lets a test pass while verifying nothing. Take the
+action on the right instead.
 
-- Skipping, `xfail`-ing, commenting out, or deleting a test to avoid a failure.
-- Loosening an expected value or assertion on continuation without a contract
-  version that changed it.
-- Computing the expected value in the test by re-implementing the logic under
-  test (mirror oracle).
+- Skipping, `xfail`-ing, commenting out, or deleting a test to avoid a failure
+  → keep the test as the contract requires it; if you believe it is wrong,
+  raise a challenge for its `id`.
+- Loosening an expected value or assertion on continuation → change it only
+  when a contract version or the given reason changed it; otherwise raise a
+  challenge.
+- Computing the expected value by re-implementing the logic under test →
+  write the value from a Cases row or a hand calculation in the test data, or
+  assert a property.
 - Asserting a catch-all error type (`Exception`, `Error`, `BaseException`), or
-  an error message the contract does not state.
-- Calling a helper, fixture, or API you have not seen in a file you read.
-- Covering only the happy path.
-- Several tests for one equivalence class that differ only in the value;
-  parameterize instead.
-- A test with no assertion, or one that only prints or logs.
-- `sleep`-based waiting, or skipping on environment conditions.
-- Mocking the unit under test, or asserting a mock's return value back.
+  an error message the contract does not state → assert the type from Errors;
+  if Errors names none for that case, raise a challenge.
+- Calling a helper, fixture, or API you have not seen → read its definition
+  first; if you cannot find one, do not use it.
+- `sleep`-based waiting, or skipping on environment conditions → fake time and
+  the environment; if a dependency cannot be faked, raise a challenge.
 
 ## Gaps
 
