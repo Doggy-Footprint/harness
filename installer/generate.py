@@ -56,9 +56,11 @@ def load_hooks_spec(spec_path) -> list:
         return json.load(fh)["hooks"]
 
 
-def _render_hooks_dict(hooks_spec: list, root_var: str) -> dict:
+def _render_hooks_dict(hooks_spec: list, root_var: str, target: str) -> dict:
     result = {"hooks": {}}
     for entry in hooks_spec:
+        if target not in entry.get("targets", ("claude", "codex")):
+            continue
         event = entry["event"]
         hook = {"type": "command", "command": entry["command"].replace("{root}", root_var)}
         group = {"hooks": [hook]}
@@ -69,8 +71,8 @@ def _render_hooks_dict(hooks_spec: list, root_var: str) -> dict:
 
 
 def render_claude_settings_hooks(hooks_spec: list) -> dict:
-    return _render_hooks_dict(hooks_spec, "$CLAUDE_PROJECT_DIR")
+    return _render_hooks_dict(hooks_spec, "$CLAUDE_PROJECT_DIR", "claude")
 
 
 def render_codex_hooks(hooks_spec: list) -> dict:
-    return _render_hooks_dict(hooks_spec, "$(git rev-parse --show-toplevel)")
+    return _render_hooks_dict(hooks_spec, "$(git rev-parse --show-toplevel)", "codex")

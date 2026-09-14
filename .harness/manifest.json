@@ -9,7 +9,7 @@
     ".harness/agents/test-implementer.md": "4186ca4f8f98c73b6013933340db8beee274ec6ce3092859ace24028ba0e017e",
     ".harness/agents/implementer.md": "d5e96bb22b43197369ed1962451faf2d2e8b9961d4b5c42078a937b290cc8d93",
     ".harness/agents/test-verifier.md": "8ff6da5f6b6275ec1750da8af0d5753c5b449ee2ad585430f1013a2d104a11a5",
-    ".harness/hooks/hooks.spec.json": "4e011d8fd8b4b66edd754510eeaf43eb74f8e1d83bf05b1c75852a76d14e4166",
+    ".harness/hooks/hooks.spec.json": "40592a58139c7c4f25b7d529ce70a4656c58c925fd32fd9563d86927a3d0d5fb",
     ".harness/hooks/contract_gate.py": "290e58768b06b287edb154d5caca4a72cec7ded9f175174786c157b5997b775e",
     ".harness/hooks/session_end.py": "2bdd8cf2e69e9080d4894a11437c6ea8dce4e20cb8c023114aafe17d627fa69f",
     ".harness/lib/config.py": "726fdae749adccd1c5fde786fc9150b8a901d9feb4139094664f66539080a12a",

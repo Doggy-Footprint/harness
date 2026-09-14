@@ -307,5 +307,59 @@ class TestPhaseBFixes(InstallerTestCase):
         self.assertNotIn(f"{relpath} (user-modified)", result.stdout)
 
 
+class TestCodexClearContractCleanup(InstallerTestCase):
+    def install_hook_configs(self):
+        repo = self.make_repo()
+        result = run_installer("install", str(repo))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        claude = json.loads((repo / ".claude" / "settings.json").read_text())
+        codex = json.loads((repo / ".codex" / "hooks.json").read_text())
+        return claude["hooks"], codex["hooks"]
+
+    def commands(self, hook_groups):
+        return [hook["command"] for group in hook_groups for hook in group["hooks"]]
+
+    def test_e1_characterization_shared_session_end_cleanup_is_in_both_configs(self):
+        claude, codex = self.install_hook_configs()
+
+        self.assertIn(".harness/hooks/session_end.py", "\n".join(self.commands(claude["SessionEnd"])))
+        self.assertIn(".harness/hooks/session_end.py", "\n".join(self.commands(codex["SessionEnd"])))
+
+    def test_i2_e2_codex_clear_hook_is_absent_from_claude_and_present_in_codex(self):
+        claude, codex = self.install_hook_configs()
+
+        self.assertEqual(claude.get("SessionStart", []), [])
+        self.assertEqual(
+            len([group for group in codex["SessionStart"] if group.get("matcher") == "clear"]),
+            1,
+        )
+
+    def test_e3_codex_clear_reuses_session_end_cleanup_command(self):
+        _, codex = self.install_hook_configs()
+
+        clear_commands = self.commands(
+            [group for group in codex["SessionStart"] if group.get("matcher") == "clear"]
+        )
+        self.assertEqual(clear_commands, self.commands(codex["SessionEnd"]))
+
+    def test_i1_session_start_clear_removes_contracts(self):
+        repo = self.make_repo()
+        result = run_installer("install", str(repo))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        contracts = repo / "agent-docs" / "contracts"
+        contracts.mkdir(parents=True)
+        (contracts / "contract.md").write_text("contract")
+
+        proc = subprocess.run(
+            [sys.executable, str(repo / ".harness" / "hooks" / "session_end.py")],
+            input=json.dumps({"hook_event_name": "SessionStart", "source": "clear"}),
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertFalse(contracts.exists())
+
+
 if __name__ == "__main__":
     unittest.main()
