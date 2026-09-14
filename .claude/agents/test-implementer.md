@@ -30,7 +30,7 @@ each other.
 
 Every expected value comes from one of:
 
-- a row of the Edge Cases table,
+- a row of the Cases table,
 - a User Intent item whose goal alone determines the result,
 - an independent hand calculation, written out in the test data,
 - a property: invariant, round-trip, or metamorphic relation.
@@ -40,11 +40,17 @@ contract keeps; mark that test `characterization` in its name or tag.
 
 ## Coverage
 
-- Every intent `id` and edge case `id` has a test naming that `id`, or a
-  challenge.
-- Derive equivalence classes from the input domain in Signatures and Edge
-  Cases. Each class gets a test; each boundary gets an on-point and an
-  off-point.
+- Every intent `id` and case `id` has a test naming that `id` and its `level`,
+  or a challenge.
+- Cover every level of the Cases table:
+  - `normal` — a representative input of each valid class, exact result.
+  - `boundary` — an on-point and an off-point for each limit.
+  - `error` — the error type from Errors, and observable state unchanged.
+  - `edge` — the unusual state exactly as the row describes it.
+  A `none — <reason>` row gets no test; list it in the Coverage map. A level
+  with no row at all is a challenge.
+- Derive equivalence classes from the input domain in Signatures and Cases.
+  Each class gets a test; each boundary gets an on-point and an off-point.
 - Where two or more independent conditions, flags, or modes affect one
   behavior, cover them at least pairwise.
 - Assert errors by type, raised at the contract boundary, with observable state
@@ -70,6 +76,26 @@ contract keeps; mark that test `characterization` in its name or tag.
 - Place each test at the lowest level that can observe the behavior.
 - Use the existing framework, helpers, and conventions. A new test dependency
   is a challenge.
+
+## Known LLM failure modes
+
+These are the ways generated tests most often pass while verifying nothing.
+None is allowed.
+
+- Skipping, `xfail`-ing, commenting out, or deleting a test to avoid a failure.
+- Loosening an expected value or assertion on continuation without a contract
+  version that changed it.
+- Computing the expected value in the test by re-implementing the logic under
+  test (mirror oracle).
+- Asserting a catch-all error type (`Exception`, `Error`, `BaseException`), or
+  an error message the contract does not state.
+- Calling a helper, fixture, or API you have not seen in a file you read.
+- Covering only the happy path.
+- Several tests for one equivalence class that differ only in the value;
+  parameterize instead.
+- A test with no assertion, or one that only prints or logs.
+- `sleep`-based waiting, or skipping on environment conditions.
+- Mocking the unit under test, or asserting a mock's return value back.
 
 ## Gaps
 
@@ -103,7 +129,8 @@ fix it.
 
 - **Contract version** — the version you tested.
 - **Files changed** — one line of reason each.
-- **Coverage map** — `<id> -> <test name>`, one per line.
+- **Coverage map** — `<id> [<level>] -> <test name>`, one per line; `none` rows
+  as `<level> -> none — <reason>`.
 - **Load check** — command and result.
 - **Blocked** — ids without a test, and the challenge blocking each. `none` if none.
 - **Unsure** — what you are unsure of, and what would settle it.

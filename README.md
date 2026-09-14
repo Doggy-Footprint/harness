@@ -25,7 +25,7 @@ AI 에이전트로 작업할수록 문서·주석·docstring이 통제 불가능
 > 지시보다는 **rule**이 낫습니다. 검증 가능한 부분은 커밋 훅으로, 판단이 필요한 부분(ADR 작성 여부 등)만 에이전트/사용자 판단에 남겨둡니다.
 
 ### 5. 경로 검증 기반 안전한 자동 삭제
-세션 종료 시 세션 한정 디렉터리(`agent-docs/contracts/`)를 자동 삭제하는 `cleanup.py`는, 삭제 대상 경로가 설정 가능한 `docs_root`와 저장소 루트 양쪽에 엄격히 포함되는지(`is_strictly_inside`) 확인한 뒤에만 지웁니다.
+세션 종료 시 세션 한정 디렉터리(`agent-docs/contracts/`)를 자동 삭제하는 `cleanup.py`는, 삭제 대상 경로가 설정 가능한 `docs_root`와 저장소 루트 양쪽에 엄격히 포함되는지(`is_strictly_inside`) 확인한 뒤에만 지웁니다. 또한 `Seed` 결함 주입 도중 작업이 멈춰 `.seed/`에 원본 백업이 남아 있으면 삭제하지 않고 `python3 .harness/bin/seed.py restore` 실행을 안내합니다(SessionEnd, Codex `/clear`, git post-merge 공통).
 > 잘못된 설정 값 하나가 임의 경로 삭제로 이어지지 않도록, 자동화된 삭제 동작에는 항상 경로 포함 검증을 둡니다.
 
 ### 6. 기존 프로젝트와의 비파괴적 병합
@@ -47,7 +47,7 @@ python3 installer/harness.py doctor <target>
 
 ## 테스트
 
-`tests/test_installer.py`는 mock 없이 실제 CLI/훅 스크립트를 임시 git 저장소에서 서브프로세스로 실행하는 black-box 테스트입니다(~20개 시나리오). 멱등성(반복 업그레이드가 no-op인지), 사용자 수정 보존과 drift 감지, Claude/Codex 두 플랫폼 간 설정 일관성, 그리고 실제 프로세스의 생존/종료 상태를 이용한 세션 락 동시성 검증까지 다룹니다.
+`tests/test_installer.py`는 mock 없이 실제 CLI/훅 스크립트를 임시 git 저장소에서 서브프로세스로 실행하는 black-box 테스트입니다. 멱등성(반복 업그레이드가 no-op인지), 사용자 수정 보존과 drift 감지, Claude/Codex 두 플랫폼 간 설정 일관성, 그리고 실제 프로세스의 생존/종료 상태를 이용한 세션 락 동시성 검증까지 다룹니다.
 
 ```bash
 python3 -m unittest tests/test_installer.py

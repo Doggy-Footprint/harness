@@ -22,7 +22,8 @@ implementation matches the contract rather than itself.
 
 ## Rules
 
-- Satisfy Signatures, Errors, Edge Cases, and every User Intent item.
+- Satisfy Signatures, Errors, every Cases row at every level, and every User
+  Intent item.
 - Edit only `Implementation` paths. A change needed elsewhere is a challenge.
 - Read before you write. Follow the conventions of the file you edit.
 - No drive-by refactors, dependency changes, or abstractions the contract does

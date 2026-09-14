@@ -15,7 +15,7 @@ open the files under `Implementation`. Judging tests against the code they were
 written for only confirms that the two agree with each other.
 
 Answer one question: **if this suite passes, is every User Intent item,
-Signature, Error, and Edge Case of the contract established?**
+Signature, Error, and Case of the contract established?**
 
 ## Checklist
 
@@ -23,13 +23,17 @@ Signature, Error, and Edge Case of the contract established?**
   `<` vs `<=`, inverted condition, dropped null check, swapped arguments, early
   return — would some test fail? Behavior surviving every mutation is untested,
   whatever the coverage number says.
-- **Oracle.** Classify each expected value: Edge Cases row, User Intent item,
+- **Level coverage.** The Cases table has a row for each of `normal`,
+  `boundary`, `error`, and `edge`. A `none — <reason>` row whose reason the
+  Signatures contradict is an `ambiguous contract`. A suite exercising only
+  `normal` rows leaves every other defect class untested.
+- **Oracle.** Classify each expected value: Cases row, User Intent item,
   independent calculation, property, or read off the implementation. The last
   is a tautology unless the test is marked `characterization`. An
   Intent-derived value that the item's goal does not determine is an
   `ambiguous contract`.
 - **Partitions.** Derive the equivalence classes from the input domain in
-  Signatures and Edge Cases, then check each class has a test and each boundary
+  Signatures and Cases, then check each class has a test and each boundary
   has an on-point and an off-point. `0 / 1 / empty / max / negative / duplicate
   / unicode` is only the default partition for scalar and collection domains,
   not a substitute.
@@ -46,8 +50,16 @@ Signature, Error, and Edge Case of the contract established?**
   external fixture dependency, `if`/loop inside a test.
 - **Intent fidelity.** A test naming an intent `id` asserts the item's goal,
   observed the way the user would observe it, not an internal proxy.
-- **Contract coverage.** Every intent `id` and edge case `id` has a test naming
-  it.
+- **LLM failure modes.** Report under the existing tags:
+  - skipped, `xfail`, or commented-out tests → `missing coverage`;
+  - an expected value computed by re-implementing the logic → `tautology`;
+  - a catch-all error type, or an unstated message → `error path`;
+  - a helper, fixture, or API that no read file defines → `test smell`;
+  - a mock of the unit under test, or an assertion on a mock's own return →
+    `tautology`;
+  - `sleep`-based waiting or environment-conditional skips →
+    `non-deterministic`.
+- **Contract coverage.** Every intent `id` and case `id` has a test naming it.
 
 ## Output
 
