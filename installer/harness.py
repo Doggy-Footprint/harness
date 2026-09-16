@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import difflib
 import hashlib
 import json
 import os
@@ -45,6 +46,10 @@ INFO_PATHS = [
     "azure-pipelines.yml",
     "bitbucket-pipelines.yml",
 ]
+
+
+def iter_skill_dirs():
+    return sorted(d for d in (SOURCE_HARNESS / "skills").iterdir() if d.is_dir())
 
 
 def new_report():
@@ -94,12 +99,12 @@ def render_owned_files(no_ci: bool) -> dict:
         owned[f".claude/agents/{name}.md"] = generate.render_claude_agent_md(fields, body).encode("utf-8")
         owned[f".codex/agents/{name}.toml"] = generate.render_codex_agent_toml(fields, body).encode("utf-8")
 
-    skill_src = SOURCE_HARNESS / "skills" / "contract-workflow"
-    for path in skill_src.rglob("*"):
-        if path.is_dir():
-            continue
-        rel = ".agents/skills/contract-workflow/" + path.relative_to(skill_src).as_posix()
-        owned[rel] = path.read_bytes()
+    for skill_src in iter_skill_dirs():
+        for path in sorted(skill_src.rglob("*")):
+            if path.is_dir():
+                continue
+            rel = f".agents/skills/{skill_src.name}/" + path.relative_to(skill_src).as_posix()
+            owned[rel] = path.read_bytes()
 
     if not no_ci:
         ci_src = SOURCE_HARNESS / "ci" / "harness-comment-warning.yml"
@@ -157,11 +162,12 @@ def apply_owned_files(target: Path, owned: dict, old_manifest_files: dict, dry_r
         if not dry_run and path.exists():
             os.chmod(path, 0o755)
 
-    link = target / ".claude" / "skills" / "contract-workflow"
-    if not dry_run:
-        link.parent.mkdir(parents=True, exist_ok=True)
-        if not link.exists() and not link.is_symlink():
-            os.symlink("../../.agents/skills/contract-workflow", link)
+    for skill_src in iter_skill_dirs():
+        link = target / ".claude" / "skills" / skill_src.name
+        if not dry_run:
+            link.parent.mkdir(parents=True, exist_ok=True)
+            if not link.exists() and not link.is_symlink():
+                os.symlink(f"../../.agents/skills/{skill_src.name}", link)
 
     return new_manifest
 
@@ -275,7 +281,7 @@ def install_claude_md(target: Path, dry_run: bool, report: dict, original_agents
 
 
 def ensure_agent_docs_dirs(target: Path, dry_run: bool, report: dict):
-    for name in ("adr", "rejections", "handoff"):
+    for name in ("adr", "rejections", "handoff", "requirements"):
         directory = target / "agent-docs" / name
         for fname in ("index.md", "stale.md"):
             path = directory / fname
@@ -380,12 +386,13 @@ def cmd_install(target: Path, dry_run: bool, no_ci: bool) -> int:
     for c in check_owned_conflicts(target, owned, {}):
         report["conflict"].append(c)
 
-    skill_dir = target / ".agents" / "skills" / "contract-workflow"
-    if skill_dir.exists():
-        report["conflict"].append(".agents/skills/contract-workflow already exists")
-    link = target / ".claude" / "skills" / "contract-workflow"
-    if link.exists() or link.is_symlink():
-        report["conflict"].append(".claude/skills/contract-workflow already exists")
+    for skill_src in iter_skill_dirs():
+        skill_dir = target / ".agents" / "skills" / skill_src.name
+        if skill_dir.exists():
+            report["conflict"].append(f".agents/skills/{skill_src.name} already exists")
+        link = target / ".claude" / "skills" / skill_src.name
+        if link.exists() or link.is_symlink():
+            report["conflict"].append(f".claude/skills/{skill_src.name} already exists")
 
     check_settings_json_validity(target, report)
 
@@ -539,12 +546,113 @@ def cmd_doctor(target: Path) -> int:
     return 1 if report["conflict"] else 0
 
 
+IMPORT_SCAN_DIRS = [".harness", ".agents/skills", ".claude/agents", ".claude/skills", ".codex/agents"]
+IMPORT_SCAN_SKIP = ("__pycache__", "/sessions/", "manifest.json")
+
+
+def _decode(data: bytes):
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+
+
+def collect_drift(target: Path, manifest: dict, owned: dict) -> dict:
+    drift = {
+        "target": str(target),
+        "target_version": manifest.get("version"),
+        "harness_version": VERSION,
+        "modified": [],
+        "missing": [],
+        "added": [],
+        "unchanged": 0,
+    }
+    files = manifest.get("files", {})
+    for relpath, sha in sorted(files.items()):
+        path = target / relpath
+        if not path.exists():
+            drift["missing"].append(relpath)
+            continue
+        current = path.read_bytes()
+        if hashlib.sha256(current).hexdigest() == sha:
+            drift["unchanged"] += 1
+            continue
+        entry = {"path": relpath, "baseline": "harness source" if relpath in owned else "unavailable"}
+        base_text = _decode(owned[relpath]) if relpath in owned else None
+        cur_text = _decode(current)
+        if base_text is not None and cur_text is not None:
+            entry["diff"] = "".join(
+                difflib.unified_diff(
+                    base_text.splitlines(keepends=True),
+                    cur_text.splitlines(keepends=True),
+                    fromfile=f"harness/{relpath}",
+                    tofile=f"target/{relpath}",
+                )
+            )
+        else:
+            entry["diff"] = None
+        drift["modified"].append(entry)
+
+    for scan in IMPORT_SCAN_DIRS:
+        root = target / scan
+        if not root.is_dir():
+            continue
+        for path in sorted(root.rglob("*")):
+            if not path.is_file() or path.is_symlink():
+                continue
+            relpath = path.relative_to(target).as_posix()
+            if relpath in files or any(skip in "/" + relpath for skip in IMPORT_SCAN_SKIP):
+                continue
+            drift["added"].append(relpath)
+    return drift
+
+
+def cmd_import(target: Path, as_json: bool) -> int:
+    if not is_git_worktree(target):
+        print(f"{target} is not a git work tree", file=sys.stderr)
+        return 1
+    manifest_path = target / ".harness" / "manifest.json"
+    if not manifest_path.exists():
+        print(f"{target}: harness is not installed (no .harness/manifest.json)", file=sys.stderr)
+        return 1
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    drift = collect_drift(target, manifest, render_owned_files(no_ci=False))
+
+    if as_json:
+        print(json.dumps(drift, indent=2, ensure_ascii=False))
+        return 0
+
+    print(f"== versions ==\n  target: {drift['target_version']}\n  harness: {drift['harness_version']}")
+    print(f"== unchanged ==\n  {drift['unchanged']} file(s)")
+    if drift["missing"]:
+        print("== missing ==")
+        for relpath in drift["missing"]:
+            print(f"  {relpath}")
+    if drift["added"]:
+        print("== added ==")
+        for relpath in drift["added"]:
+            print(f"  {relpath}")
+    print("== modified ==")
+    if not drift["modified"]:
+        print("  none")
+    for entry in drift["modified"]:
+        print(f"  {entry['path']} (baseline: {entry['baseline']})")
+        if entry["diff"]:
+            for line in entry["diff"].splitlines():
+                print(f"    {line}")
+        else:
+            print("    no textual diff available")
+    return 0
+
+
 def main(argv) -> int:
     parser = argparse.ArgumentParser(prog="harness.py")
-    parser.add_argument("command", choices=["install", "upgrade", "doctor"])
+    parser.add_argument("command", choices=["install", "upgrade", "doctor", "import"])
     parser.add_argument("target")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--no-ci", action="store_true")
+    parser.add_argument("--json", action="store_true", help="machine-readable output (import only)")
     args = parser.parse_args(argv)
     target = Path(args.target).resolve()
 
@@ -552,6 +660,8 @@ def main(argv) -> int:
         return cmd_install(target, args.dry_run, args.no_ci)
     if args.command == "upgrade":
         return cmd_upgrade(target, args.dry_run, args.no_ci)
+    if args.command == "import":
+        return cmd_import(target, args.json)
     return cmd_doctor(target)
 
 

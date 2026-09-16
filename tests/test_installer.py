@@ -8,6 +8,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = REPO_ROOT / "installer" / "harness.py"
+SKILLS = sorted(d.name for d in (REPO_ROOT / "harness" / "skills").iterdir() if d.is_dir())
 
 
 def run_installer(*args):
@@ -247,6 +248,53 @@ class TestNormal(InstallerTestCase):
         self.assertFalse(seed_dir.exists())
 
 
+    def test_every_skill_is_installed_with_a_claude_symlink(self):
+        repo = self.install()
+        self.assertGreater(len(SKILLS), 1)
+        for name in SKILLS:
+            self.assertTrue((repo / ".agents" / "skills" / name / "SKILL.md").is_file(), name)
+            link = repo / ".claude" / "skills" / name
+            self.assertTrue(link.is_symlink(), name)
+            self.assertEqual(link.resolve(), (repo / ".agents" / "skills" / name).resolve())
+
+    def test_requirements_docs_dir_is_created(self):
+        repo = self.install()
+        for fname in ("index.md", "stale.md"):
+            self.assertTrue((repo / "agent-docs" / "requirements" / fname).is_file(), fname)
+
+    def test_import_reports_the_modified_file_with_a_diff(self):
+        repo = self.install()
+        gate = repo / ".harness" / "hooks" / "contract_gate.py"
+        gate.write_text(gate.read_text() + "\n# local edit\n")
+
+        result = run_installer("import", str(repo))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(".harness/hooks/contract_gate.py", result.stdout)
+        self.assertIn("+# local edit", result.stdout)
+
+    def test_import_json_lists_only_the_modified_file(self):
+        repo = self.install()
+        gate = repo / ".harness" / "hooks" / "contract_gate.py"
+        gate.write_text(gate.read_text() + "\n# local edit\n")
+
+        result = run_installer("import", str(repo), "--json")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        drift = json.loads(result.stdout)
+        self.assertEqual([e["path"] for e in drift["modified"]], [".harness/hooks/contract_gate.py"])
+        self.assertIn("+# local edit", drift["modified"][0]["diff"])
+        self.assertEqual(drift["missing"], [])
+
+    def test_import_reports_an_unowned_skill_as_added(self):
+        repo = self.install()
+        own = repo / ".agents" / "skills" / "local-only"
+        own.mkdir(parents=True)
+        (own / "SKILL.md").write_text("mine")
+
+        result = run_installer("import", str(repo), "--json")
+        drift = json.loads(result.stdout)
+        self.assertIn(".agents/skills/local-only/SKILL.md", drift["added"])
+
+
 class TestBoundary(InstallerTestCase):
     def test_b_claude_md_only(self):
         repo = self.make_repo()
@@ -320,6 +368,17 @@ class TestBoundary(InstallerTestCase):
         self.assertFalse(contracts.exists())
 
 
+    def test_import_on_a_fresh_install_reports_no_drift(self):
+        repo = self.install()
+        result = run_installer("import", str(repo), "--json")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        drift = json.loads(result.stdout)
+        self.assertEqual(drift["modified"], [])
+        self.assertEqual(drift["missing"], [])
+        self.assertEqual(drift["added"], [])
+        self.assertGreater(drift["unchanged"], 0)
+
+
 class TestError(InstallerTestCase):
     def test_e_existing_agent_file_conflicts(self):
         repo = self.make_repo()
@@ -331,6 +390,30 @@ class TestError(InstallerTestCase):
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         after = self.snapshot(repo)
         self.assertEqual(before, after)
+
+    def test_import_without_a_manifest_exits_1(self):
+        repo = self.make_repo()
+        before = self.snapshot(repo)
+        result = run_installer("import", str(repo))
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertEqual(before, self.snapshot(repo))
+
+    def test_existing_skill_dir_conflicts(self):
+        repo = self.make_repo()
+        (repo / ".agents" / "skills" / SKILLS[0]).mkdir(parents=True)
+
+        before = self.snapshot(repo)
+        result = run_installer("install", str(repo))
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertEqual(before, self.snapshot(repo))
+
+    def test_import_reports_a_deleted_owned_file_as_missing(self):
+        repo = self.install()
+        (repo / ".harness" / "hooks" / "contract_gate.py").unlink()
+        result = run_installer("import", str(repo), "--json")
+        drift = json.loads(result.stdout)
+        self.assertIn(".harness/hooks/contract_gate.py", drift["missing"])
+
 
     def test_g_upgrade_preserves_user_modification(self):
         repo = self.install()
