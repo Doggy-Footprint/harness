@@ -101,6 +101,19 @@ class TestNormal(InstallerTestCase):
         verify = self.run_verify_rules(repo)
         self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
 
+    def test_a1_verified_test_gap_checks_clean_baseline_before_seed(self):
+        repo = self.install()
+        workflow = (
+            repo / ".agents" / "skills" / "contract-workflow" / "SKILL.md"
+        ).read_text()
+
+        clean_baseline = "run `Test command` on the restored implementation."
+        failure_route = "A failure enters step 5; a pass enters step 7"
+
+        self.assertIn(clean_baseline, workflow)
+        self.assertIn(failure_route, workflow)
+        self.assertLess(workflow.index(clean_baseline), workflow.index(failure_route))
+
     def test_c_settings_preserved_and_upgrade_no_duplicate(self):
         repo = self.make_repo()
         (repo / ".claude").mkdir()

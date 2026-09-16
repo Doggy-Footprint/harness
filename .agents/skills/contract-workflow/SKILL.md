@@ -73,7 +73,7 @@ Contract before code. Implementation and tests both derive from the contract, ne
 
    A suite that stays green confirms the finding.
 8. **Close (main).**
-   - confirmed → continue `test-implementer` with the `id` and the defect class, not the injected diff. Then repeat step 7 for that defect; the suite must now fail.
+   - confirmed → continue `test-implementer` with the `id` and defect class, not the injected diff. When it reports, run `Test command` on the restored implementation. A failure enters step 5; a pass enters step 7, where the same seed must now fail.
    - not confirmed → drop.
    - `ambiguous contract` → step 4.
 9. **Limit.** The first pass through steps 4-8 is free. Each later return to step 4 or 5 is one round; allow at most 2. If challenges, failing tests, or confirmed findings remain after that, stop, write a handoff per the Handoff Rule, and report to the user.
