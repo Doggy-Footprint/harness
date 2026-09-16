@@ -1,8 +1,8 @@
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "files": {
     ".harness/config.default.json": "c21d7705713f2a9bc8cd9527d87b8964b58c7ae1b5e63e83446371b2c68a4dbd",
-    ".harness/VERSION": "e9dd8507f4bf0c6f42458e41aea833ad0bd3f6127272335eee9bf4d58541ed67",
+    ".harness/VERSION": "1f930dd1f133c1f97a94fe3acb8db34372cf4c01ffdb2b3ff4ca72f9494121e9",
     ".harness/instructions/harness-block.md": "529b520e54d1f99d7299af6b0e8f7c114873f80c34f86b24a56b4caa678b4f7a",
     ".harness/bin/seed.py": "39d4168079cd5665bba06dfe030db7b8225d5309f80e8b8100376126fa4f3336",
     ".harness/ci/harness-comment-warning.yml": "b1baf0b786612e52762ea4666b449ff89f745c54a553097ee00d0a113feb63d0",
@@ -19,7 +19,10 @@
     ".harness/git/post-merge": "30b2d3e0641707013bfb5e4254a07ab74d950e0d8dad922cd0838de76cb53aca",
     ".harness/git/pre-commit": "7b1cfdc9e80f7ca2511ffe6bd3f0c08b37694b11fdcf0a57617572f3dd7fe792",
     ".harness/git/verify_rules.py": "9584a0b45382199022a23addbb76916958089cf9a7d7670d6cce0f0a2dd61f6b",
+    ".harness/skills/harness-import/SKILL.md": "947f1f83390047246bd40ed2a82afa2abde46c0d189db77ead76f49c20724208",
     ".harness/skills/contract-workflow/SKILL.md": "f5ac5da9a3d8325da8d9ef7839a31012f2984102b081e94fa5370199197ac065",
+    ".harness/skills/requirement-oracle/SKILL.md": "98299d24d0ef2dd48efd2e4a52b6a46167624b3a32a16e183ddbb5eafeafc0ee",
+    ".harness/skills/architecture-options/SKILL.md": "6333362f89d081c8692d23df9ef52bbb511af3ff3ee94d6cd49ecff5d045971c",
     ".claude/agents/code-explorer.md": "a79998a720ac9d84f8dd1916ccc4ea8fb1e594867fa139ca1cc0aa8fbc974208",
     ".codex/agents/code-explorer.toml": "48c238e3e7ca6378927b09cd17ac2c2d8a3cd1013ddb644992d58439fe07994c",
     ".claude/agents/implementer.md": "a35c50509c259001dd531c0f9c2b18131a75b764f1588c4d79bd466b0307200b",
@@ -28,7 +31,10 @@
     ".codex/agents/test-implementer.toml": "6c418028a6f09737f30d079d8ebe14c2dd6174e2f981fc6c3f3184bb235f3f64",
     ".claude/agents/test-verifier.md": "ec651a4fb2fc080496038c209404c341b2ccf09c741710c2f17e2d9bb8d64dce",
     ".codex/agents/test-verifier.toml": "6dca9b73c38ac27aed9edd967a75a512b592e17e3bc317ce3b99cc073b79dcdd",
+    ".agents/skills/architecture-options/SKILL.md": "6333362f89d081c8692d23df9ef52bbb511af3ff3ee94d6cd49ecff5d045971c",
     ".agents/skills/contract-workflow/SKILL.md": "f5ac5da9a3d8325da8d9ef7839a31012f2984102b081e94fa5370199197ac065",
+    ".agents/skills/harness-import/SKILL.md": "947f1f83390047246bd40ed2a82afa2abde46c0d189db77ead76f49c20724208",
+    ".agents/skills/requirement-oracle/SKILL.md": "98299d24d0ef2dd48efd2e4a52b6a46167624b3a32a16e183ddbb5eafeafc0ee",
     ".github/workflows/harness-comment-warning.yml": "b1baf0b786612e52762ea4666b449ff89f745c54a553097ee00d0a113feb63d0"
   }
 }

@@ -38,11 +38,13 @@ AI 에이전트로 작업할수록 문서·주석·docstring이 통제 불가능
 python3 installer/harness.py install <target> [--dry-run] [--no-ci]
 python3 installer/harness.py upgrade <target> [--dry-run] [--no-ci]
 python3 installer/harness.py doctor <target>
+python3 installer/harness.py import <target> [--json]
 ```
 
 - `install`은 대상이 git worktree가 아니거나, 이미 설치돼 있거나, 충돌이 있으면 아무것도 쓰지 않고 종료합니다.
 - `upgrade`는 하네스가 소유한 파일만 갱신하고, 사용자가 수정한 파일은 건너뜁니다.
 - `--no-ci`는 `.github/workflows/harness-comment-warning.yml` CI 체크 워크플로우를 설치/업그레이드 대상에서 제외합니다. GitHub Actions를 쓰지 않는 저장소에 설치할 때 사용합니다.
+- `import`는 설치된 대상 저장소가 하네스 파일을 어떻게 수정했는지 읽어 오는 읽기 전용 명령입니다. 아무것도 쓰지 않으며, 해석·제안·브랜치 생성은 `harness-import` 스킬이 담당합니다.
 - `doctor`는 설치 상태(파일 sha, 훅 등록, 문서 블록, git 훅 연동)를 점검하는 읽기 전용 명령입니다.
 - 이 저장소 자체도 자신을 설치해 도그푸딩합니다. `harness/`를 수정한 뒤에는 `python3 installer/harness.py upgrade .`로 반영합니다.
 
