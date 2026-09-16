@@ -2,6 +2,7 @@
 name: code-explorer
 description: Locates and cites the code a decision depends on. Use when the main agent needs facts from files it has not read; the main agent then reads the cited lines itself.
 tools: Read, Grep, Glob
+model: sonnet
 disallowedTools: mcp__*
 ---
 
