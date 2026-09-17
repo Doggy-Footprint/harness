@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -92,6 +93,85 @@ class InstallerTestCase(unittest.TestCase):
 
 
 class TestNormal(InstallerTestCase):
+    def installed_agent_artifacts(self, repo, name):
+        artifacts = []
+        for target in (".agents", ".claude", ".codex"):
+            root = repo / target
+            for suffix in ("md", "toml"):
+                artifacts.extend(sorted(root.rglob(f"{name}.{suffix}")))
+        self.assertGreater(len(artifacts), 0, name)
+        return artifacts
+
+    def assert_contains_all(self, text, phrases):
+        normalized = text.lower()
+        for phrase in phrases:
+            self.assertIn(phrase.lower(), normalized)
+
+    def assert_matches(self, text, pattern):
+        self.assertRegex(text, re.compile(pattern, re.IGNORECASE | re.DOTALL))
+
+    def test_c1_normal_rewritten_agents_preserve_contract_boundaries_and_reports(self):
+        repo = self.install()
+        implementer = "\n".join(
+            path.read_text() for path in self.installed_agent_artifacts(repo, "implementer")
+        )
+        test_implementer = "\n".join(
+            path.read_text()
+            for path in self.installed_agent_artifacts(repo, "test-implementer")
+        )
+        workflow = (
+            repo / ".agents" / "skills" / "contract-workflow" / "SKILL.md"
+        ).read_text()
+
+        self.assert_contains_all(
+            implementer,
+            (
+                "contract",
+                "challenge",
+                "Contract version",
+                "Files changed",
+                "Checks",
+                "Blocked",
+                "Unsure",
+                "Contract challenges",
+            ),
+        )
+        self.assert_matches(implementer, r"(?:isolation|do not (?:open|read)|independent)")
+        self.assert_matches(implementer, r"(?:allowed|permitted|#)\s*paths?")
+        self.assert_contains_all(
+            test_implementer,
+            ("oracle", "Implementation", "contract", "challenge"),
+        )
+        self.assert_matches(test_implementer, r"(?:independent|do not (?:open|read)).{0,120}implementation")
+        self.assert_contains_all(workflow, ("Each instruction", "replacement", "contract"))
+        self.assert_matches(
+            workflow,
+            r"each instruction.{0,700}(?:risk|verification|oracle)",
+        )
+        self.assert_matches(
+            workflow,
+            r"each instruction.{0,700}(?:exclude|avoid|not use)",
+        )
+        self.assert_matches(workflow, r"replacement instruction.{0,500}role-specific direction")
+        self.assert_matches(workflow, r"implementer.{0,400}(?:approach|constraint)")
+        self.assert_matches(workflow, r"test-implementer.{0,400}(?:risk|oracle|test)")
+
+    def test_c2_boundary_upgrade_keeps_all_installed_agent_artifacts_in_sync(self):
+        repo = self.install()
+        before = {
+            path: path.read_text()
+            for name in ("implementer", "test-implementer")
+            for path in self.installed_agent_artifacts(repo, name)
+        }
+        workflow = repo / ".agents" / "skills" / "contract-workflow" / "SKILL.md"
+        before[workflow] = workflow.read_text()
+
+        result = run_installer("upgrade", str(repo))
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for path, content in before.items():
+            self.assertEqual(path.read_text(), content, path)
+
     def test_a_empty_repo_install_then_doctor(self):
         repo = self.install()
 
