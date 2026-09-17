@@ -20,7 +20,7 @@
     ".harness/git/pre-commit": "7b1cfdc9e80f7ca2511ffe6bd3f0c08b37694b11fdcf0a57617572f3dd7fe792",
     ".harness/git/verify_rules.py": "9584a0b45382199022a23addbb76916958089cf9a7d7670d6cce0f0a2dd61f6b",
     ".harness/skills/harness-import/SKILL.md": "947f1f83390047246bd40ed2a82afa2abde46c0d189db77ead76f49c20724208",
-    ".harness/skills/contract-workflow/SKILL.md": "80bc69bef5edd6853470d3e7ef215e295690fe3626841d5731722e6ea5ad6632",
+    ".harness/skills/contract-workflow/SKILL.md": "7d7aab72e3f64356a4c64b165e1ec961e3587edec08d0f436d3490dfeab68032",
     ".harness/skills/requirement-oracle/SKILL.md": "98299d24d0ef2dd48efd2e4a52b6a46167624b3a32a16e183ddbb5eafeafc0ee",
     ".harness/skills/architecture-options/SKILL.md": "6333362f89d081c8692d23df9ef52bbb511af3ff3ee94d6cd49ecff5d045971c",
     ".claude/agents/code-explorer.md": "a79998a720ac9d84f8dd1916ccc4ea8fb1e594867fa139ca1cc0aa8fbc974208",
@@ -32,7 +32,7 @@
     ".claude/agents/test-verifier.md": "ec651a4fb2fc080496038c209404c341b2ccf09c741710c2f17e2d9bb8d64dce",
     ".codex/agents/test-verifier.toml": "6dca9b73c38ac27aed9edd967a75a512b592e17e3bc317ce3b99cc073b79dcdd",
     ".agents/skills/architecture-options/SKILL.md": "6333362f89d081c8692d23df9ef52bbb511af3ff3ee94d6cd49ecff5d045971c",
-    ".agents/skills/contract-workflow/SKILL.md": "80bc69bef5edd6853470d3e7ef215e295690fe3626841d5731722e6ea5ad6632",
+    ".agents/skills/contract-workflow/SKILL.md": "7d7aab72e3f64356a4c64b165e1ec961e3587edec08d0f436d3490dfeab68032",
     ".agents/skills/harness-import/SKILL.md": "947f1f83390047246bd40ed2a82afa2abde46c0d189db77ead76f49c20724208",
     ".agents/skills/requirement-oracle/SKILL.md": "98299d24d0ef2dd48efd2e4a52b6a46167624b3a32a16e183ddbb5eafeafc0ee",
     ".github/workflows/harness-comment-warning.yml": "b1baf0b786612e52762ea4666b449ff89f745c54a553097ee00d0a113feb63d0"

@@ -1,14 +1,14 @@
 ---
 name: contract-workflow
-description: Contract-first implementation and test workflow with implementer, test-implementer, and test-verifier subagents. Use before feature/fix level implementation or debugging. Not for typo fixes, renames, config or doc edits, or local bug fixes that keep interfaces unchanged.
+description: Contract-first implementation and test workflow with implementer, test-implementer, and test-verifier subagents. Use before feature/fix level implementation or debugging. Not for typo fixes, renames, config or doc edits, or local bug fixes.
 ---
 
 # Contract
 
-A contract is a session-scoped working file, not documentation.
+A contract is a session-scoped working file, not persisting documentation.
 
 1. Location: `agent-docs/contracts/<kebab-case-name>.md`. Excluded from Index & Staleness Management: no `index.md`, `stale.md`, or `<hex-id>-` naming.
-2. Delete `agent-docs/contracts/` before the session ends.
+2. Hooks delete `agent-docs/contracts/` on the end of the session.
 3. Only the main agent writes or amends a contract. Subagents read it and are given its path and version.
 4. Amendment: bump `version`, append a Version Log entry, re-dispatch. Never edit a contract silently.
 5. Format:
