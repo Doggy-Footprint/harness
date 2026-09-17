@@ -118,12 +118,12 @@ type-check mode on `Tests` paths alone. An error caused solely by a Signatures
 symbol not existing yet is expected. Any other error is a defect in your tests;
 fix it.
 
-## Continuation
+## Replacement instruction
 
-- Continued with a new contract version: read its Version Log entry and change
-  only the tests that entry affects.
-- Continued with an `id` and a reason or defect class: change only the tests for
-  that `id`.
+On redispatch, treat the latest instruction as a complete replacement for the
+earlier assignment rather than information to append to it. Follow only its
+contract version, affected ids, reason or defect class, and stated remaining
+scope.
 
 ## Report
 

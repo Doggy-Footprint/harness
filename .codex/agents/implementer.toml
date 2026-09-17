@@ -53,11 +53,11 @@ When the contract does not determine a behavior, or determines it inconsistently
 
 Never pick a behavior to fill a gap.
 
-## Continuation
+## Replacement instruction
 
-- Continued with a new contract version: read its Version Log entry and change
-  only what that entry affects.
-- Continued with an `id` and an expected result: change only that behavior.
+On redispatch, treat the latest instruction as a complete replacement for the
+earlier assignment rather than information to append to it. Follow only its
+contract version, affected ids, expected results, and stated remaining scope.
 
 ## Checks
 
