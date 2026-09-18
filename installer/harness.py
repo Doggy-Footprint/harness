@@ -8,6 +8,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import generate  # noqa: E402
@@ -46,6 +47,107 @@ INFO_PATHS = [
     "azure-pipelines.yml",
     "bitbucket-pipelines.yml",
 ]
+
+
+class MigrationConflict(Exception):
+    def __init__(self, conflicts: list[str]):
+        self.conflicts = conflicts
+        super().__init__("; ".join(conflicts))
+
+
+class MigrationDeclined(Exception):
+    pass
+
+
+class InvalidManifestVersion(Exception):
+    pass
+
+
+def parse_version(value: str) -> tuple[int, ...]:
+    if not isinstance(value, str) or not re.fullmatch(r"\d+\.\d+\.\d+", value):
+        raise InvalidManifestVersion(value)
+    return tuple(int(part) for part in value.split("."))
+
+
+def _stale_record_paths(target: Path) -> list[Path]:
+    docs_root = target / "agent-docs"
+    if not docs_root.is_dir():
+        return []
+    return sorted(
+        path for path in docs_root.rglob("stale.md")
+        if "stale" not in path.relative_to(docs_root).parts
+    )
+
+
+def migrate_stale_records(target: Path, dry_run: bool) -> list[str]:
+    moves: list[tuple[Path, Path]] = []
+    stale_records = _stale_record_paths(target)
+    conflicts: list[str] = []
+    for record in stale_records:
+        for line in record.read_text(encoding="utf-8").splitlines():
+            entry = line.strip()
+            if not entry:
+                continue
+            listed_path = Path(entry)
+            source = record.parent / listed_path
+            destination = record.parent / "stale" / listed_path.name
+            if listed_path.is_absolute() or ".." in listed_path.parts or source.parent != record.parent:
+                conflicts.append(f"{record.relative_to(target)}: invalid stale entry {entry!r}")
+            elif not source.is_file():
+                conflicts.append(f"{record.relative_to(target)}: listed source {entry!r} is missing")
+            elif destination.exists():
+                conflicts.append(f"{record.relative_to(target)}: archive destination {destination.relative_to(target)} already exists")
+            else:
+                moves.append((source, destination))
+
+    if conflicts:
+        raise MigrationConflict(conflicts)
+
+    planned = [f"move {source.relative_to(target)} to {destination.relative_to(target)}" for source, destination in moves]
+    planned.extend(f"remove {record.relative_to(target)}" for record in stale_records)
+    if dry_run:
+        return planned
+
+    for source, destination in moves:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        source.rename(destination)
+    for record in stale_records:
+        record.unlink()
+    return planned
+
+
+MIGRATIONS = (
+    (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
+)
+
+
+def run_migrations(
+    target: Path,
+    installed_version: str,
+    dry_run: bool,
+    input_fn: Callable[[str], str],
+) -> bool:
+    installed = parse_version(installed_version)
+    current = parse_version(VERSION)
+    if installed > current:
+        raise InvalidManifestVersion(installed_version)
+
+    for migration_version, label, migration in MIGRATIONS:
+        if not installed < migration_version <= current:
+            continue
+        planned = migration(target, dry_run=True)
+        if not planned:
+            continue
+        print(f"migration {migration_version}: {label}")
+        for item in planned:
+            print(f"- {item}")
+        if dry_run:
+            print("- confirmation required (dry-run: not requested)")
+            continue
+        if input_fn(f"Apply migration {migration_version} ({label})? [y/N] ").strip().lower() != "y":
+            raise MigrationDeclined()
+        migration(target, dry_run=False)
+    return True
 
 
 def iter_skill_dirs():
@@ -283,13 +385,18 @@ def install_claude_md(target: Path, dry_run: bool, report: dict, original_agents
 def ensure_agent_docs_dirs(target: Path, dry_run: bool, report: dict):
     for name in ("adr", "rejections", "handoff", "requirements"):
         directory = target / "agent-docs" / name
-        for fname in ("index.md", "stale.md"):
-            path = directory / fname
-            if not path.exists():
-                if not dry_run:
-                    path.parent.mkdir(parents=True, exist_ok=True)
-                    path.write_text("", encoding="utf-8")
-                report["write"].append(str((directory / fname).relative_to(target)))
+        path = directory / "index.md"
+        if not path.exists():
+            if not dry_run:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("", encoding="utf-8")
+            report["write"].append(str(path.relative_to(target)))
+        stale_gitkeep = directory / "stale" / ".gitkeep"
+        if not stale_gitkeep.exists():
+            if not dry_run:
+                stale_gitkeep.parent.mkdir(parents=True, exist_ok=True)
+                stale_gitkeep.write_text("", encoding="utf-8")
+            report["write"].append(str(stale_gitkeep.relative_to(target)))
     gitkeep = target / "agent-docs" / "synced-comments" / ".gitkeep"
     if not gitkeep.exists():
         if not dry_run:
@@ -378,7 +485,7 @@ def cmd_install(target: Path, dry_run: bool, no_ci: bool) -> int:
 
     manifest_path = target / ".harness" / "manifest.json"
     if manifest_path.exists():
-        report["conflict"].append(".harness/manifest.json already exists; already installed, use upgrade")
+        report["conflict"].append(".harness/manifest.json already exists; already installed, use update")
         print_report(report)
         return 1
 
@@ -415,7 +522,7 @@ def cmd_install(target: Path, dry_run: bool, no_ci: bool) -> int:
     return 0
 
 
-def cmd_upgrade(target: Path, dry_run: bool, no_ci: bool) -> int:
+def cmd_update(target: Path, dry_run: bool, no_ci: bool) -> int:
     report = new_report()
 
     if not is_git_worktree(target):
@@ -444,6 +551,21 @@ def cmd_upgrade(target: Path, dry_run: bool, no_ci: bool) -> int:
     check_settings_json_validity(target, report)
 
     if report["conflict"]:
+        print_report(report)
+        return 1
+
+    try:
+        run_migrations(target, manifest.get("version"), dry_run, input)
+    except InvalidManifestVersion:
+        report["conflict"].append("InvalidManifestVersion: .harness/manifest.json version is absent or malformed")
+        print_report(report)
+        return 1
+    except MigrationConflict as error:
+        report["conflict"].extend(f"MigrationConflict: {conflict}" for conflict in error.conflicts)
+        print_report(report)
+        return 1
+    except MigrationDeclined:
+        report["conflict"].append("MigrationDeclined: migration was not confirmed")
         print_report(report)
         return 1
 
@@ -648,7 +770,7 @@ def cmd_import(target: Path, as_json: bool) -> int:
 
 def main(argv) -> int:
     parser = argparse.ArgumentParser(prog="harness.py")
-    parser.add_argument("command", choices=["install", "upgrade", "doctor", "import"])
+    parser.add_argument("command", choices=["install", "update", "upgrade", "doctor", "import"])
     parser.add_argument("target")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--no-ci", action="store_true")
@@ -658,8 +780,8 @@ def main(argv) -> int:
 
     if args.command == "install":
         return cmd_install(target, args.dry_run, args.no_ci)
-    if args.command == "upgrade":
-        return cmd_upgrade(target, args.dry_run, args.no_ci)
+    if args.command in ("update", "upgrade"):
+        return cmd_update(target, args.dry_run, args.no_ci)
     if args.command == "import":
         return cmd_import(target, args.json)
     return cmd_doctor(target)

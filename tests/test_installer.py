@@ -12,9 +12,10 @@ INSTALLER = REPO_ROOT / "installer" / "harness.py"
 SKILLS = sorted(d.name for d in (REPO_ROOT / "harness" / "skills").iterdir() if d.is_dir())
 
 
-def run_installer(*args):
+def run_installer(*args, input=None):
     return subprocess.run(
         [sys.executable, str(INSTALLER)] + list(args),
+        input=input,
         capture_output=True,
         text=True,
     )
@@ -53,6 +54,17 @@ class InstallerTestCase(unittest.TestCase):
             if path.is_file():
                 files[str(path.relative_to(repo))] = hashlib.sha256(path.read_bytes()).hexdigest()
         return files
+
+    def prepare_stale_record(self, repo, directory="handoff", filename="1234567890abcdef-x.md"):
+        docs = repo / "agent-docs" / directory
+        source = docs / filename
+        source.write_text("# Stale\n")
+        (docs / "stale.md").write_text(f"{filename}\n")
+        manifest_path = repo / ".harness" / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["version"] = "0.2.0"
+        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+        return docs, source, manifest_path
 
     def install_hook_configs(self):
         repo = self.install()
@@ -352,8 +364,30 @@ class TestNormal(InstallerTestCase):
 
     def test_requirements_docs_dir_is_created(self):
         repo = self.install()
-        for fname in ("index.md", "stale.md"):
-            self.assertTrue((repo / "agent-docs" / "requirements" / fname).is_file(), fname)
+        self.assertTrue((repo / "agent-docs" / "requirements" / "index.md").is_file())
+        self.assertFalse((repo / "agent-docs" / "requirements" / "stale.md").exists())
+        self.assertTrue((repo / "agent-docs" / "requirements" / "stale" / ".gitkeep").is_file())
+
+    def test_c1_update_migrates_stale_records_after_confirmation(self):
+        repo = self.install()
+        docs, source, manifest_path = self.prepare_stale_record(repo)
+
+        result = run_installer("update", str(repo), input="y\n")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("stale", (result.stdout + result.stderr).lower())
+        self.assertFalse(source.exists())
+        self.assertEqual((docs / "stale" / source.name).read_text(), "# Stale\n")
+        self.assertFalse((docs / "stale.md").exists())
+        self.assertNotEqual(json.loads(manifest_path.read_text())["version"], "0.2.0")
+
+    def test_archived_stale_docs_are_excluded_from_index_validation(self):
+        repo = self.install()
+        archived = repo / "agent-docs" / "handoff" / "stale" / "1234567890abcdef-x.md"
+        archived.write_text("# Archived\n")
+
+        verify = self.run_verify_rules(repo)
+        self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
 
     def test_import_reports_the_modified_file_with_a_diff(self):
         repo = self.install()
@@ -389,6 +423,16 @@ class TestNormal(InstallerTestCase):
 
 
 class TestBoundary(InstallerTestCase):
+    def test_c2_upgrade_is_a_compatible_alias_and_readme_introduces_update(self):
+        repo = self.install()
+
+        result = run_installer("upgrade", str(repo))
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        readme = (REPO_ROOT / "README.md").read_text()
+        self.assertIn("installer/harness.py update", readme)
+        self.assertNotIn("installer/harness.py upgrade", readme)
+
     def test_b_claude_md_only(self):
         repo = self.make_repo()
         (repo / "CLAUDE.md").write_text("hello")
@@ -473,6 +517,47 @@ class TestBoundary(InstallerTestCase):
 
 
 class TestError(InstallerTestCase):
+    def test_c3_migration_conflicts_are_reported_before_any_change(self):
+        repo = self.install()
+        docs, source, manifest_path = self.prepare_stale_record(repo)
+        (docs / "stale.md").write_text(f"missing.md\n{source.name}\n")
+        destination = docs / "stale" / source.name
+        destination.write_text("already archived\n")
+        before = self.snapshot(repo)
+
+        result = run_installer("update", str(repo), input="y\n")
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        output = result.stdout + result.stderr
+        self.assertIn("missing.md", output)
+        self.assertIn(source.name, output)
+        self.assertEqual(before, self.snapshot(repo))
+        self.assertTrue((docs / "stale.md").exists())
+        self.assertTrue(source.exists())
+        self.assertEqual(destination.read_text(), "already archived\n")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.2.0")
+
+    def test_c6_invalid_manifest_version_makes_no_changes(self):
+        for invalid in (None, "not-a-version"):
+            with self.subTest(version=invalid):
+                repo = self.install()
+                docs, source, manifest_path = self.prepare_stale_record(repo)
+                manifest = json.loads(manifest_path.read_text())
+                if invalid is None:
+                    del manifest["version"]
+                else:
+                    manifest["version"] = invalid
+                manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+                before = self.snapshot(repo)
+
+                result = run_installer("update", str(repo), input="y\n")
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("version", (result.stdout + result.stderr).lower())
+                self.assertEqual(before, self.snapshot(repo))
+                self.assertTrue((docs / "stale.md").exists())
+                self.assertTrue(source.exists())
+
     def test_e_existing_agent_file_conflicts(self):
         repo = self.make_repo()
         (repo / ".claude" / "agents").mkdir(parents=True)
@@ -627,6 +712,38 @@ class TestError(InstallerTestCase):
 
 
 class TestEdge(InstallerTestCase):
+    def test_c4_declining_any_migration_confirmation_preserves_files(self):
+        for response in ("n\n", "no\n", "not-sure\n", "\n"):
+            with self.subTest(response=response):
+                repo = self.install()
+                docs, source, manifest_path = self.prepare_stale_record(repo)
+                before = self.snapshot(repo)
+
+                result = run_installer("update", str(repo), input=response)
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("migration", (result.stdout + result.stderr).lower())
+                self.assertEqual(before, self.snapshot(repo))
+                self.assertTrue((docs / "stale.md").exists())
+                self.assertTrue(source.exists())
+                self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.2.0")
+
+    def test_c5_dry_run_reports_migration_without_writing(self):
+        repo = self.install()
+        docs, source, manifest_path = self.prepare_stale_record(repo)
+        before = self.snapshot(repo)
+
+        result = run_installer("update", str(repo), "--dry-run", input="y\n")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        output = (result.stdout + result.stderr).lower()
+        self.assertIn("migration", output)
+        self.assertIn("stale", output)
+        self.assertEqual(before, self.snapshot(repo))
+        self.assertTrue((docs / "stale.md").exists())
+        self.assertTrue(source.exists())
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.2.0")
+
     def test_d_husky_hooks_path_untouched(self):
         repo = self.make_repo()
         (repo / ".husky").mkdir()

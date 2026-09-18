@@ -1,6 +1,6 @@
 # harness
 
-Claude Code와 Codex 양쪽에서 동작하는, **임의의 git 저장소에 설치·업그레이드 가능한 AI 에이전트 하네스**입니다. 문서화 규칙, contract 기반 구현/테스트 워크플로우, 서브에이전트, 라이프사이클 훅, CI 체크를 하나의 패키지로 배포하고 버전 관리합니다.
+Claude Code와 Codex 양쪽에서 동작하는, **임의의 git 저장소에 설치·갱신 가능한 AI 에이전트 하네스**입니다. 문서화 규칙, contract 기반 구현/테스트 워크플로우, 서브에이전트, 라이프사이클 훅, CI 체크를 하나의 패키지로 배포하고 버전 관리합니다.
 
 ## 왜 만들었나
 
@@ -12,9 +12,9 @@ AI 에이전트로 작업할수록 문서·주석·docstring이 통제 불가능
 서브에이전트 정의를 `harness/agents/<name>.md` 하나(공통 본문 + `claude.*`/`codex.*` frontmatter)로만 작성하면, `installer/generate.py`가 Claude용 Markdown+frontmatter와 Codex용 TOML로 각각 렌더링합니다. 훅 설정도 동일하게 `hooks.spec.json` 하나에서 `.claude/settings.json`과 `.codex/hooks.json`을 생성합니다.
 > 두 플랫폼 사이의 차이를 방지
 
-### 2. 3-way sha 비교 기반 안전한 업그레이드
-`upgrade`는 `.harness/manifest.json`에 기록된 이전 sha256, 현재 디스크 상태, 새로 렌더링한 내용을 3방향으로 비교해 "하네스 원본과 동일 → 갱신", "사용자가 수정함 → 건너뛰고 보고", "더 이상 소유하지 않음 → 미변경 시 삭제"를 구분합니다. 건너뛴 파일은 manifest에 이전 sha가 그대로 남아, 이후 `doctor`가 drift를 계속 잡아냅니다.
-> 하네스가 배포하는 파일이라도 사용자가 수정했다면 그건 존중해야 할 로컬 변경입니다. 무조건 덮어쓰는 업그레이드는 신뢰할 수 없는 도구가 됩니다.
+### 2. 3-way sha 비교 기반 안전한 갱신
+`update`는 `.harness/manifest.json`에 기록된 이전 sha256, 현재 디스크 상태, 새로 렌더링한 내용을 3방향으로 비교해 "하네스 원본과 동일 → 갱신", "사용자가 수정함 → 건너뛰고 보고", "더 이상 소유하지 않음 → 미변경 시 삭제"를 구분합니다. 건너뛴 파일은 manifest에 이전 sha가 그대로 남아, 이후 `doctor`가 drift를 계속 잡아냅니다.
+> 하네스가 배포하는 파일이라도 사용자가 수정했다면 그건 존중해야 할 로컬 변경입니다. 무조건 덮어쓰는 갱신은 신뢰할 수 없는 도구가 됩니다.
 
 ### 3. Contract 기반 구현/테스트 워크플로우 (`contract-workflow` 스킬)
 구현과 테스트를 담당하는 두 서브에이전트(`implementer`, `test-implementer`)를 같은 Contract 문서(시그니처·엣지케이스·Intent)만 보고 서로 결과를 보지 못한 채 병렬로 작업시킵니다. 테스트의 기대값은 코드 실행이 아니라 명세에서만 도출하도록 강제합니다. 이후 `test-verifier`가 구현 코드 없이 테스트 스위트만 감사하고, 발견한 허점을 실제 파일에 주입(`Seed`)해 실증합니다.
@@ -36,17 +36,17 @@ AI 에이전트로 작업할수록 문서·주석·docstring이 통제 불가능
 
 ```bash
 python3 installer/harness.py install <target> [--dry-run] [--no-ci]
-python3 installer/harness.py upgrade <target> [--dry-run] [--no-ci]
+python3 installer/harness.py update <target> [--dry-run] [--no-ci]
 python3 installer/harness.py doctor <target>
 python3 installer/harness.py import <target> [--json]
 ```
 
 - `install`은 대상이 git worktree가 아니거나, 이미 설치돼 있거나, 충돌이 있으면 아무것도 쓰지 않고 종료합니다.
-- `upgrade`는 하네스가 소유한 파일만 갱신하고, 사용자가 수정한 파일은 건너뜁니다.
-- `--no-ci`는 `.github/workflows/harness-comment-warning.yml` CI 체크 워크플로우를 설치/업그레이드 대상에서 제외합니다. GitHub Actions를 쓰지 않는 저장소에 설치할 때 사용합니다.
+- `update`는 하네스가 소유한 파일만 갱신하고, 사용자가 수정한 파일은 건너뜁니다.
+- `--no-ci`는 `.github/workflows/harness-comment-warning.yml` CI 체크 워크플로우를 설치/갱신 대상에서 제외합니다. GitHub Actions를 쓰지 않는 저장소에 설치할 때 사용합니다.
 - `import`는 설치된 대상 저장소가 하네스 파일을 어떻게 수정했는지 읽어 오는 읽기 전용 명령입니다. 아무것도 쓰지 않으며, 해석·제안·브랜치 생성은 `harness-import` 스킬이 담당합니다.
 - `doctor`는 설치 상태(파일 sha, 훅 등록, 문서 블록, git 훅 연동)를 점검하는 읽기 전용 명령입니다.
-- 이 저장소 자체도 자신을 설치해 도그푸딩합니다. `harness/`를 수정한 뒤에는 `python3 installer/harness.py upgrade .`로 반영합니다.
+- 이 저장소 자체도 자신을 설치해 도그푸딩합니다. `harness/`를 수정한 뒤에는 `python3 installer/harness.py update .`로 반영합니다.
 
 ## 테스트
 

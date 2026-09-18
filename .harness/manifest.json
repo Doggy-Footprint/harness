@@ -1,9 +1,9 @@
 {
-  "version": "0.2.0",
+  "version": "0.3.0",
   "files": {
     ".harness/config.default.json": "c21d7705713f2a9bc8cd9527d87b8964b58c7ae1b5e63e83446371b2c68a4dbd",
-    ".harness/VERSION": "1f930dd1f133c1f97a94fe3acb8db34372cf4c01ffdb2b3ff4ca72f9494121e9",
-    ".harness/instructions/harness-block.md": "529b520e54d1f99d7299af6b0e8f7c114873f80c34f86b24a56b4caa678b4f7a",
+    ".harness/VERSION": "d915cc95d6ca8f47ae297713ed46d4e5c5d99ddd29fc3c61e263bdf305f2b5b0",
+    ".harness/instructions/harness-block.md": "afae59f58b8799d7413c98ab821c36f0e633f0f0610b32cb197cc5aeccc4b57e",
     ".harness/bin/seed.py": "39d4168079cd5665bba06dfe030db7b8225d5309f80e8b8100376126fa4f3336",
     ".harness/ci/harness-comment-warning.yml": "b1baf0b786612e52762ea4666b449ff89f745c54a553097ee00d0a113feb63d0",
     ".harness/agents/code-explorer.md": "35fe932dbaa0a3ac3a153743052c192ea11061586e8279737a0f9012b45c4653",
@@ -18,7 +18,7 @@
     ".harness/git/warn_new_comments.py": "0feef0063473a6279153eff875d08251a45e2265cd82f78295c0f8f83d4c0b8c",
     ".harness/git/post-merge": "30b2d3e0641707013bfb5e4254a07ab74d950e0d8dad922cd0838de76cb53aca",
     ".harness/git/pre-commit": "7b1cfdc9e80f7ca2511ffe6bd3f0c08b37694b11fdcf0a57617572f3dd7fe792",
-    ".harness/git/verify_rules.py": "9584a0b45382199022a23addbb76916958089cf9a7d7670d6cce0f0a2dd61f6b",
+    ".harness/git/verify_rules.py": "b72d5786aa0d83d5c190f26a25016d04e35ee708e3a2503f617996ef4c462198",
     ".harness/skills/harness-import/SKILL.md": "947f1f83390047246bd40ed2a82afa2abde46c0d189db77ead76f49c20724208",
     ".harness/skills/contract-workflow/SKILL.md": "92183b3f9de9788b92a336fe690c8425c1b2b4753e1bf1411d5dee4be93497f0",
     ".harness/skills/requirement-oracle/SKILL.md": "98299d24d0ef2dd48efd2e4a52b6a46167624b3a32a16e183ddbb5eafeafc0ee",
