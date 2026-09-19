@@ -98,7 +98,7 @@ def _index_block_matches(block: str, filename: str) -> bool:
 def _write_index_blocks(blocks: list[str]) -> str:
     if not blocks:
         return ""
-    return "---\n".join(block.rstrip("\n") for block in blocks) + "\n"
+    return "\n---\n".join(block.rstrip("\n") for block in blocks) + "\n"
 
 
 def _write_stale_archive(blocks: list[str]) -> str:

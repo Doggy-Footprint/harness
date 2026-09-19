@@ -409,6 +409,28 @@ class TestNormal(InstallerTestCase):
         self.assertTrue(archive_format.strip())
         self.assertNotIn(source.name, archive_format)
 
+    def test_c1_update_keeps_retained_index_blocks_separated_by_newlines(self):
+        repo = self.install()
+        docs, _, _, stale_block = self.prepare_stale_record(repo)
+        first = (
+            "File: 1111111111111111-first.md\n"
+            "Summary: first retained record\n"
+            "Related Files: none\n"
+            "Related Symbols: none\n"
+        )
+        second = (
+            "File: 2222222222222222-second.md\n"
+            "Summary: second retained record\n"
+            "Related Files: none\n"
+            "Related Symbols: none\n"
+        )
+        (docs / "index.md").write_text(first + "\n---\n" + stale_block + "\n---\n" + second)
+
+        result = run_installer("update", str(repo), input="y\ny\n")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual((docs / "index.md").read_text(), first.rstrip("\n") + "\n---\n" + second)
+
     def test_archived_stale_docs_are_excluded_from_index_validation(self):
         repo = self.install()
         archived = repo / "agent-docs" / "handoff" / "stale" / "1234567890abcdef-x.md"
