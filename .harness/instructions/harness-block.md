@@ -27,7 +27,7 @@ Do not use comments to narrate code, restate names/types/control flow, provide t
    Related Files: <comma-separated repo paths>
    Related Symbols: <comma-separated function/class/module names>
    ````
-4. When marking a document stale, remove its entry from `index.md` and move it to `stale/`, preserving its filename.
+4. When marking a document stale, remove its entry from `index.md` and move it to `stale/`.
 
 ## Shared Comment & Docstring Synchronization Rules
 
