@@ -127,6 +127,10 @@ Required file structure:
 - `## Open Questions`
 - `## Contract Snapshot` (contract content at stop, or `none`)
 
+The contracts directory is deleted when the session ends, so every section must stand on its own:
+never point at a contract file or refer to contract content that is not written out in this handoff.
+`## Contract Snapshot` holds the contract text inline; any other section that needs it restates it.
+
 When resuming, never delete or edit existing Failed Attempts rows; only append.
 
 When the task completes, remove its entry from `index.md` and move the file to `stale/`.
