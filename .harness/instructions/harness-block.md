@@ -18,7 +18,7 @@ A comment/docstring is allowed only when it records a non-obvious:
 Do not use comments to narrate code, restate names/types/control flow, provide tutorials, or justify ordinary implementation choices.
 
 ## Index & Staleness Management
-1. Every agent-managed directory (e.g., `agent-docs/adr`, `agent-docs/rejections`, `agent-docs/handoff`) must contain `index.md` and a `stale/` directory.
+1. Every agent-managed directory (e.g., `agent-docs/adr`, `agent-docs/rejections`, `agent-docs/handoff`) must contain `index.md`, `stale.md`, and a `stale/` directory.
 2. File Naming: `<16-char-hex-id>-<kebab-case-name>.md` (e.g., `3f8a9c12b0e45d67-auth-flow.md`).
 3. `index.md` Format: entries separated by `---`:
    ````
@@ -27,7 +27,7 @@ Do not use comments to narrate code, restate names/types/control flow, provide t
    Related Files: <comma-separated repo paths>
    Related Symbols: <comma-separated function/class/module names>
    ````
-4. When marking a document stale, remove its entry from `index.md` and move it to `stale/`.
+4. When marking a document stale, remove its entry from `index.md`, append that index block verbatim to `stale.md`, and move the document to `stale/`.
 
 ## Shared Comment & Docstring Synchronization Rules
 

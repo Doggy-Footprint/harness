@@ -69,6 +69,10 @@ def parse_version(value: str) -> tuple[int, ...]:
     return tuple(int(part) for part in value.split("."))
 
 
+def format_version(version: tuple[int, ...]) -> str:
+    return ".".join(str(part) for part in version)
+
+
 def _stale_record_paths(target: Path) -> list[Path]:
     docs_root = target / "agent-docs"
     if not docs_root.is_dir():
@@ -79,12 +83,48 @@ def _stale_record_paths(target: Path) -> list[Path]:
     )
 
 
+STALE_ARCHIVE_TITLE = "# Stale Index Archive\n"
+STALE_ARCHIVE_HEADER = STALE_ARCHIVE_TITLE + "<!-- harness:stale-index-archive -->\n\n"
+
+
+def _index_blocks(content: str) -> list[str]:
+    return [block for block in re.split(r"(?m)^---[ \t]*\n?", content) if block.strip()]
+
+
+def _index_block_matches(block: str, filename: str) -> bool:
+    return bool(re.search(rf"(?m)^File:[ \t]*{re.escape(filename)}[ \t]*$", block))
+
+
+def _write_index_blocks(blocks: list[str]) -> str:
+    if not blocks:
+        return ""
+    return "---\n".join(block.rstrip("\n") for block in blocks) + "\n"
+
+
+def _write_stale_archive(blocks: list[str]) -> str:
+    archive = STALE_ARCHIVE_TITLE + "\n"
+    for block in blocks:
+        archive += block.rstrip("\n") + "\n---\n"
+    return archive
+
+
 def migrate_stale_records(target: Path, dry_run: bool) -> list[str]:
     moves: list[tuple[Path, Path]] = []
     stale_records = _stale_record_paths(target)
     conflicts: list[str] = []
+    index_updates: dict[Path, str] = {}
+    archive_updates: dict[Path, str] = {}
+    destinations: set[Path] = set()
     for record in stale_records:
-        for line in record.read_text(encoding="utf-8").splitlines():
+        record_content = record.read_text(encoding="utf-8")
+        if record_content.startswith(STALE_ARCHIVE_TITLE):
+            continue
+
+        index_path = record.parent / "index.md"
+        index_blocks = _index_blocks(index_path.read_text(encoding="utf-8")) if index_path.is_file() else []
+        archived_blocks: list[str] = []
+        remaining_blocks = index_blocks
+        for line in record_content.splitlines():
             entry = line.strip()
             if not entry:
                 continue
@@ -97,27 +137,62 @@ def migrate_stale_records(target: Path, dry_run: bool) -> list[str]:
                 conflicts.append(f"{record.relative_to(target)}: listed source {entry!r} is missing")
             elif destination.exists():
                 conflicts.append(f"{record.relative_to(target)}: archive destination {destination.relative_to(target)} already exists")
+            elif destination in destinations:
+                conflicts.append(f"{record.relative_to(target)}: archive destination {destination.relative_to(target)} is listed more than once")
             else:
+                destinations.add(destination)
                 moves.append((source, destination))
+                matching_blocks = [
+                    block for block in remaining_blocks if _index_block_matches(block, listed_path.name)
+                ]
+                archived_blocks.extend(matching_blocks)
+                remaining_blocks = [block for block in remaining_blocks if block not in matching_blocks]
+
+        if index_path.is_file() and remaining_blocks != index_blocks:
+            index_updates[index_path] = _write_index_blocks(remaining_blocks)
+        archive_updates[record] = _write_stale_archive(archived_blocks)
 
     if conflicts:
         raise MigrationConflict(conflicts)
 
     planned = [f"move {source.relative_to(target)} to {destination.relative_to(target)}" for source, destination in moves]
-    planned.extend(f"remove {record.relative_to(target)}" for record in stale_records)
+    planned.extend(f"update {path.relative_to(target)}" for path in sorted(index_updates))
+    planned.extend(f"archive stale index records in {path.relative_to(target)}" for path in sorted(archive_updates))
     if dry_run:
         return planned
 
     for source, destination in moves:
         destination.parent.mkdir(parents=True, exist_ok=True)
         source.rename(destination)
-    for record in stale_records:
-        record.unlink()
+    for path, content in index_updates.items():
+        path.write_text(content, encoding="utf-8")
+    for path, content in archive_updates.items():
+        path.write_text(content, encoding="utf-8")
+    return planned
+
+
+def migrate_stale_index_logs(target: Path, dry_run: bool) -> list[str]:
+    updates: dict[Path, str] = {}
+    for record in _stale_record_paths(target):
+        content = record.read_text(encoding="utf-8")
+        if content.startswith(STALE_ARCHIVE_HEADER):
+            continue
+        if content.startswith(STALE_ARCHIVE_TITLE):
+            updates[record] = STALE_ARCHIVE_HEADER + content[len(STALE_ARCHIVE_TITLE):].lstrip("\n")
+        else:
+            updates[record] = STALE_ARCHIVE_HEADER + content
+
+    planned = [f"format stale index archive {path.relative_to(target)}" for path in sorted(updates)]
+    if dry_run:
+        return planned
+    for path, content in updates.items():
+        path.write_text(content, encoding="utf-8")
     return planned
 
 
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
+    (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
 )
 
 
@@ -132,20 +207,31 @@ def run_migrations(
     if installed > current:
         raise InvalidManifestVersion(installed_version)
 
-    for migration_version, label, migration in MIGRATIONS:
-        if not installed < migration_version <= current:
-            continue
+    applicable_migrations = [
+        (migration_version, label, migration)
+        for migration_version, label, migration in sorted(MIGRATIONS, key=lambda migration: migration[0])
+        if installed < migration_version <= current
+    ]
+    planned_migrations = []
+    for migration_version, label, migration in applicable_migrations:
         planned = migration(target, dry_run=True)
-        if not planned:
-            continue
-        print(f"migration {migration_version}: {label}")
+        planned_migrations.append((migration_version, label, migration, planned))
+        version = format_version(migration_version)
+        print(f"migration {version}: {label}")
         for item in planned:
             print(f"- {item}")
         if dry_run:
             print("- confirmation required (dry-run: not requested)")
-            continue
-        if input_fn(f"Apply migration {migration_version} ({label})? [y/N] ").strip().lower() != "y":
+
+    if dry_run:
+        return True
+
+    for migration_version, label, _migration, _planned in planned_migrations:
+        version = format_version(migration_version)
+        if input_fn(f"Apply migration {version} ({label})? [y/N] ").strip().lower() != "y":
             raise MigrationDeclined()
+
+    for _migration_version, _label, migration, _planned in planned_migrations:
         migration(target, dry_run=False)
     return True
 
@@ -391,6 +477,12 @@ def ensure_agent_docs_dirs(target: Path, dry_run: bool, report: dict):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text("", encoding="utf-8")
             report["write"].append(str(path.relative_to(target)))
+        stale_record = directory / "stale.md"
+        if not stale_record.exists():
+            if not dry_run:
+                stale_record.parent.mkdir(parents=True, exist_ok=True)
+                stale_record.write_text(STALE_ARCHIVE_HEADER, encoding="utf-8")
+            report["write"].append(str(stale_record.relative_to(target)))
         stale_gitkeep = directory / "stale" / ".gitkeep"
         if not stale_gitkeep.exists():
             if not dry_run:

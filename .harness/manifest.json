@@ -1,9 +1,9 @@
 {
-  "version": "0.3.0",
+  "version": "0.4.0",
   "files": {
     ".harness/config.default.json": "c21d7705713f2a9bc8cd9527d87b8964b58c7ae1b5e63e83446371b2c68a4dbd",
-    ".harness/VERSION": "d915cc95d6ca8f47ae297713ed46d4e5c5d99ddd29fc3c61e263bdf305f2b5b0",
-    ".harness/instructions/harness-block.md": "c88cfaab366e6dd3fb3b14bda6c31f260c4d1cc54be9b795b8918fceaa81ea5b",
+    ".harness/VERSION": "40b8eb4000a913a7791090535f291d3d369874162a89ef3c9e3d4e887a1b9e79",
+    ".harness/instructions/harness-block.md": "79c1dbacebb5257a6f4c791b92c570a6ed6bdd19df1b85bb6cbb0c4abee48c65",
     ".harness/bin/seed.py": "39d4168079cd5665bba06dfe030db7b8225d5309f80e8b8100376126fa4f3336",
     ".harness/ci/harness-comment-warning.yml": "b1baf0b786612e52762ea4666b449ff89f745c54a553097ee00d0a113feb63d0",
     ".harness/agents/code-explorer.md": "35fe932dbaa0a3ac3a153743052c192ea11061586e8279737a0f9012b45c4653",

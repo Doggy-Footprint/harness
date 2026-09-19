@@ -60,11 +60,18 @@ class InstallerTestCase(unittest.TestCase):
         source = docs / filename
         source.write_text("# Stale\n")
         (docs / "stale.md").write_text(f"{filename}\n")
+        index_block = (
+            f"File: {filename}\n"
+            "Summary: retained archive metadata\n"
+            "Related Files: tests/test_installer.py\n"
+            "Related Symbols: InstallerTestCase\n"
+        )
+        (docs / "index.md").write_text(index_block)
         manifest_path = repo / ".harness" / "manifest.json"
         manifest = json.loads(manifest_path.read_text())
         manifest["version"] = "0.2.0"
         manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
-        return docs, source, manifest_path
+        return docs, source, manifest_path, index_block
 
     def install_hook_configs(self):
         repo = self.install()
@@ -365,21 +372,42 @@ class TestNormal(InstallerTestCase):
     def test_requirements_docs_dir_is_created(self):
         repo = self.install()
         self.assertTrue((repo / "agent-docs" / "requirements" / "index.md").is_file())
-        self.assertFalse((repo / "agent-docs" / "requirements" / "stale.md").exists())
+        self.assertTrue((repo / "agent-docs" / "requirements" / "stale.md").is_file())
         self.assertTrue((repo / "agent-docs" / "requirements" / "stale" / ".gitkeep").is_file())
 
     def test_c1_update_migrates_stale_records_after_confirmation(self):
         repo = self.install()
-        docs, source, manifest_path = self.prepare_stale_record(repo)
+        docs, source, manifest_path, index_block = self.prepare_stale_record(repo)
 
-        result = run_installer("update", str(repo), input="y\n")
+        result = run_installer("update", str(repo), input="y\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("stale", (result.stdout + result.stderr).lower())
         self.assertFalse(source.exists())
         self.assertEqual((docs / "stale" / source.name).read_text(), "# Stale\n")
-        self.assertFalse((docs / "stale.md").exists())
+        self.assertNotIn(index_block, (docs / "index.md").read_text())
+        stale_log = (docs / "stale.md").read_text()
+        self.assertIn(index_block, stale_log)
+        archive_format = stale_log.replace(index_block, "")
+        self.assertTrue(archive_format.strip())
+        self.assertNotIn(f"{source.name}\n", archive_format)
         self.assertNotEqual(json.loads(manifest_path.read_text())["version"], "0.2.0")
+
+    def test_c2_update_archives_unindexed_legacy_record_and_retires_filename_line(self):
+        repo = self.install()
+        docs, source, _, index_block = self.prepare_stale_record(repo)
+        (docs / "index.md").write_text((docs / "index.md").read_text().replace(index_block, ""))
+
+        result = run_installer("update", str(repo), input="y\ny\n")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertFalse(source.exists())
+        self.assertEqual((docs / "stale" / source.name).read_text(), "# Stale\n")
+        stale_log = docs / "stale.md"
+        self.assertTrue(stale_log.is_file())
+        archive_format = stale_log.read_text()
+        self.assertTrue(archive_format.strip())
+        self.assertNotIn(source.name, archive_format)
 
     def test_archived_stale_docs_are_excluded_from_index_validation(self):
         repo = self.install()
@@ -517,9 +545,25 @@ class TestBoundary(InstallerTestCase):
 
 
 class TestError(InstallerTestCase):
+    def test_c3_malformed_legacy_stale_entry_reports_conflict_without_changes(self):
+        repo = self.install()
+        docs, _, _, _ = self.prepare_stale_record(repo)
+        malformed_entry = "../outside.md"
+        (docs.parent / "outside.md").write_text("# Outside handoff\n")
+        (docs / "stale.md").write_text(f"{malformed_entry}\n")
+        before = self.snapshot(repo)
+
+        result = run_installer("update", str(repo), input="y\ny\n")
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        output = result.stdout + result.stderr
+        self.assertIn("conflict", output.lower())
+        self.assertIn(malformed_entry, output)
+        self.assertEqual(before, self.snapshot(repo))
+
     def test_c3_migration_conflicts_are_reported_before_any_change(self):
         repo = self.install()
-        docs, source, manifest_path = self.prepare_stale_record(repo)
+        docs, source, manifest_path, _ = self.prepare_stale_record(repo)
         (docs / "stale.md").write_text(f"missing.md\n{source.name}\n")
         destination = docs / "stale" / source.name
         destination.write_text("already archived\n")
@@ -541,7 +585,7 @@ class TestError(InstallerTestCase):
         for invalid in (None, "not-a-version"):
             with self.subTest(version=invalid):
                 repo = self.install()
-                docs, source, manifest_path = self.prepare_stale_record(repo)
+                docs, source, manifest_path, _ = self.prepare_stale_record(repo)
                 manifest = json.loads(manifest_path.read_text())
                 if invalid is None:
                     del manifest["version"]
@@ -712,11 +756,40 @@ class TestError(InstallerTestCase):
 
 
 class TestEdge(InstallerTestCase):
+    def test_c4_update_runs_03_then_04_migrations_once_each(self):
+        repo = self.install()
+        docs, source, _, index_block = self.prepare_stale_record(repo)
+
+        result = run_installer("update", str(repo), input="y\ny\n")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        output = result.stdout + result.stderr
+        announcement_versions = [
+            match.group(0)
+            for line in output.splitlines()
+            if line.startswith("migration ")
+            for match in [re.search(r"\b0\.[34]\.0\b", line)]
+            if match
+        ]
+        self.assertEqual(announcement_versions, ["0.3.0", "0.4.0"], output)
+        self.assertFalse(source.exists())
+        self.assertEqual((docs / "stale" / source.name).read_text(), "# Stale\n")
+        self.assertNotIn(index_block, (docs / "index.md").read_text())
+        stale_log = (docs / "stale.md").read_text()
+        self.assertEqual(
+            stale_log.splitlines()[:2],
+            ["# Stale Index Archive", "<!-- harness:stale-index-archive -->"],
+        )
+        self.assertIn(index_block, stale_log)
+        archive_format = stale_log.replace(index_block, "")
+        self.assertTrue(archive_format.strip())
+        self.assertNotIn(f"{source.name}\n", archive_format)
+
     def test_c4_declining_any_migration_confirmation_preserves_files(self):
         for response in ("n\n", "no\n", "not-sure\n", "\n"):
             with self.subTest(response=response):
                 repo = self.install()
-                docs, source, manifest_path = self.prepare_stale_record(repo)
+                docs, source, manifest_path, _ = self.prepare_stale_record(repo)
                 before = self.snapshot(repo)
 
                 result = run_installer("update", str(repo), input=response)
@@ -728,9 +801,23 @@ class TestEdge(InstallerTestCase):
                 self.assertTrue(source.exists())
                 self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.2.0")
 
+    def test_c4_declining_second_migration_confirmation_preserves_files(self):
+        repo = self.install()
+        docs, source, manifest_path, _ = self.prepare_stale_record(repo)
+        before = self.snapshot(repo)
+
+        result = run_installer("update", str(repo), input="y\nn\n")
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("migration", (result.stdout + result.stderr).lower())
+        self.assertEqual(before, self.snapshot(repo))
+        self.assertTrue((docs / "stale.md").exists())
+        self.assertTrue(source.exists())
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.2.0")
+
     def test_c5_dry_run_reports_migration_without_writing(self):
         repo = self.install()
-        docs, source, manifest_path = self.prepare_stale_record(repo)
+        docs, source, manifest_path, _ = self.prepare_stale_record(repo)
         before = self.snapshot(repo)
 
         result = run_installer("update", str(repo), "--dry-run", input="y\n")
