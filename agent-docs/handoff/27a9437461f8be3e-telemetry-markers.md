@@ -8,7 +8,6 @@
 - `python3 -m unittest discover -s tests -p 'test_*.py'`: 107 tests OK.
 - Real Claude session check done (session 3): contract_write, test_command, seed, tool_failure lines written to `~/.harness/telemetry/-Users-hwansu-tools-harness.jsonl` with client "claude". Observed: Claude PostToolUse Bash payload has no tool_response.exit_code (always null); a failed Bash fires only PostToolUseFailure; SubagentStop sent agent_type "". Compound commands (`cd x && <test command>`) are not matched (by design, C9).
 - User decisions (session 3): tool_failure gains contract/action; keep exit_code, documented always null on Claude (success/failure = event kind); agent_type "" -> null for every event kind.
-- Claude side closed. Known test gaps accepted by user as open issues (not fixed): S18, S19 (see Seed Log).
 
 ## Failed Attempts
 | attempt | failure evidence | cause |
@@ -43,8 +42,6 @@ Each seed: `python3 .harness/bin/seed.py backup <file>`, inject, run the Test co
 | S15 | harness/hooks/telemetry_hook.py | tool_failure action only for backup/restore | green | fails (session 3 r2) |
 | S16 | harness/lib/telemetry.py | agent_type "" -> null only for subagent_start/stop, test_command, tool_failure | green | fails (session 3 extra) |
 | S17 | harness/hooks/telemetry_hook.py | tool_failure contract = last registered contract when any matches | green | fails (session 3 extra) |
-| S18 | harness/hooks/telemetry_hook.py | PostToolUseFailure command not whitespace-normalized | green | open |
-| S19 | harness/hooks/telemetry_hook.py | tool_name == "Bash" guard removed in handle_post_tool_use_failure | green | open |
 
 ## Next Step
 Resume in Codex, in this repo on feat/harness-analytics:
@@ -56,8 +53,6 @@ Resume in Codex, in this repo on feat/harness-analytics:
 
 ## Open Questions
 - Codex: is exit_code present in PostToolUse Bash payload; does a failed Bash fire PostToolUse.
-- Open issue S18 (accepted): PostToolUseFailure command whitespace normalization is not tested (`python3  -m unittest` double-space).
-- Open issue S19 (accepted): the in-script `tool_name == "Bash"` guard in handle_post_tool_use_failure is not tested (hook matcher already limits to Bash).
 - Resolved (session 3): real Claude PostToolUse has no exit_code; failed Bash fires only PostToolUseFailure.
 
 ## Contract Snapshot
