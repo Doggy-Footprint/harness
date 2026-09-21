@@ -49,6 +49,21 @@ Test command: <one shell command that runs the full suite, including Tests>
 
 Use the model and effort set in each agent definition (`.claude/agents/`, `.codex/agents/`). Override them only when the user names a model.
 
+# Telemetry Markers
+
+The main agent records the semantic lifecycle of every contract-workflow run. Choose one stable run ID for the run and use the contract filename without `.md` and its current version in the start marker. Marker commands are best-effort: invoke them normally, never inspect their result, and never let a failure change the workflow.
+
+```sh
+python3 .harness/bin/workflow_marker.py start --run-id ID --contract NAME --contract-version N
+python3 .harness/bin/workflow_marker.py phase --run-id ID --phase implement_test
+python3 .harness/bin/workflow_marker.py phase --run-id ID --phase verify
+python3 .harness/bin/workflow_marker.py phase --run-id ID --phase amend
+python3 .harness/bin/workflow_marker.py verifier --run-id ID --round N --result pass|retry|limit --findings N --seeds-run N --seeds-detected N
+python3 .harness/bin/workflow_marker.py end --run-id ID --status complete|handoff|aborted
+```
+
+Emit `start` after the contract is confirmed and immediately before dispatching implementation and tests. Emit `implement_test` before that parallel step and `verify` before dispatching a verifier. Emit one `verifier` marker after every verifier result: `pass` when it passes, `retry` when its findings send work back through amend, and `limit` when the workflow limit stops further correction. Its round is the verifier round; use zero for counts that did not run. Emit `amend` before every amendment or correction redispatch. Emit `end complete` after a completed workflow, `end handoff` when the limit writes a handoff, and `end aborted` whenever the workflow stops for another reason. Do not emit markers for ordinary tool activity or intermediate prose.
+
 # Workflow
 
 Contract before code. Implementation and tests both derive from the contract, never from each other.

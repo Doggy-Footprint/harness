@@ -52,18 +52,17 @@ class TelemetryTestCase(InstallerTestCase):
             env=env,
         )
 
-    def telemetry_file_path(self, telemetry_dir, repo):
-        return telemetry_dir / f"{repo_slug(repo)}.jsonl"
-
     def read_events(self, telemetry_dir, repo):
-        path = self.telemetry_file_path(telemetry_dir, repo)
-        if not path.exists():
-            return []
-        return [
-            json.loads(line)
-            for line in path.read_text().splitlines()
-            if line.strip()
-        ]
+        events = []
+        for path in telemetry_dir.glob("*.jsonl"):
+            events.extend(
+                event
+                for line in path.read_text().splitlines()
+                if line.strip()
+                for event in (json.loads(line),)
+                if event.get("repo") == str(repo.resolve())
+            )
+        return events
 
     def write_contract(self, repo, name="sample", version=None, test_command="python3 -m unittest"):
         contracts_dir = repo / "agent-docs" / "contracts"
@@ -161,7 +160,7 @@ class TestNormal(TelemetryTestCase):
         self.assertEqual(events[0]["event"], "subagent_start")
         self.assertEqual(events[0]["agent_type"], "test-verifier")
 
-    def test_c3_test_command_bash_records_contract_stem_and_exit_code(self):
+    def test_c3_test_command_bash_records_null_contract_without_active_marker_and_exit_code(self):
         repo, telemetry_dir = self.install_with_telemetry_dir()
         self.write_contract(repo, name="sample", test_command="python3 -m unittest")
         env = self.telemetry_env(telemetry_dir)
@@ -178,7 +177,7 @@ class TestNormal(TelemetryTestCase):
         events = self.read_events(telemetry_dir, repo)
         self.assertEqual(len(events), 1, events)
         self.assertEqual(events[0]["event"], "test_command")
-        self.assertEqual(events[0]["contract"], "sample")
+        self.assertIsNone(events[0]["contract"])
         self.assertEqual(events[0]["exit_code"], 1)
 
     def test_c3_matches_correct_contract_created_alpha_then_beta(self):
@@ -204,8 +203,8 @@ class TestNormal(TelemetryTestCase):
 
         events = self.read_events(telemetry_dir, repo)
         self.assertEqual(len(events), 2, events)
-        self.assertEqual(events[0]["contract"], "beta")
-        self.assertEqual(events[1]["contract"], "alpha")
+        self.assertIsNone(events[0]["contract"])
+        self.assertIsNone(events[1]["contract"])
 
     def test_c3_matches_correct_contract_created_beta_then_alpha(self):
         repo, telemetry_dir = self.install_with_telemetry_dir()
@@ -230,8 +229,8 @@ class TestNormal(TelemetryTestCase):
 
         events = self.read_events(telemetry_dir, repo)
         self.assertEqual(len(events), 2, events)
-        self.assertEqual(events[0]["contract"], "alpha")
-        self.assertEqual(events[1]["contract"], "beta")
+        self.assertIsNone(events[0]["contract"])
+        self.assertIsNone(events[1]["contract"])
 
     def test_c4_seed_bash_records_action_and_exit_code(self):
         repo, telemetry_dir = self.install_with_telemetry_dir()
@@ -271,7 +270,7 @@ class TestNormal(TelemetryTestCase):
         self.assertEqual(events[0]["action"], "restore")
         self.assertEqual(events[0]["exit_code"], 1)
 
-    def test_c5_contract_write_records_stem_and_frontmatter_version(self):
+    def test_c5_contract_write_records_null_contract_without_active_marker_and_frontmatter_version(self):
         repo, telemetry_dir = self.install_with_telemetry_dir()
         contract = self.write_contract(repo, name="x", version=3)
         env = self.telemetry_env(telemetry_dir)
@@ -284,7 +283,7 @@ class TestNormal(TelemetryTestCase):
         events = self.read_events(telemetry_dir, repo)
         self.assertEqual(len(events), 1, events)
         self.assertEqual(events[0]["event"], "contract_write")
-        self.assertEqual(events[0]["contract"], "x")
+        self.assertIsNone(events[0]["contract"])
         self.assertEqual(events[0]["version"], 3)
 
     def test_c6_handoff_write_records_file_name(self):
@@ -386,7 +385,7 @@ class TestNormal(TelemetryTestCase):
         events = self.read_events(telemetry_dir, repo)
         self.assertEqual(len(events), 1, events)
         self.assertEqual(events[0]["event"], "contract_write")
-        self.assertEqual(events[0]["contract"], "x")
+        self.assertIsNone(events[0]["contract"])
         self.assertEqual(events[0]["version"], 7)
 
     def test_c21_tool_failure_matches_registered_contract_among_two(self):
@@ -408,7 +407,7 @@ class TestNormal(TelemetryTestCase):
         events = self.read_events(telemetry_dir, repo)
         self.assertEqual(len(events), 1, events)
         self.assertEqual(events[0]["event"], "tool_failure")
-        self.assertEqual(events[0]["contract"], "beta")
+        self.assertIsNone(events[0]["contract"])
         self.assertIsNone(events[0]["action"])
 
     def test_c21_tool_failure_matches_registered_contract_created_beta_then_alpha(self):
@@ -430,7 +429,7 @@ class TestNormal(TelemetryTestCase):
         events = self.read_events(telemetry_dir, repo)
         self.assertEqual(len(events), 1, events)
         self.assertEqual(events[0]["event"], "tool_failure")
-        self.assertEqual(events[0]["contract"], "alpha")
+        self.assertIsNone(events[0]["contract"])
         self.assertIsNone(events[0]["action"])
 
     def test_c22_tool_failure_for_seed_restore_records_action_not_contract(self):
@@ -587,7 +586,7 @@ class TestBoundary(TelemetryTestCase):
         events = self.read_events(telemetry_dir, repo)
         self.assertEqual(len(events), 1, events)
         self.assertEqual(events[0]["event"], "contract_write")
-        self.assertEqual(events[0]["contract"], "noversion")
+        self.assertIsNone(events[0]["contract"])
         self.assertIsNone(events[0]["version"])
 
     def test_c13_default_telemetry_dir_is_under_home_harness_telemetry(self):
@@ -607,8 +606,10 @@ class TestBoundary(TelemetryTestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        expected = home_dir / ".harness" / "telemetry" / f"{repo_slug(repo)}.jsonl"
-        self.assertEqual(Path(result.stdout.strip()), expected)
+        path = Path(result.stdout.strip())
+        self.assertEqual(path.parent, home_dir / ".harness" / "telemetry")
+        self.assertTrue(path.name.startswith(f"{repo_slug(repo)}-"), path)
+        self.assertEqual(path.suffix, ".jsonl")
 
     def test_c14_client_field_from_transcript_path(self):
         repo, telemetry_dir = self.install_with_telemetry_dir()
@@ -944,7 +945,7 @@ class TestEdge(TelemetryTestCase):
         self.assertEqual(events[0]["event"], "tool_failure")
         self.assertEqual(events[0]["tool_name"], "Bash")
         self.assertEqual(events[0]["error_code"], "timeout")
-        self.assertEqual(events[0]["contract"], "sample")
+        self.assertIsNone(events[0]["contract"])
         self.assertIsNone(events[0]["action"])
 
     def test_c17_post_tool_use_failure_seed_command_records_tool_failure(self):
@@ -1064,7 +1065,7 @@ class TestEdge(TelemetryTestCase):
         self.assertEqual(len(events), 1, events)
         self.assertEqual(events[0]["event"], "test_command")
         self.assertEqual(events[0]["client"], "codex")
-        self.assertEqual(events[0]["contract"], "sample")
+        self.assertIsNone(events[0]["contract"])
         self.assertEqual(events[0]["exit_code"], 1)
 
     def test_c19_claude_failure_matcher_is_bash_only(self):
@@ -1096,8 +1097,8 @@ class TestEdge(TelemetryTestCase):
         )
 
 
-    def test_c18_harness_version_is_0_5_0(self):
-        self.assertEqual(HARNESS_VERSION, "0.5.0")
+    def test_c18_harness_version_is_0_6_0(self):
+        self.assertEqual(HARNESS_VERSION, "0.6.0")
 
     def test_c20_update_preserves_pre_existing_post_tool_use_hook(self):
         repo = self.install()
@@ -1193,7 +1194,7 @@ class TestEnvelopeAndActions(TelemetryTestCase):
         events = self.read_events(telemetry_dir, repo)
         self.assertEqual(len(events), 1, events)
         self.assertEqual(events[0]["event"], "contract_write")
-        self.assertEqual(events[0]["contract"], "locked")
+        self.assertIsNone(events[0]["contract"])
         self.assertIsNone(events[0]["version"])
 
 

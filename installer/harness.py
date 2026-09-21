@@ -190,9 +190,14 @@ def migrate_stale_index_logs(target: Path, dry_run: bool) -> list[str]:
     return planned
 
 
+def migrate_workflow_markers(target: Path, dry_run: bool) -> list[str]:
+    return []
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
+    (parse_version("0.6.0"), "install workflow telemetry markers", migrate_workflow_markers),
 )
 
 

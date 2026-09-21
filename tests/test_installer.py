@@ -379,7 +379,7 @@ class TestNormal(InstallerTestCase):
         repo = self.install()
         docs, source, manifest_path, index_block = self.prepare_stale_record(repo)
 
-        result = run_installer("update", str(repo), input="y\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("stale", (result.stdout + result.stderr).lower())
@@ -398,7 +398,7 @@ class TestNormal(InstallerTestCase):
         docs, source, _, index_block = self.prepare_stale_record(repo)
         (docs / "index.md").write_text((docs / "index.md").read_text().replace(index_block, ""))
 
-        result = run_installer("update", str(repo), input="y\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertFalse(source.exists())
@@ -426,7 +426,7 @@ class TestNormal(InstallerTestCase):
         )
         (docs / "index.md").write_text(first + "\n---\n" + stale_block + "\n---\n" + second)
 
-        result = run_installer("update", str(repo), input="y\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual((docs / "index.md").read_text(), first.rstrip("\n") + "\n---\n" + second)
@@ -778,11 +778,11 @@ class TestError(InstallerTestCase):
 
 
 class TestEdge(InstallerTestCase):
-    def test_c4_update_runs_03_then_04_migrations_once_each(self):
+    def test_c4_update_runs_03_04_then_06_migrations_once_each(self):
         repo = self.install()
         docs, source, _, index_block = self.prepare_stale_record(repo)
 
-        result = run_installer("update", str(repo), input="y\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         output = result.stdout + result.stderr
@@ -790,10 +790,10 @@ class TestEdge(InstallerTestCase):
             match.group(0)
             for line in output.splitlines()
             if line.startswith("migration ")
-            for match in [re.search(r"\b0\.[34]\.0\b", line)]
+            for match in [re.search(r"\b0\.(?:3|4|6)\.0\b", line)]
             if match
         ]
-        self.assertEqual(announcement_versions, ["0.3.0", "0.4.0"], output)
+        self.assertEqual(announcement_versions, ["0.3.0", "0.4.0", "0.6.0"], output)
         self.assertFalse(source.exists())
         self.assertEqual((docs / "stale" / source.name).read_text(), "# Stale\n")
         self.assertNotIn(index_block, (docs / "index.md").read_text())
