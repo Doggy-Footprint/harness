@@ -4,15 +4,11 @@
 "Otel을 이용해서 하네스가 잘 작동하는지, 작동 워크플로우를 준수하는지, test-verifier/seed 등에서 실제로 문제를 잡아내는지, test-verifier에 의한 retry는 평균 몇 round 반복되고 handoff로 넘어가는 비율은 어떤지 서브 에이전트 등이 실행될 때 비용은 얼마나 드는지 등을 통계로 확인하고 싶어." Decisions: markers adopted; analyzer in `analytics/` (not in payload, separate contract, not started); markers written to `~/.harness/telemetry/<repo-slug>.jsonl`; events = existing hooks + PostToolUse; Claude and Codex both, fields Codex lacks are null; no Docker; VERSION 0.5.0 without MIGRATIONS entry. Work on branch `feat/harness-analytics`.
 
 ## State
-- Branch: feat/harness-analytics, base commit 33be63b; work committed as 4f01f82; session 2 changes uncommitted.
-- Changed: harness/VERSION, harness/hooks/contract_gate.py, harness/hooks/hooks.spec.json.
-- Added: harness/lib/telemetry.py, harness/lib/hook_shared.py, harness/hooks/telemetry_hook.py, tests/test_telemetry.py.
-- `python3 -m unittest discover -s tests -p 'test_*.py'`: 92 tests OK (session 2).
-- `python3 installer/harness.py update .` run on this repo in session 2 (.harness/, .claude/settings.json, .codex/hooks.json, AGENTS.md updated).
-- Contract-workflow stopped at Limit: round 2 used; the third verifier produced 2 findings confirmed by seed (suite stayed green):
-  1. C19: the Claude `PostToolUseFailure` group's matcher is not asserted; widening `"Bash"` to `".*"` passes.
-  2. C9/C3: no near-miss test against a registered Test command; substring matching instead of exact normalized matching passes.
-- Unseeded verifier findings: malformed/unreadable contract file during parsing (Errors section) never exercised; C18/C20 read harness/VERSION dynamically so a missing 0.5.0 bump passes.
+- Branch: feat/harness-analytics. Session 3 work (contract v3, tests, `installer/harness.py update .` applied to this repo) is committed; see `git log -1`.
+- `python3 -m unittest discover -s tests -p 'test_*.py'`: 107 tests OK.
+- Real Claude session check done (session 3): contract_write, test_command, seed, tool_failure lines written to `~/.harness/telemetry/-Users-hwansu-tools-harness.jsonl` with client "claude". Observed: Claude PostToolUse Bash payload has no tool_response.exit_code (always null); a failed Bash fires only PostToolUseFailure; SubagentStop sent agent_type "". Compound commands (`cd x && <test command>`) are not matched (by design, C9).
+- User decisions (session 3): tool_failure gains contract/action; keep exit_code, documented always null on Claude (success/failure = event kind); agent_type "" -> null for every event kind.
+- Claude side closed. Known test gaps accepted by user as open issues (not fixed): S18, S19 (see Seed Log).
 
 ## Failed Attempts
 | attempt | failure evidence | cause |
@@ -20,6 +16,10 @@
 | Round 1: tests added for C19 PostToolUse matcher, C17 non-matching failure, C7 sorted running | Verifier 2 then found 4 more gaps; seeds for C17 seed-branch, C3 stem choice, C15 stderr stayed green | verified: each verifier pass audits the grown suite and finds adjacent uncovered combinations |
 | Round 2: tests added for C17 seed branch, C3 two-contract stem, C15 byte-identical stderr | Verifier 3 found PostToolUseFailure matcher and near-miss Test command gaps; both seeds stayed green | verified: same as above |
 | Round 3 (user-approved extra, main agent wrote tests): added C9 near-miss and C19 PostToolUseFailure Bash-only tests; seeds for both now fail | Verifier 4 found 4 gaps; seeds stayed green for: repo field emitted as null, seed action hardcoded to "backup", OSError from contract read re-raised | verified: envelope fields (ts, repo, session_id, tool_use_id), non-backup seed actions, and unreadable-contract path are never asserted |
+
+| Session 3 round 1: added C24 (SubagentStart "" -> null), C25 (failure-path near-miss) after S12/S13 stayed green | Verifier found failure-path action partition and non-subagent agent_type "" uncovered (S14/S15 green) | verified: each verifier pass finds adjacent uncovered combinations |
+| Session 3 round 2: added C24 tests for test_command/tool_failure, C22 action partition status/token/none; S12-S15 now fail | Verifier found agent_type "" untested for seed/contract_write/handoff_write/gate_block, and C21 tested only alpha-then-beta order (S16/S17 green) | verified: same as above |
+| Session 3 extra round (user-approved): added C24 tests for seed/contract_write/handoff_write/gate_block, C21 beta-then-alpha; S16/S17 now fail | Verifier found failure-path whitespace normalization and in-script tool_name=="Bash" guard untested (S18/S19 green) | verified: same as above |
 
 ## Seed Log
 Each seed: `python3 .harness/bin/seed.py backup <file>`, inject, run the Test command, `seed.py restore` (all restores exited 0). "green" = suite passed with the defect = test gap confirmed.
@@ -37,24 +37,32 @@ Each seed: `python3 .harness/bin/seed.py backup <file>`, inject, run the Test co
 | S9 | harness/lib/telemetry.py | `repo` emitted as null | green | fails (session 2) |
 | S10 | harness/hooks/telemetry_hook.py | seed `action` hardcoded to "backup" | green | fails (session 2) |
 | S11 | harness/hooks/telemetry_hook.py | OSError reading a contract re-raised in parse_contract_version | green | fails (session 2) |
+| S12 | harness/lib/telemetry.py | agent_type "" -> null only for subagent_stop | green | fails (session 3 r1) |
+| S13 | harness/hooks/telemetry_hook.py | PostToolUseFailure test command matched by substring | green | fails (session 3 r1) |
+| S14 | harness/lib/telemetry.py | agent_type "" -> null only for subagent_* events | green | fails (session 3 r2) |
+| S15 | harness/hooks/telemetry_hook.py | tool_failure action only for backup/restore | green | fails (session 3 r2) |
+| S16 | harness/lib/telemetry.py | agent_type "" -> null only for subagent_start/stop, test_command, tool_failure | green | fails (session 3 extra) |
+| S17 | harness/hooks/telemetry_hook.py | tool_failure contract = last registered contract when any matches | green | fails (session 3 extra) |
+| S18 | harness/hooks/telemetry_hook.py | PostToolUseFailure command not whitespace-normalized | green | open |
+| S19 | harness/hooks/telemetry_hook.py | tool_name == "Bash" guard removed in handle_post_tool_use_failure | green | open |
 
 ## Next Step
-Session 2 progress: step 1 done (tests added in tests/test_telemetry.py class TestEnvelopeAndActions, plus C18 VERSION == 0.5.0 and C20 pre-existing PostToolUse hook preserved; 92 tests OK; S9–S11 re-seeded and all fail). `python3 installer/harness.py update .` run on this repo (uncommitted). Remaining: step 2 real Claude/Codex session checks (needs a fresh session so the new hooks load), then commit.
-
-User decision (after round 3): stop the verifier loop and resume in a new session with both of:
-1. Close S9–S11: assert envelope fields ts/repo/session_id/tool_use_id on a PostToolUse-derived event; assert seed action for restore and status; make a contract file unreadable (chmod 000) during contract_write and assert the event is still recorded with version null and exit 0. Re-run S9–S11; each must now fail. Unseeded verifier-4 finding: C20 update should preserve pre-existing PostToolUse hooks.
-2. Then run `python3 installer/harness.py update .` on this repo, start a real Claude session, and check `~/.harness/telemetry/<repo-slug>.jsonl` receives subagent_start/stop, test_command, seed, contract_write lines; check whether the real Claude PostToolUse Bash payload carries `tool_response.exit_code` (docs say yes, observed transcripts show failed Bash as error text). Same check in a Codex session.
-After that, commit on feat/harness-analytics and start the separate `analytics/` analyzer contract.
-
-Done in round 3 (kept for history): Continue test-implementer (fresh one if needed) with: C19 assert Claude PostToolUseFailure matcher fullmatches "Bash" and not "Write"/"Edit"; C9 with a registered `Test command: python3 -m unittest`, Bash `python3 -m unittest -k x` and `echo python3 -m unittest` write no test_command line. Then run the suite, fresh test-verifier, re-seed (matcher `.*`, substring match in telemetry_hook.handle_bash). Then run `python3 installer/harness.py update .`, check a real session writes markers, and check whether Claude's PostToolUse payload actually carries `tool_response.exit_code` for Bash.
+Resume in Codex, in this repo on feat/harness-analytics:
+1. Confirm Codex loads the hooks: `.codex/hooks.json` must have PostToolUse -> `.harness/hooks/telemetry_hook.py` (installed by update).
+2. In the Codex session, create a probe contract `agent-docs/contracts/zz-telemetry-probe.md` via apply_patch with frontmatter `version: 2` and a line `Test command: python3 -c "import sys; sys.exit(0)"`. Then run as separate, standalone commands (no `cd ... &&` prefix): `python3 -c "import sys; sys.exit(0)"`, then change the probe to exit 3 and run `python3 -c "import sys; sys.exit(3)"`, then `python3 .harness/bin/seed.py status`.
+3. Inspect the last lines of `~/.harness/telemetry/-Users-hwansu-tools-harness.jsonl`. Check: client is "codex"; contract_write from apply_patch has contract zz-telemetry-probe, version 2; whether test_command/seed exit_code is populated on Codex; whether a failed Bash (exit 3) still produces a test_command line (Codex has no PostToolUseFailure hook, so a failure may produce no line at all); whether agent_type/agent_id/tool_use_id are populated.
+4. Delete the probe contract. If Codex results contradict the contract (e.g. failed Bash yields no event), report to the user and propose a contract amendment; do not decide it.
+5. Then start the separate `analytics/` analyzer contract (outside `harness/` payload).
 
 ## Open Questions
-- Resolved: user approved one extra round (round 3), then chose to close S9–S11 and verify in a real session in a new session.
-- Whether real Claude/Codex PostToolUse Bash payloads include exit_code (docs and observed transcripts disagree).
+- Codex: is exit_code present in PostToolUse Bash payload; does a failed Bash fire PostToolUse.
+- Open issue S18 (accepted): PostToolUseFailure command whitespace normalization is not tested (`python3  -m unittest` double-space).
+- Open issue S19 (accepted): the in-script `tool_name == "Bash"` guard in handle_post_tool_use_failure is not tested (hook matcher already limits to Bash).
+- Resolved (session 3): real Claude PostToolUse has no exit_code; failed Bash fires only PostToolUseFailure.
 
 ## Contract Snapshot
 ---
-version: 1
+version: 3
 ---
 
 # User Intent
@@ -64,6 +72,8 @@ version: 1
 | U2 | Markers go to one per-user file per repo | `~/.harness/telemetry/<repo-slug>.jsonl`, aggregatable across projects, outside the repo |
 | U3 | Record existing hook points plus PostToolUse | subagent start/stop, gate block, Test command runs + exit code, seed.py runs + exit code, contract writes + version, handoff writes |
 | U4 | Works for Claude Code and Codex | Same events from both; a field Codex does not provide is recorded as null, no Codex-specific tooling |
+| U6 | Failed Test command / seed runs stay attributable | tool_failure carries the matched contract stem or seed action, so failures group with their contract |
+| U7 | Missing payload values are uniformly null | empty-string agent_type (observed on real SubagentStop) is recorded as null |
 | U5 | Telemetry never changes hook behavior | Write failures are swallowed; gate exit codes and stderr are unchanged |
 
 # Paths
@@ -79,16 +89,17 @@ Env HARNESS_TELEMETRY_DIR overrides the directory `~/.harness/telemetry`.
 repo-slug = resolved repo root path with every char outside [A-Za-z0-9] replaced by "-".
 Event line (one JSON object per line, append-only):
   {"v": 1, "ts": <UTC ISO-8601>, "harness_version": <VERSION>, "repo": <repo root str>, "client": "claude"|"codex"|null, "session_id", "agent_id", "agent_type", "tool_use_id", "event": <kind>, ...kind fields}
-  missing payload fields are null. client: "codex" when transcript_path contains "/.codex/", "claude" when it contains "/.claude/", else null.
+  missing payload fields are null; agent_type "" is recorded as null. client: "codex" when transcript_path contains "/.codex/", "claude" when it contains "/.claude/", else null.
 Kinds and fields:
   subagent_start: -
   subagent_stop: -
   gate_block: running (list of agent types, sorted)
   test_command: contract (contract file stem whose `Test command` matched), exit_code (int|null)
+  exit_code is always null on Claude (real PostToolUse payload has no tool_response.exit_code); success vs failure is the event kind: test_command/seed = succeeded, tool_failure = failed.
   seed: action ("backup"|"restore"|"status"|other token|null), exit_code (int|null)
   contract_write: contract (file stem), version (int|null from frontmatter)
   handoff_write: file (file name)
-  tool_failure: tool_name, error_code (from PostToolUseFailure; only for Bash commands that match test_command or seed)
+  tool_failure: tool_name, error_code, contract (matched Test command file stem, else null), action (seed action as in seed, else null) (from PostToolUseFailure; only for Bash commands that match test_command or seed)
 Hook registration (hooks.spec.json):
   PostToolUse, both targets, matcher covering Bash, Write, Edit (Claude) and apply_patch (Codex) -> telemetry_hook.py
   PostToolUseFailure, claude only, matcher Bash -> telemetry_hook.py
@@ -121,8 +132,17 @@ none raised — every telemetry failure (unwritable dir, malformed payload, unre
 | C17 | edge | PostToolUseFailure Bash matching Test command, error_code "timeout" | tool_failure with tool_name Bash, error_code timeout |
 | C18 | edge | two events appended | file has two lines, each valid JSON with v 1, harness_version equal to harness/VERSION |
 | C19 | edge | installed repo hook configs | Claude settings has PostToolUse and PostToolUseFailure -> telemetry_hook.py; Codex hooks.json has PostToolUse, no PostToolUseFailure |
+| C21 | normal | PostToolUseFailure Bash matching registered Test command of contract file x | tool_failure with contract x, action null |
+| C22 | normal | PostToolUseFailure Bash "python3 .harness/bin/seed.py restore" | tool_failure with action restore, contract null |
+| C23 | boundary | SubagentStop payload with agent_type "" | subagent_stop with agent_type null |
+| C24 | boundary | SubagentStart payload with agent_type "" | subagent_start with agent_type null (rule is envelope-wide, all event kinds) |
+| C25 | boundary | registered `Test command: python3 -m unittest`; PostToolUseFailure Bash "python3 -m unittest -k x" and "echo python3 -m unittest" | no tool_failure line (same exact normalized match as C9) |
 | C20 | edge | `installer/harness.py update` from a 0.4.0 install | succeeds, manifest version = new VERSION, new hooks merged |
 
 # Version Log
+## v3
+- Added C24, C25. Evidence: verifier findings; seeds (agent_type normalized only for subagent_stop; substring match on PostToolUseFailure path) stayed green.
+## v2
+- tool_failure gains contract/action; agent_type "" -> null; exit_code documented always null on Claude. Evidence: real Claude session 2026-09-21: failed Test command produced only tool_failure (error_code null, no contract); successful test_command/seed had exit_code null; SubagentStop lines had agent_type "".
 ## v1
 - Initial contract.

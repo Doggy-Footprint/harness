@@ -121,15 +121,23 @@ def handle_post_tool_use_failure(payload: dict) -> None:
         return
     tool_input = payload.get("tool_input") or {}
     command = hook_shared.normalize(hook_shared.shell_command(tool_input))
-    _, is_seed = match_seed(command)
-    if command not in hook_shared.test_commands(PATHS.contracts) and not is_seed:
+    contracts = dict(hook_shared.iter_test_commands(PATHS.contracts))
+    action, is_seed = match_seed(command)
+    if command not in contracts and not is_seed:
         return
     error_code = payload.get("error_code")
     if error_code is None:
         tool_response = payload.get("tool_response")
         if isinstance(tool_response, dict):
             error_code = tool_response.get("error_code")
-    telemetry.emit(payload, "tool_failure", tool_name="Bash", error_code=error_code)
+    telemetry.emit(
+        payload,
+        "tool_failure",
+        tool_name="Bash",
+        error_code=error_code,
+        contract=contracts.get(command),
+        action=action if is_seed else None,
+    )
 
 
 def main() -> int:

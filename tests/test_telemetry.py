@@ -371,6 +371,97 @@ class TestNormal(TelemetryTestCase):
         self.assertEqual(events[0]["contract"], "x")
         self.assertEqual(events[0]["version"], 7)
 
+    def test_c21_tool_failure_matches_registered_contract_among_two(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        self.write_contract(repo, name="alpha", test_command="python3 -m pytest tests/alpha")
+        self.write_contract(repo, name="beta", test_command="python3 -m pytest tests/beta")
+        env = self.telemetry_env(telemetry_dir)
+        payload = {
+            "hook_event_name": "PostToolUseFailure",
+            "tool_name": "Bash",
+            "tool_input": {"command": "python3 -m pytest tests/beta"},
+            "error_code": "timeout",
+            "session_id": "s1",
+        }
+
+        result = self.run_hook_env(repo, "telemetry_hook.py", payload, env)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        events = self.read_events(telemetry_dir, repo)
+        self.assertEqual(len(events), 1, events)
+        self.assertEqual(events[0]["event"], "tool_failure")
+        self.assertEqual(events[0]["contract"], "beta")
+        self.assertIsNone(events[0]["action"])
+
+    def test_c21_tool_failure_matches_registered_contract_created_beta_then_alpha(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        self.write_contract(repo, name="beta", test_command="python3 -m pytest tests/beta")
+        self.write_contract(repo, name="alpha", test_command="python3 -m pytest tests/alpha")
+        env = self.telemetry_env(telemetry_dir)
+        payload = {
+            "hook_event_name": "PostToolUseFailure",
+            "tool_name": "Bash",
+            "tool_input": {"command": "python3 -m pytest tests/alpha"},
+            "error_code": "timeout",
+            "session_id": "s1",
+        }
+
+        result = self.run_hook_env(repo, "telemetry_hook.py", payload, env)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        events = self.read_events(telemetry_dir, repo)
+        self.assertEqual(len(events), 1, events)
+        self.assertEqual(events[0]["event"], "tool_failure")
+        self.assertEqual(events[0]["contract"], "alpha")
+        self.assertIsNone(events[0]["action"])
+
+    def test_c22_tool_failure_for_seed_restore_records_action_not_contract(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        env = self.telemetry_env(telemetry_dir)
+        payload = {
+            "hook_event_name": "PostToolUseFailure",
+            "tool_name": "Bash",
+            "tool_input": {"command": "python3 .harness/bin/seed.py restore"},
+            "error_code": "timeout",
+            "session_id": "s1",
+        }
+
+        result = self.run_hook_env(repo, "telemetry_hook.py", payload, env)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        events = self.read_events(telemetry_dir, repo)
+        self.assertEqual(len(events), 1, events)
+        self.assertEqual(events[0]["event"], "tool_failure")
+        self.assertEqual(events[0]["action"], "restore")
+        self.assertIsNone(events[0]["contract"])
+
+    def test_c22_tool_failure_seed_action_matches_seed_event_partition(self):
+        cases = {
+            "python3 .harness/bin/seed.py status": "status",
+            "python3 .harness/bin/seed.py frobnicate x": "frobnicate",
+            "python3 .harness/bin/seed.py": None,
+        }
+        for command, expected_action in cases.items():
+            with self.subTest(command=command):
+                repo, telemetry_dir = self.install_with_telemetry_dir()
+                env = self.telemetry_env(telemetry_dir)
+                payload = {
+                    "hook_event_name": "PostToolUseFailure",
+                    "tool_name": "Bash",
+                    "tool_input": {"command": command},
+                    "error_code": "timeout",
+                    "session_id": "s1",
+                }
+
+                result = self.run_hook_env(repo, "telemetry_hook.py", payload, env)
+
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                events = self.read_events(telemetry_dir, repo)
+                self.assertEqual(len(events), 1, events)
+                self.assertEqual(events[0]["event"], "tool_failure")
+                self.assertEqual(events[0]["action"], expected_action)
+                self.assertIsNone(events[0]["contract"])
+
 
 class TestBoundary(TelemetryTestCase):
     def test_c9_unrelated_bash_command_writes_nothing(self):
@@ -527,6 +618,187 @@ class TestBoundary(TelemetryTestCase):
                 self.assertEqual(len(events), 1, events)
                 self.assertEqual(events[0].get("client"), expected_client)
 
+    def test_c23_subagent_stop_empty_string_agent_type_records_null(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        env = self.telemetry_env(telemetry_dir)
+
+        result = self.run_hook_env(
+            repo,
+            "contract_gate.py",
+            {"hook_event_name": "SubagentStop", "agent_type": "", "agent_id": "a1"},
+            env,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        events = self.read_events(telemetry_dir, repo)
+        self.assertEqual(len(events), 1, events)
+        self.assertEqual(events[0]["event"], "subagent_stop")
+        self.assertIsNone(events[0]["agent_type"])
+
+    def test_c23_subagent_start_non_empty_agent_type_is_not_nulled(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        env = self.telemetry_env(telemetry_dir)
+
+        result = self.run_hook_env(
+            repo,
+            "contract_gate.py",
+            {"hook_event_name": "SubagentStart", "agent_type": "implementer", "agent_id": "a1"},
+            env,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        events = self.read_events(telemetry_dir, repo)
+        self.assertEqual(len(events), 1, events)
+        self.assertEqual(events[0]["agent_type"], "implementer")
+
+    def test_c24_subagent_start_empty_string_agent_type_records_null(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        env = self.telemetry_env(telemetry_dir)
+
+        result = self.run_hook_env(
+            repo,
+            "contract_gate.py",
+            {"hook_event_name": "SubagentStart", "agent_type": "", "agent_id": "a1"},
+            env,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        events = self.read_events(telemetry_dir, repo)
+        self.assertEqual(len(events), 1, events)
+        self.assertEqual(events[0]["event"], "subagent_start")
+        self.assertIsNone(events[0]["agent_type"])
+
+    def test_c25_post_tool_use_failure_near_miss_of_registered_test_command_writes_nothing(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        self.write_contract(repo, name="sample", test_command="python3 -m unittest")
+        env = self.telemetry_env(telemetry_dir)
+
+        for command in ("python3 -m unittest -k x", "echo python3 -m unittest", "python3 -m unittes"):
+            with self.subTest(command=command):
+                payload = {
+                    "hook_event_name": "PostToolUseFailure",
+                    "tool_name": "Bash",
+                    "tool_input": {"command": command},
+                    "error_code": "timeout",
+                    "session_id": "s1",
+                }
+                result = self.run_hook_env(repo, "telemetry_hook.py", payload, env)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.read_events(telemetry_dir, repo), [])
+
+    def test_c24_test_command_event_empty_string_agent_type_records_null(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        self.write_contract(repo, name="sample", test_command="python3 -m unittest")
+        env = self.telemetry_env(telemetry_dir)
+        payload = self.post_tool_use_bash("python3  -m unittest", exit_code=1)
+        payload["agent_type"] = ""
+
+        result = self.run_hook_env(repo, "telemetry_hook.py", payload, env)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        events = self.read_events(telemetry_dir, repo)
+        self.assertEqual(len(events), 1, events)
+        self.assertEqual(events[0]["event"], "test_command")
+        self.assertIsNone(events[0]["agent_type"])
+
+    def test_c24_tool_failure_event_empty_string_agent_type_records_null(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        self.write_contract(repo, name="sample", test_command="python3 -m unittest")
+        env = self.telemetry_env(telemetry_dir)
+        payload = {
+            "hook_event_name": "PostToolUseFailure",
+            "tool_name": "Bash",
+            "tool_input": {"command": "python3 -m unittest"},
+            "error_code": "timeout",
+            "session_id": "s1",
+            "agent_type": "",
+        }
+
+        result = self.run_hook_env(repo, "telemetry_hook.py", payload, env)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        events = self.read_events(telemetry_dir, repo)
+        self.assertEqual(len(events), 1, events)
+        self.assertEqual(events[0]["event"], "tool_failure")
+        self.assertIsNone(events[0]["agent_type"])
+
+    def test_c24_seed_event_empty_string_agent_type_records_null(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        env = self.telemetry_env(telemetry_dir)
+        payload = self.post_tool_use_bash(
+            "python3 .harness/bin/seed.py backup src/a.py", exit_code=0
+        )
+        payload["agent_type"] = ""
+
+        result = self.run_hook_env(repo, "telemetry_hook.py", payload, env)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        events = self.read_events(telemetry_dir, repo)
+        self.assertEqual(len(events), 1, events)
+        self.assertEqual(events[0]["event"], "seed")
+        self.assertIsNone(events[0]["agent_type"])
+
+    def test_c24_contract_write_event_empty_string_agent_type_records_null(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        contract = self.write_contract(repo, name="x", version=3)
+        env = self.telemetry_env(telemetry_dir)
+        payload = self.post_tool_use_write(contract)
+        payload["agent_type"] = ""
+
+        result = self.run_hook_env(repo, "telemetry_hook.py", payload, env)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        events = self.read_events(telemetry_dir, repo)
+        self.assertEqual(len(events), 1, events)
+        self.assertEqual(events[0]["event"], "contract_write")
+        self.assertIsNone(events[0]["agent_type"])
+
+    def test_c24_handoff_write_event_empty_string_agent_type_records_null(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        handoff = self.write_handoff(repo, "0123456789abcdef-y.md")
+        env = self.telemetry_env(telemetry_dir)
+        payload = self.post_tool_use_write(handoff)
+        payload["agent_type"] = ""
+
+        result = self.run_hook_env(repo, "telemetry_hook.py", payload, env)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        events = self.read_events(telemetry_dir, repo)
+        self.assertEqual(len(events), 1, events)
+        self.assertEqual(events[0]["event"], "handoff_write")
+        self.assertIsNone(events[0]["agent_type"])
+
+    def test_c24_gate_block_event_empty_string_agent_type_records_null(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        self.write_contract(repo, name="sample", test_command="python3 -m unittest")
+        env = self.telemetry_env(telemetry_dir)
+
+        start = self.run_hook_env(
+            repo,
+            "contract_gate.py",
+            {"hook_event_name": "SubagentStart", "agent_type": "implementer", "agent_id": "a1"},
+            env,
+        )
+        self.assertEqual(start.returncode, 0, start.stdout + start.stderr)
+
+        blocked = self.run_hook_env(
+            repo,
+            "contract_gate.py",
+            {
+                "hook_event_name": "PreToolUse",
+                "tool_name": "Bash",
+                "tool_input": {"command": "python3 -m unittest"},
+                "agent_type": "",
+            },
+            env,
+        )
+
+        self.assertEqual(blocked.returncode, 2, blocked.stdout + blocked.stderr)
+        events = self.read_events(telemetry_dir, repo)
+        gate_events = [e for e in events if e["event"] == "gate_block"]
+        self.assertEqual(len(gate_events), 1, events)
+        self.assertIsNone(gate_events[0]["agent_type"])
+
 
 class TestError(TelemetryTestCase):
     def make_unwritable_telemetry_dir(self):
@@ -654,6 +926,8 @@ class TestEdge(TelemetryTestCase):
         self.assertEqual(events[0]["event"], "tool_failure")
         self.assertEqual(events[0]["tool_name"], "Bash")
         self.assertEqual(events[0]["error_code"], "timeout")
+        self.assertEqual(events[0]["contract"], "sample")
+        self.assertIsNone(events[0]["action"])
 
     def test_c17_post_tool_use_failure_seed_command_records_tool_failure(self):
         repo, telemetry_dir = self.install_with_telemetry_dir()
@@ -674,6 +948,8 @@ class TestEdge(TelemetryTestCase):
         self.assertEqual(events[0]["event"], "tool_failure")
         self.assertEqual(events[0]["tool_name"], "Bash")
         self.assertEqual(events[0]["error_code"], "timeout")
+        self.assertEqual(events[0]["action"], "backup")
+        self.assertIsNone(events[0]["contract"])
 
     def test_c17_post_tool_use_failure_non_matching_command_writes_nothing(self):
         repo, telemetry_dir = self.install_with_telemetry_dir()

@@ -47,7 +47,7 @@ def emit(payload: dict, event: str, **fields) -> None:
             "client": _client(payload),
             "session_id": payload.get("session_id"),
             "agent_id": payload.get("agent_id"),
-            "agent_type": payload.get("agent_type"),
+            "agent_type": payload.get("agent_type") or None,
             "tool_use_id": payload.get("tool_use_id"),
             "event": event,
             **fields,
