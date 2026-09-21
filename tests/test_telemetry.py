@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from test_installer import InstallerTestCase, run_installer
@@ -781,6 +782,107 @@ class TestEdge(TelemetryTestCase):
         self.assertTrue(
             any("telemetry_hook.py" in c for c in post_tool_use), post_tool_use
         )
+
+
+    def test_c18_harness_version_is_0_5_0(self):
+        self.assertEqual(HARNESS_VERSION, "0.5.0")
+
+    def test_c20_update_preserves_pre_existing_post_tool_use_hook(self):
+        repo = self.install()
+        manifest_path = repo / ".harness" / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["version"] = "0.4.0"
+        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+        settings_path = repo / ".claude" / "settings.json"
+        settings = json.loads(settings_path.read_text())
+        settings["hooks"].setdefault("PostToolUse", []).append(
+            {"matcher": "Read", "hooks": [{"type": "command", "command": "echo user-hook"}]}
+        )
+        settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+
+        result = run_installer("update", str(repo), input="y\ny\ny\n")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        post_tool_use = self.commands(
+            json.loads(settings_path.read_text())["hooks"].get("PostToolUse", [])
+        )
+        self.assertIn("echo user-hook", post_tool_use)
+        self.assertTrue(
+            any("telemetry_hook.py" in c for c in post_tool_use), post_tool_use
+        )
+
+
+class TestEnvelopeAndActions(TelemetryTestCase):
+    def test_envelope_fields_on_post_tool_use_event(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        env = self.telemetry_env(telemetry_dir)
+        payload = self.post_tool_use_bash(
+            "python3 .harness/bin/seed.py backup src/a.py", exit_code=0
+        )
+        payload["session_id"] = "sess-42"
+        payload["tool_use_id"] = "tool-7"
+        before = datetime.now(timezone.utc)
+
+        result = self.run_hook_env(repo, "telemetry_hook.py", payload, env)
+
+        after = datetime.now(timezone.utc)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        events = self.read_events(telemetry_dir, repo)
+        self.assertEqual(len(events), 1, events)
+        event = events[0]
+        self.assertEqual(event["repo"], str(repo.resolve()))
+        self.assertEqual(event["session_id"], "sess-42")
+        self.assertEqual(event["tool_use_id"], "tool-7")
+        ts = datetime.fromisoformat(event["ts"].replace("Z", "+00:00"))
+        self.assertIsNotNone(ts.tzinfo, event["ts"])
+        self.assertEqual(ts.utcoffset(), timedelta(0), event["ts"])
+        self.assertLessEqual(before - timedelta(seconds=1), ts)
+        self.assertLessEqual(ts, after + timedelta(seconds=1))
+
+    def test_seed_action_is_taken_from_command(self):
+        cases = {
+            "python3 .harness/bin/seed.py restore": "restore",
+            "python3 .harness/bin/seed.py status": "status",
+            "python3 .harness/bin/seed.py frobnicate x": "frobnicate",
+            "python3 .harness/bin/seed.py": None,
+        }
+        for command, expected in cases.items():
+            with self.subTest(command=command):
+                repo, telemetry_dir = self.install_with_telemetry_dir()
+                env = self.telemetry_env(telemetry_dir)
+                result = self.run_hook_env(
+                    repo,
+                    "telemetry_hook.py",
+                    self.post_tool_use_bash(command, exit_code=3),
+                    env,
+                )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                events = self.read_events(telemetry_dir, repo)
+                self.assertEqual(len(events), 1, events)
+                self.assertEqual(events[0]["event"], "seed")
+                self.assertEqual(events[0]["action"], expected)
+                self.assertEqual(events[0]["exit_code"], 3)
+
+    @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root ignores chmod")
+    def test_unreadable_contract_write_records_null_version_and_exits_0(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        contract = self.write_contract(repo, name="locked", version=2)
+        contract.chmod(0)
+        self.addCleanup(contract.chmod, 0o644)
+        env = self.telemetry_env(telemetry_dir)
+
+        result = self.run_hook_env(
+            repo, "telemetry_hook.py", self.post_tool_use_write(contract), env
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assertNotIn("Traceback", result.stderr)
+        events = self.read_events(telemetry_dir, repo)
+        self.assertEqual(len(events), 1, events)
+        self.assertEqual(events[0]["event"], "contract_write")
+        self.assertEqual(events[0]["contract"], "locked")
+        self.assertIsNone(events[0]["version"])
 
 
 if __name__ == "__main__":

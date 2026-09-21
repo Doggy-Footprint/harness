@@ -4,11 +4,11 @@
 "Otel을 이용해서 하네스가 잘 작동하는지, 작동 워크플로우를 준수하는지, test-verifier/seed 등에서 실제로 문제를 잡아내는지, test-verifier에 의한 retry는 평균 몇 round 반복되고 handoff로 넘어가는 비율은 어떤지 서브 에이전트 등이 실행될 때 비용은 얼마나 드는지 등을 통계로 확인하고 싶어." Decisions: markers adopted; analyzer in `analytics/` (not in payload, separate contract, not started); markers written to `~/.harness/telemetry/<repo-slug>.jsonl`; events = existing hooks + PostToolUse; Claude and Codex both, fields Codex lacks are null; no Docker; VERSION 0.5.0 without MIGRATIONS entry. Work on branch `feat/harness-analytics`.
 
 ## State
-- Branch: feat/harness-analytics, base commit 33be63b, nothing committed.
+- Branch: feat/harness-analytics, base commit 33be63b; work committed as 4f01f82; session 2 changes uncommitted.
 - Changed: harness/VERSION, harness/hooks/contract_gate.py, harness/hooks/hooks.spec.json.
 - Added: harness/lib/telemetry.py, harness/lib/hook_shared.py, harness/hooks/telemetry_hook.py, tests/test_telemetry.py.
-- `python3 -m unittest discover -s tests -p 'test_*.py'`: 87 tests OK.
-- `python3 installer/harness.py update .` not yet run on this repo.
+- `python3 -m unittest discover -s tests -p 'test_*.py'`: 92 tests OK (session 2).
+- `python3 installer/harness.py update .` run on this repo in session 2 (.harness/, .claude/settings.json, .codex/hooks.json, AGENTS.md updated).
 - Contract-workflow stopped at Limit: round 2 used; the third verifier produced 2 findings confirmed by seed (suite stayed green):
   1. C19: the Claude `PostToolUseFailure` group's matcher is not asserted; widening `"Bash"` to `".*"` passes.
   2. C9/C3: no near-miss test against a registered Test command; substring matching instead of exact normalized matching passes.
@@ -34,11 +34,13 @@ Each seed: `python3 .harness/bin/seed.py backup <file>`, inject, run the Test co
 | S6 | harness/lib/telemetry.py | swallowed write failure prints "telemetry write failed" to stderr | green | fails (round 2) |
 | S7 | harness/hooks/hooks.spec.json | Claude PostToolUseFailure matcher `Bash` -> `.*` | green | fails (round 3) |
 | S8 | harness/hooks/telemetry_hook.py | Test command matched by substring instead of exact normalized match | green | fails (round 3) |
-| S9 | harness/lib/telemetry.py | `repo` emitted as null | green | open |
-| S10 | harness/hooks/telemetry_hook.py | seed `action` hardcoded to "backup" | green | open |
-| S11 | harness/hooks/telemetry_hook.py | OSError reading a contract re-raised in parse_contract_version | green | open |
+| S9 | harness/lib/telemetry.py | `repo` emitted as null | green | fails (session 2) |
+| S10 | harness/hooks/telemetry_hook.py | seed `action` hardcoded to "backup" | green | fails (session 2) |
+| S11 | harness/hooks/telemetry_hook.py | OSError reading a contract re-raised in parse_contract_version | green | fails (session 2) |
 
 ## Next Step
+Session 2 progress: step 1 done (tests added in tests/test_telemetry.py class TestEnvelopeAndActions, plus C18 VERSION == 0.5.0 and C20 pre-existing PostToolUse hook preserved; 92 tests OK; S9–S11 re-seeded and all fail). `python3 installer/harness.py update .` run on this repo (uncommitted). Remaining: step 2 real Claude/Codex session checks (needs a fresh session so the new hooks load), then commit.
+
 User decision (after round 3): stop the verifier loop and resume in a new session with both of:
 1. Close S9–S11: assert envelope fields ts/repo/session_id/tool_use_id on a PostToolUse-derived event; assert seed action for restore and status; make a contract file unreadable (chmod 000) during contract_write and assert the event is still recorded with version null and exit 0. Re-run S9–S11; each must now fail. Unseeded verifier-4 finding: C20 update should preserve pre-existing PostToolUse hooks.
 2. Then run `python3 installer/harness.py update .` on this repo, start a real Claude session, and check `~/.harness/telemetry/<repo-slug>.jsonl` receives subagent_start/stop, test_command, seed, contract_write lines; check whether the real Claude PostToolUse Bash payload carries `tool_response.exit_code` (docs say yes, observed transcripts show failed Bash as error text). Same check in a Codex session.

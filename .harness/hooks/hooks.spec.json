@@ -31,6 +31,24 @@
       "event": "PreToolUse",
       "matcher": "Bash",
       "command": "python3 \"{root}/.harness/hooks/contract_gate.py\""
+    },
+    {
+      "event": "PostToolUse",
+      "matcher": "Bash|Write|Edit",
+      "targets": ["claude"],
+      "command": "python3 \"{root}/.harness/hooks/telemetry_hook.py\""
+    },
+    {
+      "event": "PostToolUse",
+      "matcher": "apply_patch",
+      "targets": ["codex"],
+      "command": "python3 \"{root}/.harness/hooks/telemetry_hook.py\""
+    },
+    {
+      "event": "PostToolUseFailure",
+      "matcher": "Bash",
+      "targets": ["claude"],
+      "command": "python3 \"{root}/.harness/hooks/telemetry_hook.py\""
     }
   ]
 }
