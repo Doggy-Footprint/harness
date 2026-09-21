@@ -1,59 +1,3 @@
-# Harness telemetry marker hooks
-
-## Goal
-"Otel을 이용해서 하네스가 잘 작동하는지, 작동 워크플로우를 준수하는지, test-verifier/seed 등에서 실제로 문제를 잡아내는지, test-verifier에 의한 retry는 평균 몇 round 반복되고 handoff로 넘어가는 비율은 어떤지 서브 에이전트 등이 실행될 때 비용은 얼마나 드는지 등을 통계로 확인하고 싶어." Decisions: markers adopted; analyzer in `analytics/` (not in payload, separate contract, not started); markers written to `~/.harness/telemetry/<repo-slug>.jsonl`; events = existing hooks + PostToolUse; Claude and Codex both, fields Codex lacks are null; no Docker; VERSION 0.5.0 without MIGRATIONS entry. Work on branch `feat/harness-analytics`.
-
-## State
-- Branch: feat/harness-analytics. Contract v4 changes are uncommitted; Codex PostToolUse matcher now covers `Bash|apply_patch`, tests cover non-zero Codex Test command and seed events, and `installer/harness.py update .` was applied.
-- `python3 -m unittest discover -s tests -p 'test_*.py'`: 108 tests OK.
-- Real Claude session check done (session 3): contract_write, test_command, seed, tool_failure lines written to `~/.harness/telemetry/-Users-hwansu-tools-harness.jsonl` with client "claude". Observed: Claude PostToolUse Bash payload has no tool_response.exit_code (always null); a failed Bash fires only PostToolUseFailure; SubagentStop sent agent_type "". Compound commands (`cd x && <test command>`) are not matched (by design, C9).
-- Real Codex session check done (session `01a0c3ac-bbde-7f72-97ba-c1e69375566c`): contract_write, successful and non-zero test_command, and seed status lines were written with client "codex". Both Bash outcomes and seed recorded exit_code null; agent_id/agent_type were null and tool_use_id was populated. The probe contract was removed afterward.
-- User decisions (session 3): tool_failure gains contract/action; keep exit_code, documented always null on Claude (success/failure = event kind); agent_type "" -> null for every event kind.
-
-## Failed Attempts
-| attempt | failure evidence | cause |
-|---|---|---|
-| Round 1: tests added for C19 PostToolUse matcher, C17 non-matching failure, C7 sorted running | Verifier 2 then found 4 more gaps; seeds for C17 seed-branch, C3 stem choice, C15 stderr stayed green | verified: each verifier pass audits the grown suite and finds adjacent uncovered combinations |
-| Round 2: tests added for C17 seed branch, C3 two-contract stem, C15 byte-identical stderr | Verifier 3 found PostToolUseFailure matcher and near-miss Test command gaps; both seeds stayed green | verified: same as above |
-| Round 3 (user-approved extra, main agent wrote tests): added C9 near-miss and C19 PostToolUseFailure Bash-only tests; seeds for both now fail | Verifier 4 found 4 gaps; seeds stayed green for: repo field emitted as null, seed action hardcoded to "backup", OSError from contract read re-raised | verified: envelope fields (ts, repo, session_id, tool_use_id), non-backup seed actions, and unreadable-contract path are never asserted |
-
-| Session 3 round 1: added C24 (SubagentStart "" -> null), C25 (failure-path near-miss) after S12/S13 stayed green | Verifier found failure-path action partition and non-subagent agent_type "" uncovered (S14/S15 green) | verified: each verifier pass finds adjacent uncovered combinations |
-| Session 3 round 2: added C24 tests for test_command/tool_failure, C22 action partition status/token/none; S12-S15 now fail | Verifier found agent_type "" untested for seed/contract_write/handoff_write/gate_block, and C21 tested only alpha-then-beta order (S16/S17 green) | verified: same as above |
-| Session 3 extra round (user-approved): added C24 tests for seed/contract_write/handoff_write/gate_block, C21 beta-then-alpha; S16/S17 now fail | Verifier found failure-path whitespace normalization and in-script tool_name=="Bash" guard untested (S18/S19 green) | verified: same as above |
-| Session 4 Codex probe after installing `Bash|apply_patch` matcher | contract_write recorded but Test command and seed events absent | verified: current Codex session retained the hook configuration loaded at session start; a new session is required to test the installed matcher |
-
-## Seed Log
-Each seed: `python3 .harness/bin/seed.py backup <file>`, inject, run the Test command, `seed.py restore` (all restores exited 0). "green" = suite passed with the defect = test gap confirmed.
-
-| seed | file | injected defect | before fix | after fix |
-|---|---|---|---|---|
-| S1 | harness/hooks/hooks.spec.json | Claude PostToolUse matcher `Bash\|Write\|Edit` -> `Bash` | green | fails (round 1) |
-| S2 | harness/hooks/telemetry_hook.py | PostToolUseFailure filter removed (tool_failure for any Bash) | green | fails (round 1) |
-| S3 | harness/hooks/contract_gate.py | gate_block running not sorted (reversed marker order) | green | fails (round 1) |
-| S4 | harness/hooks/telemetry_hook.py | seed branch dropped from PostToolUseFailure filter | green | fails (round 2) |
-| S5 | harness/hooks/telemetry_hook.py | test_command contract = last-seen stem, not matched one | green | fails (round 2) |
-| S6 | harness/lib/telemetry.py | swallowed write failure prints "telemetry write failed" to stderr | green | fails (round 2) |
-| S7 | harness/hooks/hooks.spec.json | Claude PostToolUseFailure matcher `Bash` -> `.*` | green | fails (round 3) |
-| S8 | harness/hooks/telemetry_hook.py | Test command matched by substring instead of exact normalized match | green | fails (round 3) |
-| S9 | harness/lib/telemetry.py | `repo` emitted as null | green | fails (session 2) |
-| S10 | harness/hooks/telemetry_hook.py | seed `action` hardcoded to "backup" | green | fails (session 2) |
-| S11 | harness/hooks/telemetry_hook.py | OSError reading a contract re-raised in parse_contract_version | green | fails (session 2) |
-| S12 | harness/lib/telemetry.py | agent_type "" -> null only for subagent_stop | green | fails (session 3 r1) |
-| S13 | harness/hooks/telemetry_hook.py | PostToolUseFailure test command matched by substring | green | fails (session 3 r1) |
-| S14 | harness/lib/telemetry.py | agent_type "" -> null only for subagent_* events | green | fails (session 3 r2) |
-| S15 | harness/hooks/telemetry_hook.py | tool_failure action only for backup/restore | green | fails (session 3 r2) |
-| S16 | harness/lib/telemetry.py | agent_type "" -> null only for subagent_start/stop, test_command, tool_failure | green | fails (session 3 extra) |
-| S17 | harness/hooks/telemetry_hook.py | tool_failure contract = last registered contract when any matches | green | fails (session 3 extra) |
-
-## Next Step
-Resume in Codex, in this repo on feat/harness-analytics:
-1. Start the separate `analytics/` analyzer contract (outside `harness/` payload).
-
-## Open Questions
-- Resolved (new Codex session): PostToolUse fires for successful and non-zero Bash, but its payload has no exit_code; both test_command events recorded exit_code null.
-- Resolved (session 3): real Claude PostToolUse has no exit_code; failed Bash fires only PostToolUseFailure.
-
-## Contract Snapshot
 ---
 version: 4
 ---
@@ -88,7 +32,7 @@ Kinds and fields:
   subagent_stop: -
   gate_block: running (list of agent types, sorted)
   test_command: contract (contract file stem whose `Test command` matched), exit_code (int|null)
-  exit_code is always null on Claude (real PostToolUse payload has no tool_response.exit_code); success vs failure is the event kind: test_command/seed = succeeded, tool_failure = failed.
+  exit_code is always null on Claude (real PostToolUse payload has no tool_response.exit_code). Claude success vs failure is the event kind: test_command/seed = succeeded, tool_failure = failed. Codex emits test_command/seed from PostToolUse for both zero and non-zero exits; exit_code is recorded when its payload supplies an integer.
   seed: action ("backup"|"restore"|"status"|other token|null), exit_code (int|null)
   contract_write: contract (file stem), version (int|null from frontmatter)
   handoff_write: file (file name)

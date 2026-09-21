@@ -40,7 +40,7 @@
     },
     {
       "event": "PostToolUse",
-      "matcher": "apply_patch",
+      "matcher": "Bash|apply_patch",
       "targets": ["codex"],
       "command": "python3 \"{root}/.harness/hooks/telemetry_hook.py\""
     },

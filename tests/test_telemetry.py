@@ -253,6 +253,24 @@ class TestNormal(TelemetryTestCase):
         self.assertEqual(events[0]["action"], "backup")
         self.assertEqual(events[0]["exit_code"], 0)
 
+    def test_u4_nonzero_codex_bash_seed_records_action_and_exit_code(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        env = self.telemetry_env(telemetry_dir)
+        payload = self.post_tool_use_bash(
+            "python3 .harness/bin/seed.py restore", exit_code=1
+        )
+        payload["transcript_path"] = "/tmp/.codex/sessions/session.jsonl"
+
+        result = self.run_hook_env(repo, "telemetry_hook.py", payload, env)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        events = self.read_events(telemetry_dir, repo)
+        self.assertEqual(len(events), 1, events)
+        self.assertEqual(events[0]["event"], "seed")
+        self.assertEqual(events[0]["client"], "codex")
+        self.assertEqual(events[0]["action"], "restore")
+        self.assertEqual(events[0]["exit_code"], 1)
+
     def test_c5_contract_write_records_stem_and_frontmatter_version(self):
         repo, telemetry_dir = self.install_with_telemetry_dir()
         contract = self.write_contract(repo, name="x", version=3)
@@ -1014,7 +1032,7 @@ class TestEdge(TelemetryTestCase):
         codex_failure = self.commands(codex.get("PostToolUseFailure", []))
         self.assertEqual(codex_failure, [])
 
-    def test_c19_claude_matcher_covers_bash_write_edit_and_codex_covers_apply_patch(self):
+    def test_c19_claude_matcher_covers_bash_write_edit_and_codex_covers_only_bash_and_apply_patch(self):
         claude, codex = self.install_hook_configs()
 
         claude_matcher = self.find_matcher(claude.get("PostToolUse", []), "telemetry_hook.py")
@@ -1027,9 +1045,27 @@ class TestEdge(TelemetryTestCase):
 
         codex_matcher = self.find_matcher(codex.get("PostToolUse", []), "telemetry_hook.py")
         self.assertIsNotNone(codex_matcher, codex.get("PostToolUse"))
-        self.assertIsNotNone(
-            re.fullmatch(codex_matcher, "apply_patch"), codex_matcher
-        )
+        for tool_name in ("Bash", "apply_patch"):
+            self.assertIsNotNone(re.fullmatch(codex_matcher, tool_name), codex_matcher)
+        for tool_name in ("Write", "Edit", "Read"):
+            self.assertIsNone(re.fullmatch(codex_matcher, tool_name), codex_matcher)
+
+    def test_c26_nonzero_codex_bash_test_command_records_test_command(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        self.write_contract(repo, name="sample", test_command="python3 -m unittest")
+        env = self.telemetry_env(telemetry_dir)
+        payload = self.post_tool_use_bash("python3 -m unittest", exit_code=1)
+        payload["transcript_path"] = "/tmp/.codex/sessions/session.jsonl"
+
+        result = self.run_hook_env(repo, "telemetry_hook.py", payload, env)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        events = self.read_events(telemetry_dir, repo)
+        self.assertEqual(len(events), 1, events)
+        self.assertEqual(events[0]["event"], "test_command")
+        self.assertEqual(events[0]["client"], "codex")
+        self.assertEqual(events[0]["contract"], "sample")
+        self.assertEqual(events[0]["exit_code"], 1)
 
     def test_c19_claude_failure_matcher_is_bash_only(self):
         claude, codex = self.install_hook_configs()
