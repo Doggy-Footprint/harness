@@ -82,7 +82,7 @@ Review evidence: <named procedure/output, or none — reason>
 | id | characteristic / subcharacteristic | target and context | measure method / inputs / unit | threshold and direction | evidence: automated, review, mutation | source |
 
 # Verification Obligations
-| id | parent requirement/Case ids | applicable targets/input classes | boundary/transition/combination | observation and expected result | evidence procedure |
+| id | parent requirement/Case ids | variant and target surface | test layer and selection policy | boundary/transition/combination | observation and expected result | evidence procedure |
 
 # Assumptions and Defaults
 | id | decision | evidence and uncertainty | user approval or explicit delegation |
@@ -95,6 +95,9 @@ Review evidence: <named procedure/output, or none — reason>
 | correction batches used | 0 |
 | verifier invocations | 0 |
 | open finding ids | none |
+
+Audit state (one entry per obligation; retain prior decisions in the execution ledger):
+| obligation id | spec version | evidence references and revision | accepted / open / invalidated / pending | rationale and mutation outcome | dependencies and reopening evidence |
 
 Execution ledger (append attempts; preserve failed approaches):
 | attempt | finding / failure signature | cause hypothesis | changed approach / new evidence | result / disposition |
@@ -118,17 +121,44 @@ test roles never read Implementation.
 
 # Verification model
 
-Split broad requirements into independently checkable obligations. Cover each
-named target, neighboring boundary values, state transition, independently
-required argument omission, and valid pairwise combination. Add higher-order
-combinations only when behavior requires them. Record inapplicable dimensions
-instead of inventing domains or unbounded Cartesian products.
+Define a finite set of independently checkable obligations before dispatch. Each
+row identifies the required variant, observable target surface, test layer, and
+selection policy. Enumerate required combinations as separate stable ids or an
+explicit finite list; listing targets and variants does not imply their Cartesian
+product. Distinguish test layer (unit, integration, end-to-end) from Case `level`.
+State which variants need exhaustive checks and which need representative checks,
+including the selected representatives and rationale. Define lifecycle boundaries
+such as same-process re-import versus restart. Resolve ambiguous selection or
+boundary terms before approval; never let a test role choose missing policy.
 
-Automated evidence is preferred. Review evidence is permitted only with a
-repeatable procedure, inputs, observation boundary, expected result, and named
-artifact. Mutation evidence injects a concrete violating behavior and confirms
-that the intended automated assertion rejects it; it supplements rather than
-replaces the primary measurement or review.
+Derive obligations from every in-scope requirement, including errors and quality
+requirements. Use boundary values, transitions and combinations where required
+by the behavior or approved risk policy; justify excluded dimensions. A finite
+map does not excuse a missing user requirement. Such omissions are spec challenges,
+not permission to expand test scope silently.
+
+Evidence is sufficient when it observes the required behavior at the declared
+surface and layer, uses an independent expected result, and distinguishes the
+specified failure from success. A test name or filled map is not proof. Additional
+examples alone do not establish a gap: a blocking finding must identify a required
+obligation and a concrete violating behavior the current evidence fails to reject,
+or cite a precise conflict or omission in the approved requirements.
+
+Prefer automated evidence. Review evidence needs a repeatable procedure, inputs,
+observation, expected result and named artifact. Mutation evidence supplements
+these checks. Main selects the 2–3 strongest distinct defect classes from the audit,
+or all if fewer, including on an initial pass with no findings, and records why
+they are strongest. A mutation counts only if it executes and the intended
+assertion detects it; setup failures and unrelated failures are inconclusive.
+
+Carry audit state between fresh verifiers. Acceptance is scoped to the spec version,
+evidence revision and dependencies, not a permanent exemption. Main marks affected
+entries invalidated after changes to requirements, tests, helpers, procedures or
+implementation behavior; record the impact and why other entries remain valid.
+Changed shared helpers can invalidate several obligations. A verifier checks this
+impact assessment and reopens acceptance only with new evidence of a defect,
+changed dependency or missed requirement. Never inherit acceptance blindly or
+restart scope derivation merely because the verifier is fresh.
 
 # Subagent model
 
@@ -162,7 +192,10 @@ recovery abort. Do not emit markers for ordinary tool activity.
    active spec exists, do not start another workflow. If its handoff is valid,
    resume only when requested. Without a handoff, compare `base_commit` to HEAD,
    summarize progress and drift, and ask the user whether to resume or archive it
-   as aborted. Read deciding code yourself; delegate only location discovery.
+   as aborted. Read deciding code yourself; delegate only location discovery. For pre-0.9
+   specs, reconcile obligations and audit state with the verification model before
+   dispatch. Do not infer prior acceptance from a passing suite. Obtain approval
+   for changed verification policy and preserve invocation counts and history.
 2. **Draft and approve (main).** Derive functional requirements and all nine
    quality applicability decisions. Use `requirement-oracle` for decisions the
    user cannot assess. Define measures, thresholds, evidence, and traceability
@@ -187,8 +220,9 @@ recovery abort. Do not emit markers for ordinary tool activity.
    correction batch. A timeout is a failure to investigate, never a pass or a
    reason for an unchanged automatic retry.
 5. **Verify (fresh test-verifier).** After a passing Test command, dispatch a fresh
-   verifier with the spec path/version, complete coverage/evidence map, and finding
-   ledger for a complete audit of functional and applicable quality obligations.
+   verifier with the spec path/version, complete coverage/evidence map, audit state,
+   change-impact assessment, and finding ledger. Check every obligation has a current disposition; audit pending and
+   invalidated evidence and assess any new challenge to retained acceptance.
    Before dispatch, check and persist the incremented `verifier invocations` count
    in Workflow Control. At most two invocations are allowed per run, including the
    initial audit and failed, interrupted, or incomplete audits. Resume and spec
@@ -197,8 +231,13 @@ recovery abort. Do not emit markers for ordinary tool activity.
    the required audit would exceed the budget.
 6. **Triage and mutate (main).** Resolve findings with stable ids, spec versions,
    affected obligations/variants, evidence, dispositions, and mutation outcomes.
-   Exercise the 2–3 strongest concrete findings first, all if fewer, one mutation
-   at a time, without exposing implementation or injected diffs to test roles:
+   Classify each item as an obligation evidence gap, a spec challenge, or advisory.
+   A spec challenge cites the conflicting or missing requirement and routes to an
+   amendment/user decision; optional strengthening is advisory and does not block
+   completion. Do not downgrade an actual requirement gap to advisory. Update audit
+   state with evidence-backed dispositions. Exercise the selected strongest defect
+   classes, prioritizing blocking findings, one mutation at a time, without exposing
+   implementation or injected diffs to test roles:
    1. `python3 .harness/bin/seed.py backup <every edited file>`.
    2. Inject the violating behavior and run Test command with a finite timeout
       suited to its expected runtime.
@@ -225,12 +264,18 @@ recovery abort. Do not emit markers for ordinary tool activity.
    complete replacement instructions, continuing existing agents where possible.
    Implementation defects receive ids and observable behavior, never test code.
    Test/evidence defects receive rules, variants, and sanitized evidence, never
-   implementation diffs. A spec gap increments spec version and redispatches both
+   implementation diffs. Correct the cause across all declared obligations sharing
+   the defective pattern or helper; report the full affected set, including checked
+   siblings needing no change. Do not add undeclared combinations during this sweep.
+   Update evidence references and invalidate affected acceptance before redispatch.
+   A spec gap increments spec version after required approval and redispatches both
    roles. Reconcile, rerun the restored Test command, repeat confirming mutations,
    then return to Verify for a fresh audit.
 8. **Stop condition.** Complete only when every required functional and quality
    obligation passes, review artifacts exist, the verifier audit is complete with
-   no open finding, and confirming mutations fail for the intended assertion.
+   no open blocking finding, every obligation has current accepted evidence, and
+   the selected confirming mutations fail for the intended assertion. Advisory
+   suggestions may remain; unresolved spec challenges may not.
    If further verification is required after two invocations, stop with status
    `limit` before making corrections that require that audit. For ordinary
    corrections blocked on a user decision or external change, finish independent

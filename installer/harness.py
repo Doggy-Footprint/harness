@@ -308,12 +308,21 @@ def migrate_verifier_budget(target: Path, dry_run: bool) -> list[str]:
     return planned
 
 
+def migrate_verification_scope(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "install bounded verification and persistent audit-state instructions",
+        "preserve existing specs, archived records, and verifier counts; before resume, "
+        "reconcile obligation scope and audit state, obtaining approval for policy changes",
+    ]
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
     (parse_version("0.6.0"), "install workflow telemetry markers", migrate_workflow_markers),
     (parse_version("0.7.0"), "replace contract workflow with persistent specs", migrate_workflow_specs),
     (parse_version("0.8.0"), "limit verifier to two invocations; uncap ordinary corrections", migrate_verifier_budget),
+    (parse_version("0.9.0"), "bound verification scope and retain audit decisions", migrate_verification_scope),
 )
 
 

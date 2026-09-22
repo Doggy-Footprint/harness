@@ -24,22 +24,27 @@ threshold or change its measurement context.
 
 ## Plan, implement, and check
 
-Use Verification Obligations and applicable Quality Requirements as the shared
-acceptance criteria. Map every obligation and variant to its observation,
-expected-value source, escaping defect, evidence procedure, and test or artifact.
-Independently challenge obligations missing from User Intent, Signatures,
-Functional Requirements, Errors, Cases, or Quality Requirements.
+Use the approved Verification Obligations and Quality Requirements as the shared
+acceptance criteria. Build evidence for every declared variant, target surface,
+test layer and selected combination. Do not turn separately listed dimensions
+into an implicit Cartesian product or choose representatives yourself. Challenge
+missing requirements or ambiguous selection policies with a source reference;
+complete independent work while the affected obligations remain blocked.
 
-Cover every named target, boundary, state transition, required argument omission,
-and required combination. Use public observation boundaries and labelled
-parameterized cases. Do not guess unspecified filenames, messages, helpers,
-thresholds, or dependencies. Control external boundaries and test order.
+For each obligation, identify the observation, independent expected-value source,
+concrete escaping defect, and assertion or review artifact that rejects it. Use
+public observation boundaries and labelled parameterized cases. Control external
+boundaries and test order. Do not guess unspecified expectations or dependencies,
+or weaken a threshold or measurement context. A review procedure must name inputs,
+observation, expected result and a repeatable artifact.
 
-For review evidence, define a repeatable procedure, inputs, observation, expected
-result, and named artifact. Identify concrete violating behaviors that mutation
-evidence should reject, but do not inject them. Before reporting, check whether a
-constant result, ignored input, omitted transition, or wrong quality threshold
-could still pass. Corrections return a complete map including sibling variants.
+Check whether a constant result, ignored input, omitted transition or wrong quality
+threshold could satisfy the evidence. Propose the strongest distinct defect classes
+for mutation checks; do not inject them. On correction, trace the defective pattern
+or helper through all declared obligations, repair affected siblings in one batch,
+and report checked siblings needing no change. Stay within approved scope. Return
+a complete replacement map, changed evidence dependencies, and prior acceptance
+that needs invalidation; main and verifier own acceptance decisions.
 
 ## Gaps and checks
 
@@ -51,9 +56,11 @@ symbol is expected during parallel work; fix other load defects.
 ## Report
 
 - Spec version and files changed.
-- Complete coverage/evidence map: obligation and parent ids, variants and level,
+- Complete coverage/evidence map: obligation and parent ids, variants, target surface, test layer and selection policy,
   observation, expected-value source, escaping defect, procedure/artifact, and
   test names; include justified inapplicable entries.
+- Correction impact: shared cause, affected obligations, checked siblings, changed
+  dependencies and acceptance needing invalidation; or `none`.
 - Load-check command and result.
 - Blocked obligations and uncertainties, including what would resolve them.
 - Spec challenges, or `none`:

@@ -17,8 +17,13 @@ asking questions that the repository can answer. For remaining choices, explain:
 - a recommended option and the evidence supporting it;
 - what evidence would reduce remaining uncertainty.
 
-Cover functional intent, observable failure behavior, boundaries and state
-transitions. Evaluate all nine ISO/IEC 25010:2023 product quality characteristics
+Resolve functional intent, observable failure behavior, boundaries and state
+transitions together with verification scope. Distinguish observable target surfaces
+from test layers; define required variant/layer combinations, exhaustive versus
+representative selection and the representatives with their rationale. Clarify
+lifecycle terms such as re-import versus restart. Do not assume a Cartesian product
+or narrow away an in-scope requirement. Separate a missing requirement from optional
+evidence strengthening, and explain what evidence will be sufficient for acceptance. Evaluate all nine ISO/IEC 25010:2023 product quality characteristics
 for applicability. For applicable characteristics, help select a context-specific
 measure, inputs, unit, threshold and direction, and automated, review, or mutation
 evidence. ISO/IEC 25023 measure definitions do not determine the project's pass
