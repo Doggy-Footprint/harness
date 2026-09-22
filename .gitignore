@@ -9,3 +9,6 @@ tmp/
 agent-docs/specs/.active
 agent-docs/specs/.running/
 agent-docs/specs/.seed/
+
+analytics/frontend/node_modules/
+analytics/frontend/dist/
