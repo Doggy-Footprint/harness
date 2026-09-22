@@ -5,7 +5,7 @@ It ships documentation rules (the managed block below), the workflow-approach sk
 Source: `harness/` (payload), `installer/harness.py` (install / update / doctor), `tests/`. This repo installs itself into `.harness/` for dogfooding.
 Edit `harness/`, never `.harness/` or the generated `.claude/`, `.codex/`, `.agents/` files; then run `python3 installer/harness.py update .`. `update` MUST provide version-by-version migration steps.
 
-<!-- harness:begin 0.7.0 -->
+<!-- harness:begin 0.8.0 -->
 # Documentation Guide
 
 "Documentation" refers to standalone docs, inline comments, and docstrings.
@@ -115,7 +115,7 @@ When the revisit condition is met and the alternative is adopted, remove its ent
 
 Directory: `agent-docs/handoff/`.
 
-Write when a workflow-approach task reaches its correction limit, the user pauses or stops mid-task, or the user requests it.
+Write when a workflow-approach task exhausts its verifier budget, cannot make progress without a user decision or external change, the user pauses or stops mid-task, or the user requests it.
 
 Required file structure:
 

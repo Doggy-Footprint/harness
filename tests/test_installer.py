@@ -137,7 +137,7 @@ class InstallerTestCase(unittest.TestCase):
             f"run_id: {run_id}\n"
             f"status: {status}\n"
             f"base_commit: {'a' * 40}\n"
-            "max_correction_rounds: 2\n"
+            "max_verifier_invocations: 2\n"
             f"handoff: {handoff}\n"
             "---\n\n"
             + "\n\n".join(sections)
@@ -419,7 +419,7 @@ class TestNormal(InstallerTestCase):
         repo = self.install()
         docs, source, manifest_path, index_block = self.prepare_stale_record(repo)
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("stale", (result.stdout + result.stderr).lower())
@@ -438,7 +438,7 @@ class TestNormal(InstallerTestCase):
         docs, source, _, index_block = self.prepare_stale_record(repo)
         (docs / "index.md").write_text((docs / "index.md").read_text().replace(index_block, ""))
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertFalse(source.exists())
@@ -466,7 +466,7 @@ class TestNormal(InstallerTestCase):
         )
         (docs / "index.md").write_text(first + "\n---\n" + stale_block + "\n---\n" + second)
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual((docs / "index.md").read_text(), first.rstrip("\n") + "\n---\n" + second)
@@ -907,11 +907,77 @@ class TestSpecLifecycle(InstallerTestCase):
 
 
 class TestEdge(InstallerTestCase):
-    def test_c4_update_runs_03_04_06_07_migrations_once_each(self):
+    def prepare_070_spec(self, repo, count=1):
+        path = self.write_valid_spec(repo)
+        content = path.read_text().replace("max_verifier_invocations: 2", "max_correction_rounds: 2")
+        content = content.replace("# Workflow Control\n\nnone", f"# Workflow Control\n\n| verifier invocations | {count} |")
+        path.write_text(content)
+        manifest_path = repo / ".harness" / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["version"] = "0.7.0"
+        manifest_path.write_text(json.dumps(manifest))
+        return path
+
+    def test_080_migration_preserves_used_budget_and_archived_specs(self):
+        for count in (0, 1, 2, 3):
+            with self.subTest(count=count):
+                repo = self.install()
+                path = self.prepare_070_spec(repo, count)
+                archived = repo / "agent-docs" / "spec-logs" / path.name
+                archived.parent.mkdir(parents=True, exist_ok=True)
+                archived.write_bytes(path.read_bytes())
+                original = archived.read_bytes()
+                before = self.snapshot(repo)
+                result = run_installer("update", str(repo), "--dry-run")
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(before, self.snapshot(repo))
+                result = run_installer("update", str(repo), input="y\n")
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                content = path.read_text()
+                self.assertIn("version: 2\n", content)
+                self.assertIn("max_verifier_invocations: 2\n", content)
+                self.assertNotIn("max_correction_rounds:", content)
+                self.assertIn(f"| verifier invocations | {count} |", content)
+                self.assertIn("## v2", content)
+                self.assertEqual(archived.read_bytes(), original)
+                validation = self.run_lifecycle(repo, "validate", "--spec", str(path))
+                self.assertEqual(validation.returncode, 0, validation.stderr)
+                before = self.snapshot(repo)
+                result = run_installer("update", str(repo))
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(before, self.snapshot(repo))
+
+    def test_080_migration_missing_count_or_decline_preserves_files(self):
+        for missing_count in (False, True):
+            with self.subTest(missing_count=missing_count):
+                repo = self.install()
+                path = self.prepare_070_spec(repo)
+                if missing_count:
+                    path.write_text(path.read_text().replace("| verifier invocations | 1 |", "none"))
+                before = self.snapshot(repo)
+                result = run_installer("update", str(repo), input="n\n")
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertEqual(before, self.snapshot(repo))
+                if missing_count:
+                    self.assertIn("verifier count", result.stdout + result.stderr)
+
+    def test_verifier_budget_validation_requires_exactly_two(self):
+        repo = self.install()
+        path = self.write_valid_spec(repo)
+        original = path.read_text()
+        for field in ("max_verifier_invocations: 0", "max_verifier_invocations: 3",
+                      "max_verifier_invocations: invalid", "max_correction_rounds: 2"):
+            with self.subTest(field=field):
+                path.write_text(original.replace("max_verifier_invocations: 2", field))
+                result = self.run_lifecycle(repo, "validate", "--spec", str(path))
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("max_verifier_invocations must be 2", result.stderr)
+
+    def test_c4_update_runs_03_04_06_07_08_migrations_once_each(self):
         repo = self.install()
         docs, source, _, index_block = self.prepare_stale_record(repo)
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         output = result.stdout + result.stderr
@@ -919,10 +985,10 @@ class TestEdge(InstallerTestCase):
             match.group(0)
             for line in output.splitlines()
             if line.startswith("migration ")
-            for match in [re.search(r"\b0\.(?:3|4|6|7)\.0\b", line)]
+            for match in [re.search(r"\b0\.(?:3|4|6|7|8)\.0\b", line)]
             if match
         ]
-        self.assertEqual(announcement_versions, ["0.3.0", "0.4.0", "0.6.0", "0.7.0"], output)
+        self.assertEqual(announcement_versions, ["0.3.0", "0.4.0", "0.6.0", "0.7.0", "0.8.0"], output)
         self.assertFalse(source.exists())
         self.assertEqual((docs / "stale" / source.name).read_text(), "# Stale\n")
         self.assertNotIn(index_block, (docs / "index.md").read_text())

@@ -15,11 +15,11 @@ and never choose missing behavior.
 2. Archived path: `agent-docs/spec-logs/<same-file-name>`.
 3. `specs/` and `spec-logs/` are excluded from Index & Staleness Management.
 4. Frontmatter fields are `version`, `run_id`, `status`, `base_commit`,
-   `max_correction_rounds`, and `handoff`. Status is `draft`, `active`,
+   `max_verifier_invocations`, and `handoff`. Status is `draft`, `active`,
    `complete`, `limit`, or `aborted`; use `handoff: none` when absent.
 5. Amendment increments `version` and adds a Version Log entry. Never change an
    approved expectation silently. Reconfirm behavior, quality targets, or the
-   correction limit when an amendment changes them.
+   verification policy when an amendment changes it.
 6. Before dispatch, the user approves the whole spec. If a required decision is
    unresolved, pause. Use `requirement-oracle` when the user lacks enough domain
    or codebase evidence to decide.
@@ -37,7 +37,7 @@ version: <positive integer>
 run_id: <16 lowercase hexadecimal characters>
 status: draft|active|complete|limit|aborted
 base_commit: <full commit id at workflow start>
-max_correction_rounds: <non-negative integer; propose 2 unless risk supports another value>
+max_verifier_invocations: 2
 handoff: none|<repo-relative handoff path>
 ---
 
@@ -96,6 +96,9 @@ Review evidence: <named procedure/output, or none — reason>
 | verifier invocations | 0 |
 | open finding ids | none |
 
+Execution ledger (append attempts; preserve failed approaches):
+| attempt | finding / failure signature | cause hypothesis | changed approach / new evidence | result / disposition |
+
 # Version Log
 ## v<n>
 - <what changed and the evidence or decision that forced it>
@@ -149,7 +152,7 @@ python3 .harness/bin/workflow_marker.py end --run-id ID --status complete|limit|
 Emit `start` before the initial dispatch. Emit `implement_test` before the parallel
 roles. Emit `verify` before dispatching a verifier.
 Emit one `verifier` marker after every verifier result. Emit `amend` before every amendment or correction. Emit
-`end complete` after completion, `end limit` at the approved correction limit,
+`end complete` after completion, `end limit` when the verifier budget is exhausted,
 `end handoff` for a nonterminal handoff, and `end aborted` after an approved
 recovery abort. Do not emit markers for ordinary tool activity.
 
@@ -163,7 +166,8 @@ recovery abort. Do not emit markers for ordinary tool activity.
 2. **Draft and approve (main).** Derive functional requirements and all nine
    quality applicability decisions. Use `requirement-oracle` for decisions the
    user cannot assess. Define measures, thresholds, evidence, traceability, and
-   correction limit. Obtain whole-spec approval, set status `active`, then run
+   the fixed budget of two verifier invocations per run. Obtain whole-spec approval,
+   set status `active`, then run
    and check:
    `python3 .harness/bin/spec_lifecycle.py start --spec PATH --run-id ID`.
    Emit telemetry start only after lifecycle start succeeds.
@@ -181,7 +185,12 @@ recovery abort. Do not emit markers for ordinary tool activity.
 5. **Verify (fresh test-verifier).** After a passing Test command, provide the
    spec path/version, complete coverage/evidence map, and finding ledger. Require
    a complete audit of functional and applicable quality obligations. Use a new
-   verifier after any test or evidence-procedure correction.
+   verifier after any test or evidence-procedure correction. Before dispatch,
+   check the budget and persist the incremented `verifier invocations` count in
+   Workflow Control. The initial audit counts; at most two invocations are allowed
+   per run, including failed, interrupted, or incomplete audits. Resume and spec
+   amendments never reset the count. Never start a replacement run to evade it.
+   Use the invocation count for telemetry `--round`.
 6. **Triage and mutate (main).** Track stable finding id, spec version, affected
    obligation/variants, evidence, disposition, and mutation outcome. Resolve
    every finding before redispatch. Exercise the 2–3 strongest concrete findings
@@ -191,8 +200,11 @@ recovery abort. Do not emit markers for ordinary tool activity.
    3. `python3 .harness/bin/seed.py restore`; stop if restore fails.
 
    Green confirms a gap only when the mutation executed. A failure rejects it
-   only when the intended assertion detects the violation. Retry inconclusive
-   mutations. Never expose implementation or injected diffs to test roles.
+   only when the intended assertion detects the violation. Retry an inconclusive
+   mutation only with a changed probe that can distinguish execution from the
+   observed failure. If no such probe is available, record it as blocked and
+   hand off; never treat an inconclusive result as resolved. Never expose
+   implementation or injected diffs to test roles.
 7. **Correct as one batch (main).** Emit `amend`, increment the correction count,
    and redispatch complete replacement instructions. Continue existing agents
    where possible. Implementation defects receive ids and observable behavior,
@@ -200,13 +212,33 @@ recovery abort. Do not emit markers for ordinary tool activity.
    evidence, never implementation diffs. A spec gap increments spec version and
    redispatches both roles. Reconcile, rerun the restored Test command, repeat
    confirming mutations, then use a fresh verifier.
-8. **Stop condition.** The initial dispatch does not consume a correction round.
-   Increment immediately before each correction redispatch. Complete only when
-   every required functional and quality obligation passes, review artifacts
-   exist, the verifier audit is complete with no open finding, and confirming
-   mutations fail for the intended assertion. If another correction is required
-   after the approved limit, write a handoff, set `handoff`, set status `limit`,
-   emit limit telemetry, and archive the spec.
+8. **Stop condition.** Ordinary implementation, test, evidence, and spec
+   corrections have no count limit; correction batches are recorded for history
+   only. Complete only when every required functional and quality obligation
+   passes, review artifacts exist, the verifier audit is complete with no open
+   finding, and confirming mutations fail for the intended assertion. Triage the
+   final audit before deciding: findings rejected with evidence need no further
+   audit if tests, evidence procedures, and approved expectations are unchanged.
+   If a further audit is required after two invocations, write a handoff, set
+   `handoff`, set status `limit`, and archive the spec. Do not perform corrections
+   whose required re-audit cannot fit within the remaining budget.
+
+   For every ordinary retry, record the failure signature, cause hypothesis,
+   changed approach or new evidence, and the observed result in the execution
+   ledger. Continue while there is a concrete diagnostic or corrective next step.
+   Do not repeat a failed approach without new evidence. If a resolved finding
+   recurs or changes oscillate, compare prior attempts and re-evaluate the cause
+   before editing again. Reopen spec decisions only with new evidence; unresolved
+   decisions block dependent work until the user decides. If no new discriminating
+   check or justified correction is available, finish independent work, write a
+   nonterminal handoff, and request the missing decision or external change.
+   Keep the spec active; this is not verifier-budget exhaustion.
+
+   Use finite timeouts for test commands and mutation probes, chosen for the
+   expected runtime. Check subagent progress with bounded waits; if it stalls,
+   interrupt and diagnose before retrying. A timeout is never a pass and does not
+   justify an unchanged automatic retry. Restore mutations before continuing or
+   handing off; if restoration fails, stop and record the outstanding backup.
 9. **Close or hand off (main).** For success, set status `complete`, archive with
    `python3 .harness/bin/spec_lifecycle.py archive --spec PATH --status complete`,
    then emit end complete. For limit, archive with `--status limit`, then emit end

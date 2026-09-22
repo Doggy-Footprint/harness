@@ -262,11 +262,58 @@ def migrate_workflow_specs(target: Path, dry_run: bool) -> list[str]:
     return planned
 
 
+def migrate_verifier_budget(target: Path, dry_run: bool) -> list[str]:
+    updates = {}
+    conflicts = []
+    specs = target / "agent-docs" / "specs"
+    for path in sorted(specs.glob("*.md")):
+        content = path.read_text(encoding="utf-8")
+        parts = content.split("---", 2)
+        if len(parts) != 3 or parts[0].strip():
+            conflicts.append(f"{path.relative_to(target)} has invalid frontmatter")
+            continue
+        header, body = parts[1:]
+        if not re.search(r"(?m)^max_correction_rounds:", header):
+            continue
+        if re.search(r"(?m)^status: (complete|limit|aborted)\s*$", header):
+            continue
+        version = re.search(r"(?m)^version: ([1-9][0-9]*)\s*$", header)
+        counters = re.findall(r"(?m)^\| verifier invocations \| ([0-9]+) \|\s*$", body)
+        if (not version or len(counters) != 1
+                or body.count("# Version Log\n") != 1
+                or re.search(r"(?m)^max_verifier_invocations:", header)):
+            conflicts.append(
+                f"{path.relative_to(target)} needs an unambiguous version, verifier count, and Version Log before migration"
+            )
+            continue
+        next_version = int(version.group(1)) + 1
+        header = re.sub(r"(?m)^version: [0-9]+", f"version: {next_version}", header)
+        header = re.sub(r"(?m)^max_correction_rounds:[^\n]*", "max_verifier_invocations: 2", header)
+        body = body.replace(
+            "# Version Log\n",
+            f"# Version Log\n## v{next_version}\n"
+            "- Harness 0.8.0 migration: ordinary corrections have no count limit; "
+            "verifier invocations are limited to two total per run. "
+            "This supersedes the prior correction-limit policy. "
+            f"Preserved verifier invocations: {counters[0]}; do not reset on resume.\n\n",
+            1,
+        )
+        updates[path] = "---" + header + "---" + body
+    if conflicts:
+        raise MigrationConflict(conflicts)
+    planned = [f"migrate verifier budget in {path.relative_to(target)}" for path in updates]
+    if not dry_run:
+        for path, content in updates.items():
+            path.write_text(content, encoding="utf-8")
+    return planned
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
     (parse_version("0.6.0"), "install workflow telemetry markers", migrate_workflow_markers),
     (parse_version("0.7.0"), "replace contract workflow with persistent specs", migrate_workflow_specs),
+    (parse_version("0.8.0"), "limit verifier to two invocations; uncap ordinary corrections", migrate_verifier_budget),
 )
 
 

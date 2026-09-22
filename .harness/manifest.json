@@ -1,11 +1,11 @@
 {
-  "version": "0.7.0",
+  "version": "0.8.0",
   "files": {
     ".harness/config.default.json": "c21d7705713f2a9bc8cd9527d87b8964b58c7ae1b5e63e83446371b2c68a4dbd",
-    ".harness/VERSION": "967d9afb101346667166f2e76e81910bc190488d7d41d50ca0072e9d92f00e32",
-    ".harness/instructions/harness-block.md": "305d81c204edeaae4154f03e28afbe280097284762818f907c13eca6eeec8b50",
+    ".harness/VERSION": "a66780da23103beaf12432b418508966b31a2a3a787f9468a5b6cdaa8667c1ef",
+    ".harness/instructions/harness-block.md": "5699fbdccfa64cca5c701faaef9f9062c51317834adb89fae9ed2d335a63626b",
     ".harness/bin/workflow_marker.py": "3481c0c2953a524b680e2ae64ff12143bba0089bc4cad8ffa0877d4e7d16c3ba",
-    ".harness/bin/spec_lifecycle.py": "92464e72929821af5063743ac2f9172d57a83f0ee2a3865ea2dd27a1b478781c",
+    ".harness/bin/spec_lifecycle.py": "589dda545410e92dc00e7acc86e3a54775b01ccdc40d9e487a49223448a74cff",
     ".harness/bin/seed.py": "f15b194b90812d09eb778b7e2fff9cf24d68629a7b00ad7d4e359c71ad54b430",
     ".harness/ci/harness-comment-warning.yml": "b1baf0b786612e52762ea4666b449ff89f745c54a553097ee00d0a113feb63d0",
     ".harness/agents/code-explorer.md": "35fe932dbaa0a3ac3a153743052c192ea11061586e8279737a0f9012b45c4653",
@@ -25,7 +25,7 @@
     ".harness/git/verify_rules.py": "256996674b41cb1108fee4e29a447c753735919c4c6cd23e255a338b40221880",
     ".harness/skills/harness-import/SKILL.md": "947f1f83390047246bd40ed2a82afa2abde46c0d189db77ead76f49c20724208",
     ".harness/skills/requirement-oracle/SKILL.md": "e603599c23bd405c8d20ffe3cb352a67562edee18bb884ec6e98d9d88791bdfa",
-    ".harness/skills/workflow-approach/SKILL.md": "8181f44a956cc3cf4b357d6bebff3b57e26937f52fb99fcea2c1df56d1b895e7",
+    ".harness/skills/workflow-approach/SKILL.md": "56f65681df51da3eb59fc546b5c328482596fc26692ccd62413f63c9f60e514f",
     ".harness/skills/architecture-options/SKILL.md": "823b98a7677813aec396750337c10474bbd445a64d961277a80c8f825dc9f3a9",
     ".claude/agents/code-explorer.md": "a79998a720ac9d84f8dd1916ccc4ea8fb1e594867fa139ca1cc0aa8fbc974208",
     ".codex/agents/code-explorer.toml": "48c238e3e7ca6378927b09cd17ac2c2d8a3cd1013ddb644992d58439fe07994c",
@@ -38,7 +38,7 @@
     ".agents/skills/architecture-options/SKILL.md": "823b98a7677813aec396750337c10474bbd445a64d961277a80c8f825dc9f3a9",
     ".agents/skills/harness-import/SKILL.md": "947f1f83390047246bd40ed2a82afa2abde46c0d189db77ead76f49c20724208",
     ".agents/skills/requirement-oracle/SKILL.md": "e603599c23bd405c8d20ffe3cb352a67562edee18bb884ec6e98d9d88791bdfa",
-    ".agents/skills/workflow-approach/SKILL.md": "8181f44a956cc3cf4b357d6bebff3b57e26937f52fb99fcea2c1df56d1b895e7",
+    ".agents/skills/workflow-approach/SKILL.md": "56f65681df51da3eb59fc546b5c328482596fc26692ccd62413f63c9f60e514f",
     ".github/workflows/harness-comment-warning.yml": "b1baf0b786612e52762ea4666b449ff89f745c54a553097ee00d0a113feb63d0"
   }
 }

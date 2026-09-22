@@ -93,11 +93,10 @@ def validate(path: Path) -> list[str]:
         errors.append("status must be draft, active, complete, limit, or aborted")
     if not COMMIT_RE.fullmatch(values.get("base_commit", "")):
         errors.append("base_commit must be a 40-64 character hexadecimal commit id")
-    try:
-        if int(values.get("max_correction_rounds", "")) < 0:
-            errors.append("max_correction_rounds must be a non-negative integer")
-    except ValueError:
-        errors.append("max_correction_rounds must be a non-negative integer")
+    if values.get("max_verifier_invocations") != "2":
+        errors.append("max_verifier_invocations must be 2")
+    if "max_correction_rounds" in values:
+        errors.append("max_correction_rounds is obsolete; migrate the spec")
     if "handoff" not in values:
         errors.append("handoff must be present; use none when absent")
     elif values["handoff"] != "none":

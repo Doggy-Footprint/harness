@@ -107,7 +107,7 @@ When the revisit condition is met and the alternative is adopted, remove its ent
 
 Directory: `agent-docs/handoff/`.
 
-Write when a workflow-approach task reaches its correction limit, the user pauses or stops mid-task, or the user requests it.
+Write when a workflow-approach task exhausts its verifier budget, cannot make progress without a user decision or external change, the user pauses or stops mid-task, or the user requests it.
 
 Required file structure:
 
