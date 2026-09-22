@@ -207,11 +207,14 @@ class TestNormal(InstallerTestCase):
         ).read_text()
 
         clean_baseline = "run `Test command` on the restored implementation."
-        failure_route = "A failure enters step 5; a pass enters step 7"
+        failure_route = "If it fails, triage before further seeding."
+        seed_recheck = "On a restored-suite pass, repeat each confirming seed"
 
         self.assertIn(clean_baseline, workflow)
         self.assertIn(failure_route, workflow)
         self.assertLess(workflow.index(clean_baseline), workflow.index(failure_route))
+        self.assertIn(seed_recheck, workflow)
+        self.assertLess(workflow.index(failure_route), workflow.index(seed_recheck))
 
     def test_c_settings_preserved_and_upgrade_no_duplicate(self):
         repo = self.make_repo()
