@@ -1,4 +1,4 @@
-"""Independent oracle for workflow-markers-v2 contract (v2).
+"""Independent oracle for workflow-markers-v3 contract (v3).
 
 The marker implementation is deliberately exercised only through an installed
 harness.  Assertions inspect its public CLI effects and emitted JSONL events.
@@ -276,9 +276,20 @@ class WorkflowMarkerTestCase(InstallerTestCase):
         command_lines = [line.lower() for line in skill.splitlines() if "workflow_marker.py" in line]
         self.assertTrue(any(re.search(r"\bstart\b.*--run-id.*--contract.*--contract-version", line) for line in command_lines))
         for phase in ("implement_test", "verify", "amend"):
-            self.assertTrue(any(" phase " in line and phase in line for line in command_lines), phase)
-        self.assertTrue(any(" verifier " in line and all(value in line for value in ("--round", "--result", "--findings", "--seeds-run", "--seeds-detected")) for line in command_lines))
-        self.assertTrue(any(" end " in line and "--status" in line for line in command_lines))
+            self.assertTrue(any(
+                " phase " in line and phase in line and "--run-id" in line and "--phase" in line
+                for line in command_lines
+            ), phase)
+        self.assertTrue(any(
+            " verifier " in line and all(value in line for value in (
+                "--run-id", "--round", "--result", "--findings", "--seeds-run", "--seeds-detected",
+            ))
+            for line in command_lines
+        ))
+        self.assertTrue(any(
+            " end " in line and "--run-id" in line and "--status" in line
+            for line in command_lines
+        ))
         transition_patterns = (
             r"emit `start`.{0,160}(?:before|prior to) dispatch",
             r"emit `implement_test`.{0,160}before.{0,80}(?:parallel|implement)",
@@ -369,6 +380,225 @@ class WorkflowMarkerTestCase(InstallerTestCase):
         event = self.events(telemetry_dir, repo)[-1]
         self.assertEqual(event["workflow_run_id"], "good")
         self.assertEqual(event["contract"], "preserved")
+
+    def test_v3_m7_verifier_omitted_required_argument_is_silent_and_preserves_active_run(self):
+        for omitted_option in ("--round", "--result", "--findings", "--seeds-run"):
+            with self.subTest(obligation="V3", case="M7", omitted_option=omitted_option):
+                repo, telemetry_dir = self.install_with_telemetry()
+                env = self.environment(telemetry_dir)
+                self.write_contract(repo, "ordinary")
+                self.marker(
+                    repo, env, "start", "--run-id", "preserved-run", "--contract", "preserved",
+                    "--contract-version", "1",
+                )
+                baseline = self.events(telemetry_dir, repo)
+                verifier_args = [
+                    "verifier", "--run-id", "preserved-run", "--round", "1", "--result", "pass",
+                    "--findings", "0", "--seeds-run", "0", "--seeds-detected", "0",
+                ]
+                option_index = verifier_args.index(omitted_option)
+                del verifier_args[option_index:option_index + 2]
+
+                result = self.marker(repo, env, *verifier_args)
+
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(result.stdout + result.stderr, "")
+                self.assertEqual(self.events(telemetry_dir, repo), baseline)
+                automatic = self.hook(repo, env, {
+                    "hook_event_name": "PostToolUse", "tool_name": "Bash",
+                    "tool_input": {"command": "python3 -m unittest"}, "tool_response": {"exit_code": 0},
+                })
+                self.assertEqual(automatic.returncode, 0, automatic.stdout + automatic.stderr)
+                event = self.events(telemetry_dir, repo)[-1]
+                self.assertEqual(event["workflow_run_id"], "preserved-run")
+                self.assertEqual(event["contract"], "preserved")
+
+    def test_v3_v2_all_automatic_events_follow_active_absent_and_ended_workflow_state(self):
+        for workflow_state in ("active", "absent", "ended"):
+            with self.subTest(obligation="V2", state=workflow_state):
+                repo, telemetry_dir = self.install_with_telemetry()
+                env = self.environment(telemetry_dir)
+                self.write_contract(repo, "ordinary")
+                if workflow_state != "absent":
+                    self.marker(repo, env, "start", "--run-id", "automatic-run", "--contract", "automatic", "--contract-version", "1")
+                    if workflow_state == "ended":
+                        self.marker(repo, env, "end", "--run-id", "automatic-run", "--status", "complete")
+
+                contract_path = repo / "agent-docs" / "contracts" / "written.md"
+                contract_path.write_text("---\nversion: 1\n---\n")
+                handoff_path = repo / "agent-docs" / "handoff" / "0123456789abcdef-auto.md"
+                handoff_path.parent.mkdir(parents=True, exist_ok=True)
+                handoff_path.write_text("# Handoff\n")
+                event_calls = (
+                    ("seed", lambda: self.hook(repo, env, {
+                        "hook_event_name": "PostToolUse", "tool_name": "Bash",
+                        "tool_input": {"command": "python3 .harness/bin/seed.py backup src/a.py"},
+                        "tool_response": {"exit_code": 0},
+                    })),
+                    ("contract_write", lambda: self.hook(repo, env, {
+                        "hook_event_name": "PostToolUse", "tool_name": "Write",
+                        "tool_input": {"file_path": str(contract_path)}, "tool_response": {},
+                    })),
+                    ("handoff_write", lambda: self.hook(repo, env, {
+                        "hook_event_name": "PostToolUse", "tool_name": "Write",
+                        "tool_input": {"file_path": str(handoff_path)}, "tool_response": {},
+                    })),
+                    ("test_command", lambda: self.hook(repo, env, {
+                        "hook_event_name": "PostToolUse", "tool_name": "Bash",
+                        "tool_input": {"command": "python3 -m unittest"}, "tool_response": {"exit_code": 0},
+                    })),
+                    ("tool_failure", lambda: self.hook(repo, env, {
+                        "hook_event_name": "PostToolUseFailure", "tool_name": "Bash",
+                        "tool_input": {"command": "python3 -m unittest"}, "error_code": "timeout",
+                    })),
+                    ("subagent_start", lambda: self.gate(repo, env, {
+                        "hook_event_name": "SubagentStart", "agent_type": "test-verifier", "agent_id": "auto-start",
+                    })),
+                    ("subagent_stop", lambda: self.gate(repo, env, {
+                        "hook_event_name": "SubagentStop", "agent_type": "test-verifier", "agent_id": "auto-start",
+                    })),
+                )
+                for event_name, invoke in event_calls:
+                    with self.subTest(obligation="V2", state=workflow_state, event=event_name):
+                        result = invoke()
+                        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                        event = self.events(telemetry_dir, repo)[-1]
+                        self.assertEqual(event["event"], event_name)
+                        if workflow_state == "active":
+                            self.assertEqual(event["workflow_run_id"], "automatic-run")
+                            self.assertEqual(event["contract"], "automatic")
+                        else:
+                            self.assertIsNone(event["workflow_run_id"])
+                            self.assertIsNone(event["contract"])
+
+                self.gate(repo, env, {
+                    "hook_event_name": "SubagentStart", "agent_type": "implementer", "agent_id": "gate-agent",
+                })
+                blocked = self.gate(repo, env, {
+                    "hook_event_name": "PreToolUse", "tool_name": "Bash",
+                    "tool_input": {"command": "python3 -m unittest"},
+                })
+                self.assertEqual(blocked.returncode, 2, blocked.stdout + blocked.stderr)
+                gate_block = self.events(telemetry_dir, repo)[-1]
+                self.assertEqual(gate_block["event"], "gate_block")
+                if workflow_state == "active":
+                    self.assertEqual(gate_block["workflow_run_id"], "automatic-run")
+                    self.assertEqual(gate_block["contract"], "automatic")
+                else:
+                    self.assertIsNone(gate_block["workflow_run_id"])
+                    self.assertIsNone(gate_block["contract"])
+
+    def test_v3_v2_all_automatic_events_remain_isolated_when_repo_slugs_collide(self):
+        parent = self.temp_dir()
+        telemetry_dir = self.temp_dir()
+        first, second = parent / "same_name", parent / "same-name"
+        for repo in (first, second):
+            repo.mkdir()
+            init = subprocess.run(["git", "-C", str(repo), "init", "-q"], capture_output=True, text=True)
+            self.assertEqual(init.returncode, 0, init.stdout + init.stderr)
+            installed = run_installer("install", str(repo))
+            self.assertEqual(installed.returncode, 0, installed.stdout + installed.stderr)
+            self.write_contract(repo, "ordinary")
+        self.assertEqual(repo_slug(first), repo_slug(second))
+        env = self.environment(telemetry_dir)
+        self.marker(first, env, "start", "--run-id", "first-run", "--contract", "first", "--contract-version", "1")
+        self.marker(second, env, "start", "--run-id", "second-run", "--contract", "second", "--contract-version", "1")
+
+        for repo, run_id, contract in ((first, "first-run", "first"), (second, "second-run", "second")):
+            contract_path = repo / "agent-docs" / "contracts" / "written.md"
+            contract_path.write_text("---\nversion: 1\n---\n")
+            handoff_path = repo / "agent-docs" / "handoff" / "0123456789abcdef-auto.md"
+            handoff_path.parent.mkdir(parents=True, exist_ok=True)
+            handoff_path.write_text("# Handoff\n")
+            calls = (
+                ("seed", lambda: self.hook(repo, env, {"hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_input": {"command": "python3 .harness/bin/seed.py backup src/a.py"}, "tool_response": {"exit_code": 0}})),
+                ("contract_write", lambda: self.hook(repo, env, {"hook_event_name": "PostToolUse", "tool_name": "Write", "tool_input": {"file_path": str(contract_path)}, "tool_response": {}})),
+                ("handoff_write", lambda: self.hook(repo, env, {"hook_event_name": "PostToolUse", "tool_name": "Write", "tool_input": {"file_path": str(handoff_path)}, "tool_response": {}})),
+                ("test_command", lambda: self.hook(repo, env, {"hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_input": {"command": "python3 -m unittest"}, "tool_response": {"exit_code": 0}})),
+                ("tool_failure", lambda: self.hook(repo, env, {"hook_event_name": "PostToolUseFailure", "tool_name": "Bash", "tool_input": {"command": "python3 -m unittest"}, "error_code": "timeout"})),
+                ("subagent_start", lambda: self.gate(repo, env, {"hook_event_name": "SubagentStart", "agent_type": "test-verifier", "agent_id": "auto-start"})),
+                ("subagent_stop", lambda: self.gate(repo, env, {"hook_event_name": "SubagentStop", "agent_type": "test-verifier", "agent_id": "auto-start"})),
+            )
+            for event_name, invoke in calls:
+                with self.subTest(obligation="V2", repo=contract, event=event_name):
+                    result = invoke()
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    event = self.events(telemetry_dir, repo)[-1]
+                    self.assertEqual(event["event"], event_name)
+                    self.assertEqual(event["workflow_run_id"], run_id)
+                    self.assertEqual(event["contract"], contract)
+            self.gate(repo, env, {"hook_event_name": "SubagentStart", "agent_type": "implementer", "agent_id": "gate-agent"})
+            blocked = self.gate(repo, env, {"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": "python3 -m unittest"}})
+            self.assertEqual(blocked.returncode, 2, blocked.stdout + blocked.stderr)
+            event = self.events(telemetry_dir, repo)[-1]
+            self.assertEqual(event["event"], "gate_block")
+            self.assertEqual(event["workflow_run_id"], run_id)
+            self.assertEqual(event["contract"], contract)
+
+    def test_v3_v3_non_integer_counts_are_silent_and_round_zero_is_valid(self):
+        for option in ("--round", "--findings", "--seeds-run", "--seeds-detected"):
+            with self.subTest(obligation="V3", option=option):
+                repo, telemetry_dir = self.install_with_telemetry()
+                env = self.environment(telemetry_dir)
+                self.marker(repo, env, "start", "--run-id", "numeric-run", "--contract", "numeric", "--contract-version", "1")
+                baseline = self.events(telemetry_dir, repo)
+                args = ["verifier", "--run-id", "numeric-run", "--round", "1", "--result", "pass", "--findings", "0", "--seeds-run", "0", "--seeds-detected", "0"]
+                args[args.index(option) + 1] = "one"
+                result = self.marker(repo, env, *args)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(result.stdout + result.stderr, "")
+                self.assertEqual(self.events(telemetry_dir, repo), baseline)
+        repo, telemetry_dir = self.install_with_telemetry()
+        env = self.environment(telemetry_dir)
+        self.marker(repo, env, "start", "--run-id", "zero-round", "--contract", "numeric", "--contract-version", "1")
+        result = self.marker(repo, env, "verifier", "--run-id", "zero-round", "--round", "0", "--result", "pass", "--findings", "0", "--seeds-run", "0", "--seeds-detected", "0")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.events(telemetry_dir, repo)[-1]["round"], 0)
+
+    def test_v3_v4_end_without_active_run_is_silent_and_emits_nothing(self):
+        repo, telemetry_dir = self.install_with_telemetry()
+        env = self.environment(telemetry_dir)
+        for status in ("complete", "handoff", "aborted"):
+            with self.subTest(obligation="V4", status=status):
+                result = self.marker(repo, env, "end", "--run-id", "missing", "--status", status)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(result.stdout + result.stderr, "")
+                self.assertEqual(self.events(telemetry_dir, repo), [])
+
+    def test_v3_v4_phase_verifier_and_start_io_failures_preserve_existing_active_run(self):
+        failure_commands = (
+            ("phase", "--run-id", "io-run", "--phase", "verify"),
+            ("verifier", "--run-id", "io-run", "--round", "1", "--result", "pass", "--findings", "0", "--seeds-run", "0", "--seeds-detected", "0"),
+            ("start", "--run-id", "replacement", "--contract", "replacement", "--contract-version", "1"),
+        )
+        for args in failure_commands:
+            with self.subTest(obligation="V4", command=args[0]):
+                repo, telemetry_dir = self.install_with_telemetry()
+                env = self.environment(telemetry_dir)
+                self.write_contract(repo, "ordinary")
+                self.marker(repo, env, "start", "--run-id", "io-run", "--contract", "preserved", "--contract-version", "1")
+                baseline = self.events(telemetry_dir, repo)
+                paths = list(telemetry_dir.rglob("*"))
+                try:
+                    for path in paths:
+                        os.chmod(path, 0o500 if path.is_dir() else 0o400)
+                    os.chmod(telemetry_dir, 0o500)
+                    failed = self.marker(repo, env, *args)
+                    self.assertEqual(failed.returncode, 0, failed.stdout + failed.stderr)
+                    self.assertEqual(failed.stdout + failed.stderr, "")
+                finally:
+                    os.chmod(telemetry_dir, 0o700)
+                    for path in paths:
+                        os.chmod(path, 0o700 if path.is_dir() else 0o600)
+                self.assertEqual(self.events(telemetry_dir, repo), baseline)
+                automatic = self.hook(repo, env, {
+                    "hook_event_name": "PostToolUse", "tool_name": "Bash",
+                    "tool_input": {"command": "python3 -m unittest"}, "tool_response": {"exit_code": 0},
+                })
+                self.assertEqual(automatic.returncode, 0, automatic.stdout + automatic.stderr)
+                event = self.events(telemetry_dir, repo)[-1]
+                self.assertEqual(event["workflow_run_id"], "io-run")
+                self.assertEqual(event["contract"], "preserved")
 
     def test_m7_failed_start_cannot_activate_an_unrecorded_run(self):
         repo, telemetry_dir = self.install_with_telemetry()
@@ -480,7 +710,7 @@ class WorkflowMarkerTestCase(InstallerTestCase):
         self.assertTrue(marker_path.is_file())
         skill = skill_path.read_text()
         self.assertIn("workflow_marker.py", skill)
-        self.assertNotEqual(json.loads(manifest_path.read_text())["version"], "0.5.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.6.0")
         self.assertEqual(user_file.read_text(), "keep me\n")
 
     def test_m10_repositories_keep_active_runs_and_telemetry_isolated(self):
