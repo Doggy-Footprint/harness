@@ -18,8 +18,8 @@ and never choose missing behavior.
    `max_verifier_invocations`, and `handoff`. Status is `draft`, `active`,
    `complete`, `limit`, or `aborted`; use `handoff: none` when absent.
 5. Amendment increments `version` and adds a Version Log entry. Never change an
-   approved expectation silently. Reconfirm behavior, quality targets, or the
-   verification policy when an amendment changes it.
+   approved expectation silently. Reconfirm any behavior, quality target, or
+   verification policy changed by an amendment.
 6. Before dispatch, the user approves the whole spec. If a required decision is
    unresolved, pause. Use `requirement-oracle` when the user lacks enough domain
    or codebase evidence to decide.
@@ -165,10 +165,9 @@ recovery abort. Do not emit markers for ordinary tool activity.
    as aborted. Read deciding code yourself; delegate only location discovery.
 2. **Draft and approve (main).** Derive functional requirements and all nine
    quality applicability decisions. Use `requirement-oracle` for decisions the
-   user cannot assess. Define measures, thresholds, evidence, traceability, and
-   the fixed budget of two verifier invocations per run. Obtain whole-spec approval,
-   set status `active`, then run
-   and check:
+   user cannot assess. Define measures, thresholds, evidence, and traceability
+   with `max_verifier_invocations: 2`. Obtain whole-spec approval, set status
+   `active`, then run and check:
    `python3 .harness/bin/spec_lifecycle.py start --spec PATH --run-id ID`.
    Emit telemetry start only after lifecycle start succeeds.
 3. **Implement + test (parallel).** Emit `implement_test`; dispatch both roles on
@@ -178,71 +177,71 @@ recovery abort. Do not emit markers for ordinary tool activity.
      risks, allowed non-Test checks, and excluded approaches;
    - test-implementer: path/version, conventions, risk model, independent oracle,
      automated and review evidence, test level, and excluded approaches.
-4. **Reconcile (main).** Wait for both reports. Resolve every challenge with
-   spec/code evidence; amend or reject it with a reason. When unblocked, run the
-   exact Test command. Classify failures as implementation defect, test defect,
-   evidence defect, or spec gap and queue one correction batch.
-5. **Verify (fresh test-verifier).** After a passing Test command, provide the
-   spec path/version, complete coverage/evidence map, and finding ledger. Require
-   a complete audit of functional and applicable quality obligations. Use a new
-   verifier after any test or evidence-procedure correction. Before dispatch,
-   check the budget and persist the incremented `verifier invocations` count in
-   Workflow Control. The initial audit counts; at most two invocations are allowed
-   per run, including failed, interrupted, or incomplete audits. Resume and spec
-   amendments never reset the count. Never start a replacement run to evade it.
-   Use the invocation count for telemetry `--round`.
-6. **Triage and mutate (main).** Track stable finding id, spec version, affected
-   obligation/variants, evidence, disposition, and mutation outcome. Resolve
-   every finding before redispatch. Exercise the 2–3 strongest concrete findings
-   first, all if fewer, one mutation at a time:
+4. **Reconcile (main).** Collect both reports using bounded waits. If a subagent
+   stalls, interrupt and diagnose before retrying. Resolve challenges with
+   spec/code evidence; amend or reject each with a reason. Reopen prior spec
+   decisions only with new evidence, and leave dependent work blocked until the
+   user resolves any required decision. When unblocked, run the exact Test command
+   with a finite timeout suited to its expected runtime. Classify failures as
+   implementation defect, test defect, evidence defect, or spec gap and queue one
+   correction batch. A timeout is a failure to investigate, never a pass or a
+   reason for an unchanged automatic retry.
+5. **Verify (fresh test-verifier).** After a passing Test command, dispatch a fresh
+   verifier with the spec path/version, complete coverage/evidence map, and finding
+   ledger for a complete audit of functional and applicable quality obligations.
+   Before dispatch, check and persist the incremented `verifier invocations` count
+   in Workflow Control. At most two invocations are allowed per run, including the
+   initial audit and failed, interrupted, or incomplete audits. Resume and spec
+   amendments preserve the count; replacement runs must not evade the limit.
+   Use the invocation count for telemetry `--round`. Apply the stop condition if
+   the required audit would exceed the budget.
+6. **Triage and mutate (main).** Resolve findings with stable ids, spec versions,
+   affected obligations/variants, evidence, dispositions, and mutation outcomes.
+   Exercise the 2–3 strongest concrete findings first, all if fewer, one mutation
+   at a time, without exposing implementation or injected diffs to test roles:
    1. `python3 .harness/bin/seed.py backup <every edited file>`.
-   2. Inject the violating behavior and run Test command.
-   3. `python3 .harness/bin/seed.py restore`; stop if restore fails.
+   2. Inject the violating behavior and run Test command with a finite timeout
+      suited to its expected runtime.
+   3. `python3 .harness/bin/seed.py restore` before continuing or handing off;
+      stop if restore fails and record the outstanding backup.
 
-   Green confirms a gap only when the mutation executed. A failure rejects it
-   only when the intended assertion detects the violation. Retry an inconclusive
-   mutation only with a changed probe that can distinguish execution from the
-   observed failure. If no such probe is available, record it as blocked and
-   hand off; never treat an inconclusive result as resolved. Never expose
-   implementation or injected diffs to test roles.
-7. **Correct as one batch (main).** Emit `amend`, increment the correction count,
-   and redispatch complete replacement instructions. Continue existing agents
-   where possible. Implementation defects receive ids and observable behavior,
-   never test code. Test/evidence defects receive rules, variants, and sanitized
-   evidence, never implementation diffs. A spec gap increments spec version and
-   redispatches both roles. Reconcile, rerun the restored Test command, repeat
-   confirming mutations, then use a fresh verifier.
-8. **Stop condition.** Ordinary implementation, test, evidence, and spec
-   corrections have no count limit; correction batches are recorded for history
-   only. Complete only when every required functional and quality obligation
-   passes, review artifacts exist, the verifier audit is complete with no open
-   finding, and confirming mutations fail for the intended assertion. Triage the
-   final audit before deciding: findings rejected with evidence need no further
-   audit if tests, evidence procedures, and approved expectations are unchanged.
-   If a further audit is required after two invocations, write a handoff, set
-   `handoff`, set status `limit`, and archive the spec. Do not perform corrections
-   whose required re-audit cannot fit within the remaining budget.
+   Green confirms a gap only when the mutation executed; failure rejects a finding
+   only when the intended assertion detects the violation. For an inconclusive
+   result, retry with a changed probe that distinguishes execution from the
+   observed failure, or mark the finding blocked and hand off if none is available.
+   Triage every finding before redispatch or closure, including the final audit:
+   evidence-backed rejections need no further audit when tests, evidence procedures,
+   and approved expectations are unchanged.
+7. **Correct as one batch (main).** Ordinary implementation, test, evidence, and
+   spec corrections have no count limit. For each retry, record the failure
+   signature, cause hypothesis, changed approach or new evidence, and observed
+   result in the execution ledger. Continue only with a concrete diagnostic or
+   justified correction; never repeat a failed approach without new evidence.
+   When a resolved finding recurs or edits oscillate, compare prior attempts and
+   re-evaluate the cause before editing again. Apply the stop condition when no
+   next step is available or the correction requires an audit beyond the budget.
 
-   For every ordinary retry, record the failure signature, cause hypothesis,
-   changed approach or new evidence, and the observed result in the execution
-   ledger. Continue while there is a concrete diagnostic or corrective next step.
-   Do not repeat a failed approach without new evidence. If a resolved finding
-   recurs or changes oscillate, compare prior attempts and re-evaluate the cause
-   before editing again. Reopen spec decisions only with new evidence; unresolved
-   decisions block dependent work until the user decides. If no new discriminating
-   check or justified correction is available, finish independent work, write a
-   nonterminal handoff, and request the missing decision or external change.
-   Keep the spec active; this is not verifier-budget exhaustion.
-
-   Use finite timeouts for test commands and mutation probes, chosen for the
-   expected runtime. Check subagent progress with bounded waits; if it stalls,
-   interrupt and diagnose before retrying. A timeout is never a pass and does not
-   justify an unchanged automatic retry. Restore mutations before continuing or
-   handing off; if restoration fails, stop and record the outstanding backup.
+   Emit `amend` and increment the correction count for history. Redispatch
+   complete replacement instructions, continuing existing agents where possible.
+   Implementation defects receive ids and observable behavior, never test code.
+   Test/evidence defects receive rules, variants, and sanitized evidence, never
+   implementation diffs. A spec gap increments spec version and redispatches both
+   roles. Reconcile, rerun the restored Test command, repeat confirming mutations,
+   then return to Verify for a fresh audit.
+8. **Stop condition.** Complete only when every required functional and quality
+   obligation passes, review artifacts exist, the verifier audit is complete with
+   no open finding, and confirming mutations fail for the intended assertion.
+   If further verification is required after two invocations, stop with status
+   `limit` before making corrections that require that audit. For ordinary
+   corrections blocked on a user decision or external change, finish independent
+   work and request what is missing, keeping the spec active for a nonterminal
+   handoff. Use the same handoff when no new discriminating check or justified
+   correction is available.
 9. **Close or hand off (main).** For success, set status `complete`, archive with
    `python3 .harness/bin/spec_lifecycle.py archive --spec PATH --status complete`,
-   then emit end complete. For limit, archive with `--status limit`, then emit end
-   limit. If a nonterminal session stops, write the required handoff, store its
-   path in the still-active spec, emit end handoff, and do not archive. Report
-   spec version/path, evidence map, finding dispositions, correction causes and
-   count, verifier count, mutations, blocked ids, and handoff if any.
+   then emit end complete. For verifier-budget exhaustion, write a handoff, set
+   `handoff` and status `limit`, archive with `--status limit`, then emit end limit.
+   For a nonterminal stop, write the handoff, store its path in the still-active
+   spec, and emit end handoff without archiving. Report spec version/path, evidence
+   map, finding dispositions, correction causes and count, verifier count,
+   mutations, blocked ids, and handoff if any.
