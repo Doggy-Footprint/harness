@@ -4,7 +4,8 @@
 **/.DS_Store
 my-notes.md
 tmp/
-agent-docs/contracts/.running/
-agent-docs/contracts/.seed/
 .harness/**/__pycache__
 .harness/sessions/.running/
+agent-docs/specs/.active
+agent-docs/specs/.running/
+agent-docs/specs/.seed/

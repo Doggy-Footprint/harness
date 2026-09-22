@@ -11,8 +11,8 @@ import telemetry  # noqa: E402
 
 PATHS = config.load_paths()
 REPO_ROOT = config.REPO_ROOT
-CONTRACTS_DIR = PATHS.contracts
-RUNNING_DIR = CONTRACTS_DIR / ".running"
+SPECS_DIR = PATHS.specs
+RUNNING_DIR = SPECS_DIR / ".running"
 GATED_AGENTS = {"implementer", "test-implementer"}
 
 
@@ -23,7 +23,7 @@ def marker_path(payload: dict) -> Path:
 
 def on_subagent_start(payload: dict) -> int:
     telemetry.emit(payload, "subagent_start")
-    if payload.get("agent_type") not in GATED_AGENTS or not CONTRACTS_DIR.is_dir():
+    if payload.get("agent_type") not in GATED_AGENTS or not SPECS_DIR.is_dir():
         return 0
     RUNNING_DIR.mkdir(exist_ok=True)
     marker_path(payload).write_text(payload["agent_type"], encoding="utf-8")
@@ -41,16 +41,16 @@ def on_pre_tool_use(payload: dict) -> int:
     if not RUNNING_DIR.is_dir():
         return 0
     running = sorted(RUNNING_DIR.iterdir())
-    # Exact match only: subagents run narrower test invocations that must stay unblocked.
-    if not running or hook_shared.normalize(hook_shared.shell_command(payload.get("tool_input"))) not in hook_shared.test_commands(CONTRACTS_DIR):
+    if not running or hook_shared.normalize(hook_shared.shell_command(payload.get("tool_input"))) not in hook_shared.test_commands(SPECS_DIR):
         return 0
-    agent_types = sorted(m.read_text(encoding="utf-8") for m in running)
+    agent_types = sorted(marker.read_text(encoding="utf-8") for marker in running)
     telemetry.emit(payload, "gate_block", running=agent_types)
     listing = ", ".join(
-        f"{m.read_text(encoding='utf-8')} ({m.relative_to(REPO_ROOT)})" for m in running
+        f"{marker.read_text(encoding='utf-8')} ({marker.relative_to(REPO_ROOT)})"
+        for marker in running
     )
     print(
-        f"contract-workflow: `Test command` is blocked until these subagents report: {listing}. "
+        f"workflow-approach: `Test command` is blocked until these subagents report: {listing}. "
         "If a subagent is no longer running, delete its marker file.",
         file=sys.stderr,
     )

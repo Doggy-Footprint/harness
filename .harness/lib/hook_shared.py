@@ -1,4 +1,4 @@
-"""PreToolUse/PostToolUse helpers shared by contract_gate and telemetry_hook.
+"""PreToolUse/PostToolUse helpers shared by spec_gate and telemetry_hook.
 
 Test command matching must stay identical between the two hooks: telemetry
 should recognize exactly the commands the gate blocks on.
@@ -12,20 +12,20 @@ def normalize(command: str) -> str:
     return " ".join(command.split())
 
 
-def iter_test_commands(contracts_dir: Path):
-    """Yield (normalized_command, contract_stem) for every `Test command:` line."""
-    if not contracts_dir.is_dir():
+def iter_test_commands(specs_dir: Path):
+    """Yield (normalized_command, spec_stem) for every `Test command:` line."""
+    if not specs_dir.is_dir():
         return
-    for contract in sorted(contracts_dir.glob("*.md")):
-        for line in contract.read_text(encoding="utf-8", errors="replace").splitlines():
+    for spec in sorted(specs_dir.glob("*.md")):
+        for line in spec.read_text(encoding="utf-8", errors="replace").splitlines():
             if line.startswith(TEST_COMMAND_PREFIX):
                 command = normalize(line[len(TEST_COMMAND_PREFIX):])
                 if command:
-                    yield command, contract.stem
+                    yield command, spec.stem
 
 
-def test_commands(contracts_dir: Path) -> set:
-    return {command for command, _ in iter_test_commands(contracts_dir)}
+def test_commands(specs_dir: Path) -> set:
+    return {command for command, _ in iter_test_commands(specs_dir)}
 
 
 def shell_command(tool_input) -> str:

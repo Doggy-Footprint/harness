@@ -1,4 +1,4 @@
-"""Best-effort workflow event log for contract-workflow hooks."""
+"""Best-effort workflow event log for workflow-approach hooks."""
 import datetime
 import hashlib
 import json
@@ -55,18 +55,18 @@ def _valid_workflow(value) -> dict | None:
     if not isinstance(value, dict):
         return None
     run_id = value.get("workflow_run_id")
-    contract = value.get("contract")
-    contract_version = value.get("contract_version")
+    spec = value.get("spec")
+    spec_version = value.get("spec_version")
     if not isinstance(run_id, str) or not run_id:
         return None
-    if not isinstance(contract, str) or not contract:
+    if not isinstance(spec, str) or not spec:
         return None
-    if isinstance(contract_version, bool) or not isinstance(contract_version, int) or contract_version < 0:
+    if isinstance(spec_version, bool) or not isinstance(spec_version, int) or spec_version < 0:
         return None
     return {
         "workflow_run_id": run_id,
-        "contract": contract,
-        "contract_version": contract_version,
+        "spec": spec,
+        "spec_version": spec_version,
     }
 
 
@@ -156,10 +156,10 @@ def _event_fields(fields: dict) -> dict:
     workflow = active_workflow()
     if workflow is None:
         enriched["workflow_run_id"] = None
-        enriched["contract"] = None
+        enriched["spec"] = None
     else:
         enriched["workflow_run_id"] = workflow["workflow_run_id"]
-        enriched["contract"] = workflow["contract"]
+        enriched["spec"] = workflow["spec"]
     return enriched
 
 
@@ -191,12 +191,12 @@ def emit(payload: dict, event: str, **fields) -> None:
     _emit(payload, event, **fields)
 
 
-def workflow_start(run_id: str, contract: str, contract_version: int) -> bool:
+def workflow_start(run_id: str, spec: str, spec_version: int) -> bool:
     workflow = _valid_workflow(
         {
             "workflow_run_id": run_id,
-            "contract": contract,
-            "contract_version": contract_version,
+            "spec": spec,
+            "spec_version": spec_version,
         }
     )
     if workflow is None:

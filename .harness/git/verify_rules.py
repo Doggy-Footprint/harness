@@ -56,9 +56,9 @@ REQUIRED_HEADINGS = {
         "## Failed Attempts",
         "## Next Step",
         "## Open Questions",
-        "## Contract Snapshot",
     ],
 }
+WORKFLOW_DOC_DIRS = {"specs", "spec-logs"}
 
 
 def rel(path: Path) -> str:
@@ -71,7 +71,8 @@ def iter_docs_root_files():
     for path in PATHS.docs_root.rglob("*"):
         if not path.is_file():
             continue
-        if "stale" in path.relative_to(PATHS.docs_root).parts:
+        docs_parts = path.relative_to(PATHS.docs_root).parts
+        if "stale" in docs_parts or (docs_parts and docs_parts[0] in WORKFLOW_DOC_DIRS):
             continue
         if any(part in EXCLUDE_DIRS for part in path.relative_to(REPO_ROOT).parts):
             continue
@@ -285,6 +286,11 @@ def check_required_headings(errors: list):
                 h for h in headings
                 if not re.search(rf"(?m)^{re.escape(h)}\s*$", text)
             ]
+            if directory == PATHS.handoff and not re.search(r"(?m)^## Contract Snapshot\s*$", text):
+                missing.extend(
+                    heading for heading in ("## Spec", "## Execution Ledger")
+                    if not re.search(rf"(?m)^{re.escape(heading)}\s*$", text)
+                )
             if missing:
                 errors.append(f"{rel(path)}: missing required heading(s) {missing}")
 

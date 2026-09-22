@@ -1,14 +1,36 @@
 ---
 name: requirement-oracle
-description: Turn an unsettled feature request into an agreed, testable contract draft. Use when intent, scope, or expected behavior must be clarified before implementation.
+description: Help a user make unresolved functional or ISO quality decisions for a workflow spec. Use when intent, scope, expected behavior, quality applicability, measures, or thresholds cannot yet be approved.
 ---
 
-# Requirement Oracle
+# Spec Decision Support
 
-Help the user turn an idea into an implementation-ready agreement.
+Help the user make informed decisions; never decide unspecified behavior merely
+to unblock the workflow.
 
-Clarify only the questions that change the product behavior or its validation: the intended outcome, scope, observable behavior, failure behavior, and constraints that affect the design. Draw on the existing system when it resolves a question or exposes a conflict, and return unresolved product choices to the user.
+Read the relevant code, tests, configuration, and project documentation before
+asking questions that the repository can answer. For remaining choices, explain:
 
-From the agreement, derive the normal behavior, meaningful boundaries, error conditions, and state or interaction cases that must be verified. Expected results must come from the agreed intent rather than an implementation guess.
+- the decision and why the spec needs it;
+- codebase and domain context that changes the answer;
+- 2–3 meaningful options, their consequences and trade-offs;
+- a recommended option and the evidence supporting it;
+- what evidence would reduce remaining uncertainty.
 
-Present an intent-and-behavior contract draft suitable for `contract-workflow`: user intent, scope, observable expectations, error behavior, and verification cases. Let `contract-workflow` establish implementation paths, signatures, test commands, and the final session contract.
+Cover functional intent, observable failure behavior, boundaries and state
+transitions. Evaluate all nine ISO/IEC 25010:2023 product quality characteristics
+for applicability. For applicable characteristics, help select a context-specific
+measure, inputs, unit, threshold and direction, and automated, review, or mutation
+evidence. ISO/IEC 25023 measure definitions do not determine the project's pass
+threshold. State that distinction when presenting a threshold choice.
+
+If the user cannot decide, leave the item unresolved and `workflow-approach`
+pauses. Only after explicit delegation recommend a conservative default that
+preserves safety, security, compatibility, data, and existing observable behavior.
+Mark its evidence and uncertainty. Optional quality characteristics may be marked
+not applicable only with a reason.
+
+Return spec-ready decisions with stable provisional ids, chosen behavior or
+quality target, rejected options and trade-offs, evidence, uncertainty, and the
+user's approval or explicit delegation. `workflow-approach` owns paths,
+signatures, commands, final ids, lifecycle, and the complete spec.

@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/hooks/cleanup.py\""
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/bin/spec_lifecycle.py\" session"
           }
         ]
       },
@@ -23,7 +23,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/hooks/contract_gate.py\""
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/hooks/spec_gate.py\""
           }
         ]
       }
@@ -33,7 +33,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/hooks/contract_gate.py\""
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/hooks/spec_gate.py\""
           }
         ]
       }
@@ -44,7 +44,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/hooks/contract_gate.py\""
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/hooks/spec_gate.py\""
           }
         ]
       }
@@ -55,7 +55,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/hooks/cleanup.py\""
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.harness/bin/spec_lifecycle.py\" session"
           }
         ]
       },

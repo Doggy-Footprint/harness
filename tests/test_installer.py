@@ -103,6 +103,48 @@ class InstallerTestCase(unittest.TestCase):
             text=True,
         )
 
+    def run_lifecycle(self, repo, *args):
+        return subprocess.run(
+            [sys.executable, str(repo / ".harness" / "bin" / "spec_lifecycle.py"), *args],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+        )
+
+    def write_valid_spec(self, repo, run_id="0123456789abcdef", name="change", status="active", handoff="none"):
+        path = repo / "agent-docs" / "specs" / f"{run_id}-{name}.md"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        characteristics = (
+            "Functional suitability", "Performance efficiency", "Compatibility",
+            "Interaction capability", "Reliability", "Security", "Maintainability",
+            "Flexibility", "Safety",
+        )
+        quality_rows = "\n".join(f"| {item} | no | not affected |" for item in characteristics)
+        headings = (
+            "# User Intent", "# Scope", "# Paths", "# Signatures",
+            "# Functional Requirements", "# Errors", "# Cases",
+            "# Quality Applicability", "# Quality Requirements",
+            "# Verification Obligations", "# Assumptions and Defaults",
+            "# Traceability", "# Workflow Control", "# Version Log",
+        )
+        sections = []
+        for heading in headings:
+            sections.append(heading)
+            sections.append(quality_rows if heading == "# Quality Applicability" else "none")
+        path.write_text(
+            "---\n"
+            "version: 1\n"
+            f"run_id: {run_id}\n"
+            f"status: {status}\n"
+            f"base_commit: {'a' * 40}\n"
+            "max_correction_rounds: 2\n"
+            f"handoff: {handoff}\n"
+            "---\n\n"
+            + "\n\n".join(sections)
+            + "\n"
+        )
+        return path
+
     def run_verify_rules(self, repo):
         return subprocess.run(
             [sys.executable, str(repo / ".harness" / "git" / "verify_rules.py")],
@@ -129,7 +171,7 @@ class TestNormal(InstallerTestCase):
     def assert_matches(self, text, pattern):
         self.assertRegex(text, re.compile(pattern, re.IGNORECASE | re.DOTALL))
 
-    def test_c1_normal_rewritten_agents_preserve_contract_boundaries_and_reports(self):
+    def test_c1_normal_rewritten_agents_preserve_spec_boundaries_and_reports(self):
         repo = self.install()
         implementer = "\n".join(
             path.read_text() for path in self.installed_agent_artifacts(repo, "implementer")
@@ -139,39 +181,38 @@ class TestNormal(InstallerTestCase):
             for path in self.installed_agent_artifacts(repo, "test-implementer")
         )
         workflow = (
-            repo / ".agents" / "skills" / "contract-workflow" / "SKILL.md"
+            repo / ".agents" / "skills" / "workflow-approach" / "SKILL.md"
         ).read_text()
 
         self.assert_contains_all(
             implementer,
             (
-                "contract",
+                "spec",
                 "challenge",
-                "Contract version",
+                "Spec version",
                 "Files changed",
                 "Checks",
                 "Blocked",
                 "Unsure",
-                "Contract challenges",
+                "Spec challenges",
             ),
         )
         self.assert_matches(implementer, r"(?:isolation|do not (?:open|read)|independent)")
         self.assert_matches(implementer, r"(?:allowed|permitted|#)\s*paths?")
         self.assert_contains_all(
             test_implementer,
-            ("oracle", "Implementation", "contract", "challenge"),
+            ("independent", "Implementation", "spec", "challenge", "quality"),
         )
         self.assert_matches(test_implementer, r"(?:independent|do not (?:open|read)).{0,120}implementation")
-        self.assert_contains_all(workflow, ("Each instruction", "replacement", "contract"))
+        self.assert_contains_all(workflow, ("complete replacement instructions", "spec", "quality"))
         self.assert_matches(
             workflow,
-            r"each instruction.{0,700}(?:risk|verification|oracle)",
+            r"instructions.{0,700}(?:risk|verification|oracle)",
         )
         self.assert_matches(
             workflow,
-            r"each instruction.{0,700}(?:exclude|avoid|not use)",
+            r"instructions.{0,700}(?:exclude|avoid|not use)",
         )
-        self.assert_matches(workflow, r"replacement instruction.{0,500}role-specific direction")
         self.assert_matches(workflow, r"implementer.{0,400}(?:approach|constraint)")
         self.assert_matches(workflow, r"test-implementer.{0,400}(?:risk|oracle|test)")
 
@@ -182,7 +223,7 @@ class TestNormal(InstallerTestCase):
             for name in ("implementer", "test-implementer")
             for path in self.installed_agent_artifacts(repo, name)
         }
-        workflow = repo / ".agents" / "skills" / "contract-workflow" / "SKILL.md"
+        workflow = repo / ".agents" / "skills" / "workflow-approach" / "SKILL.md"
         before[workflow] = workflow.read_text()
 
         result = run_installer("upgrade", str(repo))
@@ -203,18 +244,12 @@ class TestNormal(InstallerTestCase):
     def test_a1_verified_test_gap_checks_clean_baseline_before_seed(self):
         repo = self.install()
         workflow = (
-            repo / ".agents" / "skills" / "contract-workflow" / "SKILL.md"
+            repo / ".agents" / "skills" / "workflow-approach" / "SKILL.md"
         ).read_text()
 
-        clean_baseline = "run `Test command` on the restored implementation."
-        failure_route = "If it fails, triage before further seeding."
-        seed_recheck = "On a restored-suite pass, repeat each confirming seed"
-
-        self.assertIn(clean_baseline, workflow)
-        self.assertIn(failure_route, workflow)
-        self.assertLess(workflow.index(clean_baseline), workflow.index(failure_route))
-        self.assertIn(seed_recheck, workflow)
-        self.assertLess(workflow.index(failure_route), workflow.index(seed_recheck))
+        self.assertIn("rerun the restored Test command", workflow)
+        self.assertRegex(workflow, r"repeat\s+confirming mutations")
+        self.assertIn("stop if restore fails", workflow)
 
     def test_c_settings_preserved_and_upgrade_no_duplicate(self):
         repo = self.make_repo()
@@ -270,37 +305,39 @@ class TestNormal(InstallerTestCase):
         status = run_git(repo, "status", "--porcelain").stdout
         self.assertEqual(status.strip(), "")
 
-    def test_h_session_end_scoped_to_docs_root(self):
+    def test_h_session_end_archives_terminal_spec_only_inside_docs_root(self):
         repo = self.install()
 
-        (repo / "contracts").mkdir()
-        (repo / "contracts" / "keep.txt").write_text("keep")
-        (repo / "agent-docs" / "contracts").mkdir(parents=True)
-        (repo / "agent-docs" / "contracts" / "c.md").write_text("c")
+        (repo / "specs").mkdir()
+        (repo / "specs" / "keep.txt").write_text("keep")
+        (repo / "agent-docs" / "specs").mkdir(parents=True)
+        spec = repo / "agent-docs" / "specs" / "0123456789abcdef-c.md"
+        spec.write_text("---\nstatus: complete\n---\n")
 
-        proc = self.run_hook(repo, "cleanup.py", {"hook_event_name": "SessionEnd"})
+        proc = self.run_lifecycle(repo, "session")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-        self.assertTrue((repo / "contracts" / "keep.txt").exists())
-        self.assertFalse((repo / "agent-docs" / "contracts").exists())
+        self.assertTrue((repo / "specs" / "keep.txt").exists())
+        self.assertFalse(spec.exists())
+        self.assertTrue((repo / "agent-docs" / "spec-logs" / spec.name).is_file())
 
-    def test_i1_session_start_clear_removes_contracts(self):
+    def test_i1_session_clear_preserves_active_spec_without_handoff(self):
         repo = self.install()
-        contracts = repo / "agent-docs" / "contracts"
-        contracts.mkdir(parents=True)
-        (contracts / "contract.md").write_text("contract")
+        specs = repo / "agent-docs" / "specs"
+        specs.mkdir(parents=True)
+        spec = specs / "0123456789abcdef-spec.md"
+        spec.write_text("---\nstatus: active\nbase_commit: deadbeef\nhandoff: none\n---\n")
 
-        proc = self.run_hook(
-            repo, "cleanup.py", {"hook_event_name": "SessionStart", "source": "clear"}
-        )
+        proc = self.run_lifecycle(repo, "session")
 
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-        self.assertFalse(contracts.exists())
+        self.assertTrue(spec.is_file())
+        self.assertIn("without a handoff", proc.stderr)
 
-    def test_e1_characterization_shared_session_end_cleanup_is_in_both_configs(self):
+    def test_e1_spec_lifecycle_session_hook_is_in_both_configs(self):
         claude, codex = self.install_hook_configs()
 
-        self.assertIn(".harness/hooks/cleanup.py", "\n".join(self.commands(claude["SessionEnd"])))
-        self.assertIn(".harness/hooks/cleanup.py", "\n".join(self.commands(codex["SessionEnd"])))
+        self.assertIn(".harness/bin/spec_lifecycle.py", "\n".join(self.commands(claude["SessionEnd"])))
+        self.assertIn(".harness/bin/spec_lifecycle.py", "\n".join(self.commands(codex["SessionEnd"])))
 
     def test_i2_e2_codex_clear_hook_is_absent_from_claude_and_present_in_codex(self):
         claude, codex = self.install_hook_configs()
@@ -351,7 +388,7 @@ class TestNormal(InstallerTestCase):
         target = repo / "src" / "app.py"
         target.parent.mkdir()
         target.write_bytes(b"def f():\n    return 1\n")
-        seed_dir = repo / "agent-docs" / "contracts" / ".seed"
+        seed_dir = repo / "agent-docs" / "specs" / ".seed"
 
         backup = self.run_seed(repo, "backup", "src/app.py")
         self.assertEqual(backup.returncode, 0, backup.stdout + backup.stderr)
@@ -382,7 +419,7 @@ class TestNormal(InstallerTestCase):
         repo = self.install()
         docs, source, manifest_path, index_block = self.prepare_stale_record(repo)
 
-        result = run_installer("update", str(repo), input="y\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("stale", (result.stdout + result.stderr).lower())
@@ -401,7 +438,7 @@ class TestNormal(InstallerTestCase):
         docs, source, _, index_block = self.prepare_stale_record(repo)
         (docs / "index.md").write_text((docs / "index.md").read_text().replace(index_block, ""))
 
-        result = run_installer("update", str(repo), input="y\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertFalse(source.exists())
@@ -429,7 +466,7 @@ class TestNormal(InstallerTestCase):
         )
         (docs / "index.md").write_text(first + "\n---\n" + stale_block + "\n---\n" + second)
 
-        result = run_installer("update", str(repo), input="y\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual((docs / "index.md").read_text(), first.rstrip("\n") + "\n---\n" + second)
@@ -444,23 +481,23 @@ class TestNormal(InstallerTestCase):
 
     def test_import_reports_the_modified_file_with_a_diff(self):
         repo = self.install()
-        gate = repo / ".harness" / "hooks" / "contract_gate.py"
+        gate = repo / ".harness" / "hooks" / "spec_gate.py"
         gate.write_text(gate.read_text() + "\n# local edit\n")
 
         result = run_installer("import", str(repo))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn(".harness/hooks/contract_gate.py", result.stdout)
+        self.assertIn(".harness/hooks/spec_gate.py", result.stdout)
         self.assertIn("+# local edit", result.stdout)
 
     def test_import_json_lists_only_the_modified_file(self):
         repo = self.install()
-        gate = repo / ".harness" / "hooks" / "contract_gate.py"
+        gate = repo / ".harness" / "hooks" / "spec_gate.py"
         gate.write_text(gate.read_text() + "\n# local edit\n")
 
         result = run_installer("import", str(repo), "--json")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         drift = json.loads(result.stdout)
-        self.assertEqual([e["path"] for e in drift["modified"]], [".harness/hooks/contract_gate.py"])
+        self.assertEqual([e["path"] for e in drift["modified"]], [".harness/hooks/spec_gate.py"])
         self.assertIn("+# local edit", drift["modified"][0]["diff"])
         self.assertEqual(drift["missing"], [])
 
@@ -520,7 +557,7 @@ class TestBoundary(InstallerTestCase):
         import harness as installer_module
 
         owned = installer_module.render_owned_files(no_ci=False)
-        relpath = ".harness/hooks/cleanup.py"
+        relpath = ".harness/bin/spec_lifecycle.py"
         new_content = owned[relpath]
 
         gate = repo / relpath
@@ -546,16 +583,18 @@ class TestBoundary(InstallerTestCase):
         self.assertEqual(proc.stderr, "")
         self.assertFalse((running_dir / str(dead.pid)).exists())
 
-    def test_cleanup_removes_contracts_when_seed_dir_is_empty(self):
+    def test_session_archives_terminal_spec_when_seed_dir_is_empty(self):
         repo = self.install()
-        contracts = repo / "agent-docs" / "contracts"
-        (contracts / ".seed" / "src").mkdir(parents=True)
-        (contracts / "contract.md").write_text("contract")
+        specs = repo / "agent-docs" / "specs"
+        (specs / ".seed" / "src").mkdir(parents=True)
+        spec = specs / "0123456789abcdef-spec.md"
+        spec.write_text("---\nstatus: limit\n---\n")
 
-        proc = self.run_hook(repo, "cleanup.py", {"hook_event_name": "SessionEnd"})
+        proc = self.run_lifecycle(repo, "session")
 
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-        self.assertFalse(contracts.exists())
+        self.assertFalse(spec.exists())
+        self.assertTrue((repo / "agent-docs" / "spec-logs" / spec.name).is_file())
 
 
     def test_import_on_a_fresh_install_reports_no_drift(self):
@@ -656,23 +695,23 @@ class TestError(InstallerTestCase):
 
     def test_import_reports_a_deleted_owned_file_as_missing(self):
         repo = self.install()
-        (repo / ".harness" / "hooks" / "contract_gate.py").unlink()
+        (repo / ".harness" / "hooks" / "spec_gate.py").unlink()
         result = run_installer("import", str(repo), "--json")
         drift = json.loads(result.stdout)
-        self.assertIn(".harness/hooks/contract_gate.py", drift["missing"])
+        self.assertIn(".harness/hooks/spec_gate.py", drift["missing"])
 
 
     def test_g_upgrade_preserves_user_modification(self):
         repo = self.install()
 
-        gate = repo / ".harness" / "hooks" / "contract_gate.py"
+        gate = repo / ".harness" / "hooks" / "spec_gate.py"
         original = gate.read_text()
         gate.write_text(original + "\n# local edit\n")
 
         result = run_installer("upgrade", str(repo))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertTrue(gate.read_text().endswith("# local edit\n"))
-        self.assertIn(".harness/hooks/contract_gate.py (user-modified)", result.stdout)
+        self.assertIn(".harness/hooks/spec_gate.py (user-modified)", result.stdout)
 
         doctor = run_installer("doctor", str(repo))
         self.assertEqual(doctor.returncode, 1, doctor.stdout + doctor.stderr)
@@ -682,16 +721,16 @@ class TestError(InstallerTestCase):
 
         manifest_path = repo / ".harness" / "manifest.json"
         pre_manifest = json.loads(manifest_path.read_text())
-        pre_sha = pre_manifest["files"][".harness/hooks/contract_gate.py"]
+        pre_sha = pre_manifest["files"][".harness/hooks/spec_gate.py"]
 
-        gate = repo / ".harness" / "hooks" / "contract_gate.py"
+        gate = repo / ".harness" / "hooks" / "spec_gate.py"
         gate.write_text(gate.read_text() + "\n# local edit\n")
 
         result = run_installer("upgrade", str(repo))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
         post_manifest = json.loads(manifest_path.read_text())
-        post_sha = post_manifest["files"][".harness/hooks/contract_gate.py"]
+        post_sha = post_manifest["files"][".harness/hooks/spec_gate.py"]
         self.assertEqual(post_sha, pre_sha)
 
     def test_i_handoff_missing_or_wrong_heading(self):
@@ -701,7 +740,7 @@ class TestError(InstallerTestCase):
         target_file = handoff_dir / "1234567890abcdef-x.md"
         target_file.write_text(
             "# X\n\n## Goal\ng\n\n## State\ns\n\n## Next Step\nn\n\n"
-            "## Open Questions\nq\n\n## Contract Snapshot\nnone\n"
+            "## Open Questions\nq\n\n## Spec Snapshot\nnone\n"
         )
         (handoff_dir / "index.md").write_text(
             "File: 1234567890abcdef-x.md\n"
@@ -716,7 +755,7 @@ class TestError(InstallerTestCase):
 
         target_file.write_text(
             "# X\n\n## Goal\ng\n\n## State\ns\n\n## Failed Attemptsx\nbad\n\n## Next Step\nn\n\n"
-            "## Open Questions\nq\n\n## Contract Snapshot\nnone\n"
+            "## Open Questions\nq\n\n## Spec Snapshot\nnone\n"
         )
         verify = self.run_verify_rules(repo)
         self.assertEqual(verify.returncode, 1, verify.stdout + verify.stderr)
@@ -727,7 +766,7 @@ class TestError(InstallerTestCase):
         target.write_bytes(b"original\n")
         backup = self.run_seed(repo, "backup", "app.py")
         self.assertEqual(backup.returncode, 0, backup.stdout + backup.stderr)
-        seed_copy = repo / "agent-docs" / "contracts" / ".seed" / "app.py"
+        seed_copy = repo / "agent-docs" / "specs" / ".seed" / "app.py"
         seed_copy.write_bytes(b"tampered\n")
         target.write_bytes(b"injected\n")
 
@@ -741,7 +780,7 @@ class TestError(InstallerTestCase):
         repo = self.install()
         target = repo / "app.py"
         target.write_bytes(b"injected\n")
-        seed_copy = repo / "agent-docs" / "contracts" / ".seed" / "app.py"
+        seed_copy = repo / "agent-docs" / "specs" / ".seed" / "app.py"
         seed_copy.parent.mkdir(parents=True)
         seed_copy.write_bytes(b"original\n")
 
@@ -757,7 +796,7 @@ class TestError(InstallerTestCase):
         (repo / "b.py").write_bytes(b"b\n")
         first = self.run_seed(repo, "backup", "a.py")
         self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
-        seed_dir = repo / "agent-docs" / "contracts" / ".seed"
+        seed_dir = repo / "agent-docs" / "specs" / ".seed"
         before = sorted(p.relative_to(seed_dir).as_posix() for p in seed_dir.rglob("*") if p.is_file())
 
         second = self.run_seed(repo, "backup", "b.py")
@@ -777,15 +816,102 @@ class TestError(InstallerTestCase):
         backup = self.run_seed(repo, "backup", str(outside))
 
         self.assertEqual(backup.returncode, 1, backup.stdout + backup.stderr)
-        self.assertFalse((repo / "agent-docs" / "contracts" / ".seed").exists())
+        self.assertFalse((repo / "agent-docs" / "specs" / ".seed").exists())
+
+
+class TestSpecLifecycle(InstallerTestCase):
+    def test_validate_requires_all_iso_quality_characteristics(self):
+        repo = self.install()
+        spec = self.write_valid_spec(repo)
+        spec.write_text(spec.read_text().replace("| Safety | no | not affected |\n", ""))
+
+        result = self.run_lifecycle(repo, "validate", "--spec", str(spec))
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("safety", result.stderr)
+
+    def test_start_is_exclusive_and_resume_is_idempotent(self):
+        repo = self.install()
+        first = self.write_valid_spec(repo)
+
+        started = self.run_lifecycle(
+            repo, "start", "--spec", str(first), "--run-id", "0123456789abcdef"
+        )
+        resumed = self.run_lifecycle(
+            repo, "start", "--spec", str(first), "--run-id", "0123456789abcdef", "--resume"
+        )
+        second = self.write_valid_spec(repo, "fedcba9876543210", "other")
+        rejected = self.run_lifecycle(
+            repo, "start", "--spec", str(second), "--run-id", "fedcba9876543210"
+        )
+
+        self.assertEqual(started.returncode, 0, started.stderr)
+        self.assertEqual(resumed.returncode, 0, resumed.stderr)
+        self.assertEqual(rejected.returncode, 1)
+        self.assertIn("another workflow is active", rejected.stderr)
+
+    def test_archive_moves_terminal_spec_without_rewriting_it(self):
+        repo = self.install()
+        spec = self.write_valid_spec(repo)
+        self.assertEqual(
+            self.run_lifecycle(
+                repo, "start", "--spec", str(spec), "--run-id", "0123456789abcdef"
+            ).returncode,
+            0,
+        )
+        spec.write_text(spec.read_text().replace("status: active", "status: complete"))
+        expected = spec.read_bytes()
+
+        result = self.run_lifecycle(
+            repo, "archive", "--spec", str(spec), "--status", "complete"
+        )
+
+        archived = repo / "agent-docs" / "spec-logs" / spec.name
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(spec.exists())
+        self.assertEqual(archived.read_bytes(), expected)
+        self.assertFalse((repo / "agent-docs" / "specs" / ".active").exists())
+
+    def test_session_keeps_active_spec_with_valid_handoff(self):
+        repo = self.install()
+        handoff = repo / "agent-docs" / "handoff" / "0123456789abcdef-resume.md"
+        handoff.write_text("# Resume\n")
+        spec = self.write_valid_spec(
+            repo, handoff="agent-docs/handoff/0123456789abcdef-resume.md"
+        )
+
+        result = self.run_lifecycle(repo, "session")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(spec.is_file())
+        self.assertEqual(result.stderr, "")
+
+    def test_070_migration_rejects_legacy_contract_or_seed_without_changes(self):
+        for relative in ("old.md", ".seed/app.py"):
+            with self.subTest(relative=relative):
+                repo = self.install()
+                manifest_path = repo / ".harness" / "manifest.json"
+                manifest = json.loads(manifest_path.read_text())
+                manifest["version"] = "0.6.0"
+                manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+                legacy = repo / "agent-docs" / "contracts" / relative
+                legacy.parent.mkdir(parents=True, exist_ok=True)
+                legacy.write_text("legacy\n")
+                before = self.snapshot(repo)
+
+                result = run_installer("update", str(repo), input="y\n")
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertEqual(self.snapshot(repo), before)
+                self.assertIn("contract", (result.stdout + result.stderr).lower())
 
 
 class TestEdge(InstallerTestCase):
-    def test_c4_update_runs_03_04_then_06_migrations_once_each(self):
+    def test_c4_update_runs_03_04_06_07_migrations_once_each(self):
         repo = self.install()
         docs, source, _, index_block = self.prepare_stale_record(repo)
 
-        result = run_installer("update", str(repo), input="y\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         output = result.stdout + result.stderr
@@ -793,10 +919,10 @@ class TestEdge(InstallerTestCase):
             match.group(0)
             for line in output.splitlines()
             if line.startswith("migration ")
-            for match in [re.search(r"\b0\.(?:3|4|6)\.0\b", line)]
+            for match in [re.search(r"\b0\.(?:3|4|6|7)\.0\b", line)]
             if match
         ]
-        self.assertEqual(announcement_versions, ["0.3.0", "0.4.0", "0.6.0"], output)
+        self.assertEqual(announcement_versions, ["0.3.0", "0.4.0", "0.6.0", "0.7.0"], output)
         self.assertFalse(source.exists())
         self.assertEqual((docs / "stale" / source.name).read_text(), "# Stale\n")
         self.assertNotIn(index_block, (docs / "index.md").read_text())
@@ -916,29 +1042,31 @@ class TestEdge(InstallerTestCase):
         target.write_bytes(b"injected\n")
         return repo
 
-    def assert_cleanup_keeps_stranded_seed(self, payload):
+    def assert_session_keeps_stranded_seed(self):
         repo = self.stranded_seed_repo()
-        seed_copy = repo / "agent-docs" / "contracts" / ".seed" / "app.py"
+        seed_copy = repo / "agent-docs" / "specs" / ".seed" / "app.py"
 
-        proc = self.run_hook(repo, "cleanup.py", payload)
+        proc = self.run_lifecycle(repo, "session")
 
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertEqual(seed_copy.read_bytes(), b"original\n")
         self.assertIn("seed.py restore", proc.stderr)
 
-    def test_session_end_cleanup_keeps_contracts_while_seed_unrestored(self):
-        self.assert_cleanup_keeps_stranded_seed({"hook_event_name": "SessionEnd"})
+    def test_session_end_keeps_specs_while_seed_unrestored(self):
+        self.assert_session_keeps_stranded_seed()
 
-    def test_codex_clear_cleanup_keeps_contracts_while_seed_unrestored(self):
-        self.assert_cleanup_keeps_stranded_seed({"hook_event_name": "SessionStart", "source": "clear"})
+    def test_codex_clear_keeps_specs_while_seed_unrestored(self):
+        self.assert_session_keeps_stranded_seed()
 
-    def test_post_merge_cleanup_keeps_contracts_while_seed_unrestored(self):
-        self.assert_cleanup_keeps_stranded_seed({"hook_event_name": "PostMerge"})
+    def test_post_merge_does_not_run_spec_lifecycle(self):
+        repo = self.install()
+        post_merge = (repo / ".harness" / "git" / "post-merge").read_text()
+        self.assertNotIn("spec_lifecycle", post_merge)
 
-    def test_restore_after_kept_cleanup_recovers_original(self):
+    def test_restore_after_kept_session_recovers_original(self):
         repo = self.stranded_seed_repo()
-        cleanup = self.run_hook(repo, "cleanup.py", {"hook_event_name": "SessionEnd"})
-        self.assertEqual(cleanup.returncode, 0, cleanup.stdout + cleanup.stderr)
+        session = self.run_lifecycle(repo, "session")
+        self.assertEqual(session.returncode, 0, session.stdout + session.stderr)
 
         restore = self.run_seed(repo, "restore")
 

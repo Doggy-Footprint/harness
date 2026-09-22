@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record contract-workflow lifecycle markers without affecting the workflow."""
+"""Record workflow-approach telemetry without affecting the workflow."""
 import argparse
 import sys
 from pathlib import Path
@@ -29,8 +29,8 @@ def _parser() -> argparse.ArgumentParser:
 
     start = commands.add_parser("start", add_help=False)
     start.add_argument("--run-id", required=True)
-    start.add_argument("--contract", required=True)
-    start.add_argument("--contract-version", required=True, type=_non_negative)
+    start.add_argument("--spec", required=True)
+    start.add_argument("--spec-version", required=True, type=_non_negative)
 
     phase = commands.add_parser("phase", add_help=False)
     phase.add_argument("--run-id", required=True)
@@ -46,7 +46,7 @@ def _parser() -> argparse.ArgumentParser:
 
     end = commands.add_parser("end", add_help=False)
     end.add_argument("--run-id", required=True)
-    end.add_argument("--status", required=True, choices=("complete", "handoff", "aborted"))
+    end.add_argument("--status", required=True, choices=("complete", "limit", "handoff", "aborted"))
     return parser
 
 
@@ -56,7 +56,7 @@ def main(argv: list[str] | None = None) -> int:
         if not args.run_id:
             return 0
         if args.command == "start":
-            telemetry.workflow_start(args.run_id, args.contract, args.contract_version)
+            telemetry.workflow_start(args.run_id, args.spec, args.spec_version)
         elif args.command == "phase":
             telemetry.workflow_phase(args.run_id, args.phase)
         elif args.command == "verifier":

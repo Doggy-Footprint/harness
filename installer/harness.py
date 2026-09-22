@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -19,8 +20,9 @@ VERSION = (SOURCE_HARNESS / "VERSION").read_text(encoding="utf-8").strip()
 REPORT_SECTIONS = ["write", "merge", "skip", "conflict", "manual review", "info"]
 
 GITIGNORE_LINES = [
-    "agent-docs/contracts/.running/",
-    "agent-docs/contracts/.seed/",
+    "agent-docs/specs/.active",
+    "agent-docs/specs/.running/",
+    "agent-docs/specs/.seed/",
     ".harness/sessions/.running/",
     ".harness/**/__pycache__",
 ]
@@ -194,10 +196,77 @@ def migrate_workflow_markers(target: Path, dry_run: bool) -> list[str]:
     return []
 
 
+def migrate_workflow_specs(target: Path, dry_run: bool) -> list[str]:
+    contracts = target / "agent-docs" / "contracts"
+    legacy_skill_link = target / ".claude" / "skills" / "contract-workflow"
+    gitignore = target / ".gitignore"
+    legacy_gitignore_lines = {
+        "agent-docs/contracts/.running/",
+        "agent-docs/contracts/.seed/",
+    }
+    conflicts = []
+    if contracts.is_dir():
+        contract_files = sorted(path for path in contracts.glob("*.md") if path.is_file())
+        seed_files = sorted(
+            path for path in (contracts / ".seed").rglob("*") if path.is_file()
+        ) if (contracts / ".seed").is_dir() else []
+        other_files = sorted(
+            path for path in contracts.rglob("*")
+            if path.is_file()
+            and path not in contract_files
+            and path not in seed_files
+            and ".running" not in path.relative_to(contracts).parts
+        )
+        if contract_files:
+            conflicts.append(
+                "agent-docs/contracts contains active contract documents; finish or hand off the workflow before updating"
+            )
+        if seed_files:
+            conflicts.append(
+                "agent-docs/contracts/.seed contains an unrestored backup; restore it before updating"
+            )
+        if other_files:
+            conflicts.append("agent-docs/contracts contains unrecognized files")
+    if legacy_skill_link.is_symlink():
+        expected = "../../.agents/skills/contract-workflow"
+        if os.readlink(legacy_skill_link) != expected:
+            conflicts.append(f"{legacy_skill_link.relative_to(target)} points to a user target")
+    elif legacy_skill_link.exists():
+        conflicts.append(f"{legacy_skill_link.relative_to(target)} is user-owned")
+    if conflicts:
+        raise MigrationConflict(conflicts)
+
+    planned = []
+    if contracts.is_dir():
+        planned.append("remove empty legacy agent-docs/contracts workflow state")
+    if legacy_skill_link.is_symlink():
+        planned.append("remove legacy .claude/skills/contract-workflow symlink")
+    gitignore_content = gitignore.read_text(encoding="utf-8") if gitignore.is_file() else None
+    filtered_gitignore = None
+    if gitignore_content is not None:
+        filtered_lines = [
+            line for line in gitignore_content.splitlines()
+            if line not in legacy_gitignore_lines
+        ]
+        filtered_gitignore = "\n".join(filtered_lines) + ("\n" if filtered_lines else "")
+        if filtered_gitignore != gitignore_content:
+            planned.append("remove legacy contract workflow entries from .gitignore")
+    if dry_run:
+        return planned
+    if contracts.is_dir():
+        shutil.rmtree(contracts)
+    if legacy_skill_link.is_symlink():
+        legacy_skill_link.unlink()
+    if filtered_gitignore is not None and filtered_gitignore != gitignore_content:
+        gitignore.write_text(filtered_gitignore, encoding="utf-8")
+    return planned
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
     (parse_version("0.6.0"), "install workflow telemetry markers", migrate_workflow_markers),
+    (parse_version("0.7.0"), "replace contract workflow with persistent specs", migrate_workflow_specs),
 )
 
 

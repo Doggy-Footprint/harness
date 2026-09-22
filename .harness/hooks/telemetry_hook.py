@@ -17,8 +17,8 @@ REPO_ROOT = config.REPO_ROOT
 SEED_SCRIPT = ".harness/bin/seed.py"
 # REPO_ROOT is symlink-resolved (config.py resolves __file__); tool_input
 # paths from the calling agent usually are not, so resolve() here too or
-# every contract/handoff write silently drops on a symlinked worktree (e.g. macOS /tmp).
-CONTRACTS_DIR = PATHS.contracts.resolve()
+# every spec/handoff write silently drops on a symlinked worktree (e.g. macOS /tmp).
+SPECS_DIR = PATHS.specs.resolve()
 HANDOFF_DIR = PATHS.handoff.resolve()
 
 
@@ -29,7 +29,7 @@ def resolve_path(path_str: str) -> Path:
     return path.resolve()
 
 
-def parse_contract_version(path: Path):
+def parse_spec_version(path: Path):
     try:
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
@@ -74,8 +74,8 @@ def emit_path_write(payload: dict, path_str) -> None:
     if not path_str:
         return
     path = resolve_path(path_str)
-    if path.parent == CONTRACTS_DIR and path.suffix == ".md":
-        telemetry.emit(payload, "contract_write", contract=path.stem, version=parse_contract_version(path))
+    if path.parent == SPECS_DIR and path.suffix == ".md":
+        telemetry.emit(payload, "spec_write", spec=path.stem, version=parse_spec_version(path))
     elif path.parent == HANDOFF_DIR and path.name not in ("index.md", "stale.md"):
         telemetry.emit(payload, "handoff_write", file=path.name)
 
@@ -84,7 +84,7 @@ def bash_exit_code(tool_response):
     if not isinstance(tool_response, dict):
         return None
     value = tool_response.get("exit_code")
-    # bool is an int subclass; the contract requires exit_code strictly int|null.
+    # bool is an int subclass; telemetry requires exit_code strictly int|null.
     if isinstance(value, bool) or not isinstance(value, int):
         return None
     return value
@@ -94,9 +94,9 @@ def handle_bash(payload: dict, tool_input: dict, tool_response) -> None:
     command = hook_shared.normalize(hook_shared.shell_command(tool_input))
     if not command:
         return
-    contracts = dict(hook_shared.iter_test_commands(PATHS.contracts))
-    if command in contracts:
-        telemetry.emit(payload, "test_command", contract=contracts[command], exit_code=bash_exit_code(tool_response))
+    specs = dict(hook_shared.iter_test_commands(PATHS.specs))
+    if command in specs:
+        telemetry.emit(payload, "test_command", spec=specs[command], exit_code=bash_exit_code(tool_response))
         return
     action, is_seed = match_seed(command)
     if is_seed:
@@ -121,9 +121,9 @@ def handle_post_tool_use_failure(payload: dict) -> None:
         return
     tool_input = payload.get("tool_input") or {}
     command = hook_shared.normalize(hook_shared.shell_command(tool_input))
-    contracts = dict(hook_shared.iter_test_commands(PATHS.contracts))
+    specs = dict(hook_shared.iter_test_commands(PATHS.specs))
     action, is_seed = match_seed(command)
-    if command not in contracts and not is_seed:
+    if command not in specs and not is_seed:
         return
     error_code = payload.get("error_code")
     if error_code is None:
@@ -135,7 +135,7 @@ def handle_post_tool_use_failure(payload: dict) -> None:
         "tool_failure",
         tool_name="Bash",
         error_code=error_code,
-        contract=contracts.get(command),
+        spec=specs.get(command),
         action=action if is_seed else None,
     )
 
