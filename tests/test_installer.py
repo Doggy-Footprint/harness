@@ -419,7 +419,7 @@ class TestNormal(InstallerTestCase):
         repo = self.install()
         docs, source, manifest_path, index_block = self.prepare_stale_record(repo)
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("stale", (result.stdout + result.stderr).lower())
@@ -438,7 +438,7 @@ class TestNormal(InstallerTestCase):
         docs, source, _, index_block = self.prepare_stale_record(repo)
         (docs / "index.md").write_text((docs / "index.md").read_text().replace(index_block, ""))
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertFalse(source.exists())
@@ -466,7 +466,7 @@ class TestNormal(InstallerTestCase):
         )
         (docs / "index.md").write_text(first + "\n---\n" + stale_block + "\n---\n" + second)
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual((docs / "index.md").read_text(), first.rstrip("\n") + "\n---\n" + second)
@@ -931,7 +931,7 @@ class TestEdge(InstallerTestCase):
                 result = run_installer("update", str(repo), "--dry-run")
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertEqual(before, self.snapshot(repo))
-                result = run_installer("update", str(repo), input="y\ny\n")
+                result = run_installer("update", str(repo), input="y\ny\ny\n")
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 content = path.read_text()
                 self.assertIn("version: 2\n", content)
@@ -996,7 +996,7 @@ class TestEdge(InstallerTestCase):
         self.assertEqual(declined.returncode, 1)
         self.assertEqual(before, self.snapshot(repo))
 
-        result = run_installer("update", str(repo), input="y\n")
+        result = run_installer("update", str(repo), input="y\ny\n")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("migration 0.9.0:", result.stdout)
         self.assertEqual(active.read_bytes(), original)
@@ -1009,11 +1009,50 @@ class TestEdge(InstallerTestCase):
         self.assertEqual(repeated.returncode, 0, repeated.stdout + repeated.stderr)
         self.assertNotIn("migration 0.9.0:", repeated.stdout)
 
-    def test_c4_update_runs_03_04_06_07_08_09_migrations_once_each(self):
+    def test_0100_migration_preserves_specs_and_installs_coverage_targets(self):
+        repo = self.install()
+        active = self.write_valid_spec(repo)
+        active.write_text(active.read_text().replace(
+            "# Workflow Control\n\nnone", "# Workflow Control\n\n| verifier invocations | 1 |"))
+        archived = repo / "agent-docs" / "spec-logs" / active.name
+        archived.parent.mkdir(parents=True, exist_ok=True)
+        archived.write_bytes(active.read_bytes())
+        original = active.read_bytes()
+        manifest_path = repo / ".harness" / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["version"] = "0.9.0"
+        manifest_path.write_text(json.dumps(manifest))
+        before = self.snapshot(repo)
+
+        dry_run = run_installer("update", str(repo), "--dry-run")
+        self.assertEqual(dry_run.returncode, 0, dry_run.stdout + dry_run.stderr)
+        self.assertIn("migration 0.10.0:", dry_run.stdout)
+        self.assertIn("before resume", dry_run.stdout)
+        self.assertEqual(before, self.snapshot(repo))
+        declined = run_installer("update", str(repo), input="n\n")
+        self.assertEqual(declined.returncode, 1)
+        self.assertEqual(before, self.snapshot(repo))
+
+        result = run_installer("update", str(repo), input="y\n")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("migration 0.10.0:", result.stdout)
+        self.assertNotIn("migration 0.9.0:", result.stdout)
+        self.assertEqual(active.read_bytes(), original)
+        self.assertEqual(archived.read_bytes(), original)
+        workflow = (repo / ".harness" / "skills" / "workflow-approach" / "SKILL.md").read_text()
+        self.assertIn("ISO/IEC/IEEE 29119-4 technique | coverage items | coverage target", workflow)
+        self.assertNotIn("boundary/transition/combination", workflow)
+        stop = workflow[workflow.index("**Stop condition.**"):]
+        self.assertIn("approved coverage target", stop[:stop.index("\n9. ")])
+        repeated = run_installer("update", str(repo))
+        self.assertEqual(repeated.returncode, 0, repeated.stdout + repeated.stderr)
+        self.assertNotIn("migration 0.10.0:", repeated.stdout)
+
+    def test_c4_update_runs_03_04_06_07_08_09_010_migrations_once_each(self):
         repo = self.install()
         docs, source, _, index_block = self.prepare_stale_record(repo)
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         output = result.stdout + result.stderr
@@ -1021,10 +1060,10 @@ class TestEdge(InstallerTestCase):
             match.group(0)
             for line in output.splitlines()
             if line.startswith("migration ")
-            for match in [re.search(r"\b0\.(?:3|4|6|7|8|9)\.0\b", line)]
+            for match in [re.search(r"\b0\.(?:3|4|6|7|8|9|10)\.0\b", line)]
             if match
         ]
-        self.assertEqual(announcement_versions, ["0.3.0", "0.4.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0"], output)
+        self.assertEqual(announcement_versions, ["0.3.0", "0.4.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.10.0"], output)
         self.assertFalse(source.exists())
         self.assertEqual((docs / "stale" / source.name).read_text(), "# Stale\n")
         self.assertNotIn(index_block, (docs / "index.md").read_text())

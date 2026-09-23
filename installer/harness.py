@@ -316,6 +316,14 @@ def migrate_verification_scope(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_test_design_coverage(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "install ISO/IEC/IEEE 29119-4 test design technique and coverage target instructions",
+        "preserve existing specs, archived records, and verifier counts; before resume, "
+        "declare each obligation's technique, coverage items, and target for user approval",
+    ]
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -323,6 +331,7 @@ MIGRATIONS = (
     (parse_version("0.7.0"), "replace contract workflow with persistent specs", migrate_workflow_specs),
     (parse_version("0.8.0"), "limit verifier to two invocations; uncap ordinary corrections", migrate_verifier_budget),
     (parse_version("0.9.0"), "bound verification scope and retain audit decisions", migrate_verification_scope),
+    (parse_version("0.10.0"), "declare 29119-4 test design techniques and coverage targets", migrate_test_design_coverage),
 )
 
 

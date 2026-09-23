@@ -21,3 +21,8 @@ File: 5be48b0b11e837d4-analytics-dashboard-final-verification.md
 Summary: Analytics implementation and tests are present but unverified; lockfile, full suite, verifier, and mutations remain after 2/2 corrections
 Related Files: agent-docs/specs/7176826b00d34cc7-analytics-dashboard.md, analytics/app.py, analytics/importer.py, analytics/compliance.py, analytics/tests/test_api.py, analytics/tests/test_server.py
 Related Symbols: create_app, import_pending, transcript_usage, evaluate, App
+---
+File: 49e8d44acdf07bd5-iso-29119-4-test-coverage.md
+Summary: Rewrite workflow-approach, requirement-oracle and test agents so obligations declare 29119-4 techniques, coverage items and targets; add 0.10.0 migration
+Related Files: harness/skills/workflow-approach/SKILL.md, harness/skills/requirement-oracle/SKILL.md, harness/agents/test-implementer.md, harness/agents/test-verifier.md, harness/VERSION, installer/harness.py, tests/test_installer.py, tests/test_telemetry.py, tests/test_workflow_markers.py
+Related Symbols: Verification Obligations, migrate_verification_scope, MIGRATIONS, REQUIRED_HEADINGS

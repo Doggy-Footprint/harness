@@ -189,7 +189,7 @@ class WorkflowMarkerTestCase(InstallerTestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         event = self.events(telemetry_dir, repo)[0]
         self.assertEqual(event["v"], 1)
-        self.assertEqual(event["harness_version"], "0.9.0")
+        self.assertEqual(event["harness_version"], "0.10.0")
         self.assertEqual(event["repo"], str(repo.resolve()))
         timestamp = datetime.fromisoformat(event["ts"].replace("Z", "+00:00"))
         self.assertEqual(timestamp.utcoffset(), timedelta(0))
@@ -703,14 +703,14 @@ class WorkflowMarkerTestCase(InstallerTestCase):
         marker_path.unlink()
         skill_path.unlink()
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertRegex(result.stdout + result.stderr, r"(?im)^migration .*\b0\.6\.0\b")
         self.assertTrue(marker_path.is_file())
         skill = skill_path.read_text()
         self.assertIn("workflow_marker.py", skill)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.9.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.10.0")
         self.assertEqual(user_file.read_text(), "keep me\n")
 
     def test_m10_repositories_keep_active_runs_and_telemetry_isolated(self):
