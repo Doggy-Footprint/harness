@@ -419,7 +419,7 @@ class TestNormal(InstallerTestCase):
         repo = self.install()
         docs, source, manifest_path, index_block = self.prepare_stale_record(repo)
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("stale", (result.stdout + result.stderr).lower())
@@ -438,7 +438,7 @@ class TestNormal(InstallerTestCase):
         docs, source, _, index_block = self.prepare_stale_record(repo)
         (docs / "index.md").write_text((docs / "index.md").read_text().replace(index_block, ""))
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertFalse(source.exists())
@@ -466,7 +466,7 @@ class TestNormal(InstallerTestCase):
         )
         (docs / "index.md").write_text(first + "\n---\n" + stale_block + "\n---\n" + second)
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual((docs / "index.md").read_text(), first.rstrip("\n") + "\n---\n" + second)
@@ -549,6 +549,122 @@ class TestBoundary(InstallerTestCase):
 
         claude_md = (repo / "CLAUDE.md").read_text()
         self.assertEqual(claude_md, "@AGENTS.md\n")
+        agents_md = (repo / "AGENTS.md").read_text()
+        self.assertTrue(agents_md.startswith("# Project Definition\n\nBody text.\n\n<!-- harness:begin"))
+        self.assertEqual((repo / "agent-docs" / "logs" / "agents-md-pre-harness.md").read_text(), content)
+
+    def manual_review_items(self, stdout: str) -> list[str]:
+        section = stdout.split("== manual review ==\n", 1)[1].split("\n== ", 1)[0]
+        return [line[2:] for line in section.splitlines() if line.startswith("- ")]
+
+    def assert_definition_install(self, original: str, expected_definition: str, log_name="agents-md-pre-harness.md"):
+        repo = self.make_repo()
+        (repo / "AGENTS.md").write_bytes(original.encode())
+        if log_name != "agents-md-pre-harness.md":
+            logs = repo / "agent-docs" / "logs"
+            logs.mkdir(parents=True)
+            (logs / "agents-md-pre-harness.md").write_text("older\n")
+
+        result = run_installer("install", str(repo))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+        agents_md = (repo / "AGENTS.md").read_text()
+        head = agents_md[: agents_md.index("<!-- harness:begin")]
+        self.assertEqual(head, f"# Project Definition\n\n{expected_definition}\n\n")
+        self.assertEqual((repo / "agent-docs" / "logs" / log_name).read_bytes(), original.encode())
+        self.assertIn(f"agent-docs/logs/{log_name}", self.manual_review_items(result.stdout)[-1])
+        return result
+
+    def test_0110_install_keeps_explicit_project_definition(self):
+        self.assert_definition_install(
+            "# Project Definition\n\nA CLI for widgets.\n\n# Rules\n\nAlways use tabs.\n",
+            "A CLI for widgets.",
+        )
+
+    def test_0110_install_keeps_overview_subsection(self):
+        self.assert_definition_install(
+            "# Widget\n\n## Overview\n\nA CLI for widgets.\n\n### Detail\n\nMore.\n\n## Style\n\nTabs.\n",
+            "A CLI for widgets.\n\n### Detail\n\nMore.",
+        )
+
+    def test_0110_install_keeps_korean_definition(self):
+        self.assert_definition_install("## 프로젝트 개요\n\n위젯 CLI.\n\n## 규칙\n\n탭 사용.\n", "위젯 CLI.")
+
+    def test_0110_install_keeps_title_body(self):
+        self.assert_definition_install("# Widget\n\nA CLI for widgets.\n\n## Rules\n\nTabs.\n", "A CLI for widgets.")
+
+    def test_0110_install_without_definition_records_todo(self):
+        result = self.assert_definition_install(
+            "# Rules\n\n## Style\n\nTabs.\n",
+            "[#TODO]Alert user to set up definition & north-start of the project.",
+        )
+        self.assertTrue(any(
+            item.startswith("AGENTS.md: no project definition found")
+            for item in self.manual_review_items(result.stdout)
+        ), result.stdout)
+
+    def test_0110_install_keeps_preamble(self):
+        self.assert_definition_install("A CLI for widgets.\n\n# Rules\n\nTabs.\n", "A CLI for widgets.")
+
+    def test_0110_install_keeps_level3_and_korean_variants(self):
+        self.assert_definition_install("# W\n\n## Rules\n\n### Purpose\n\nShip widgets.\n\n## Style\n", "Ship widgets.")
+        self.assert_definition_install("# 프로젝트 정의\n\n위젯 CLI.\n\n# 규칙\n", "위젯 CLI.")
+        self.assert_definition_install("## 소개\n\n위젯 CLI.\n\n## 규칙\n", "위젯 CLI.")
+
+    def test_0110_install_suffixes_existing_log(self):
+        self.assert_definition_install(
+            "# Overview\n\nA CLI.\n\n# Rules\n", "A CLI.", log_name="agents-md-pre-harness-2.md"
+        )
+
+    def test_0110_install_dry_run_writes_nothing(self):
+        repo = self.make_repo()
+        (repo / "AGENTS.md").write_text("# Overview\n\nA CLI.\n\n# Rules\n\nTabs.\n")
+        before = self.snapshot(repo)
+
+        result = run_installer("install", str(repo), "--dry-run")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(before, self.snapshot(repo))
+        self.assertFalse((repo / "agent-docs").exists())
+
+    def test_0110_install_with_existing_block_skips_extraction(self):
+        repo = self.make_repo()
+        original = "# Local Rules\n\nTabs.\n\n<!-- harness:begin 0.10.0 -->\nold\n<!-- harness:end -->\n"
+        (repo / "AGENTS.md").write_text(original)
+
+        result = run_installer("install", str(repo))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        agents_md = (repo / "AGENTS.md").read_text()
+        self.assertTrue(agents_md.startswith("# Local Rules\n\nTabs.\n\n<!-- harness:begin 0.11.0 -->"))
+        self.assertNotIn("\nold\n", agents_md)
+        self.assertFalse((repo / "agent-docs" / "logs").exists())
+
+    def test_0110_declining_migration_preserves_files(self):
+        repo = self.install()
+        manifest_path = repo / ".harness" / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["version"] = "0.10.0"
+        manifest_path.write_text(json.dumps(manifest))
+        before = self.snapshot(repo)
+
+        result = run_installer("update", str(repo), input="n\n")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("migration 0.11.0:", result.stdout)
+        self.assertEqual(before, self.snapshot(repo))
+
+    def test_0110_update_leaves_agents_md_outside_block(self):
+        repo = self.install()
+        agents_md = repo / "AGENTS.md"
+        agents_md.write_text(agents_md.read_text() + "\n# Local Rules\n\nTabs.\n")
+        manifest_path = repo / ".harness" / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["version"] = "0.10.0"
+        manifest_path.write_text(json.dumps(manifest))
+
+        result = run_installer("update", str(repo), input="y\n")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("migration 0.11.0:", result.stdout)
+        self.assertIn("# Local Rules\n\nTabs.\n", agents_md.read_text())
+        self.assertFalse((repo / "agent-docs" / "logs").exists())
 
     def test_fix3_disk_already_matches_new_render_is_noop(self):
         repo = self.install()
@@ -931,7 +1047,7 @@ class TestEdge(InstallerTestCase):
                 result = run_installer("update", str(repo), "--dry-run")
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertEqual(before, self.snapshot(repo))
-                result = run_installer("update", str(repo), input="y\ny\ny\n")
+                result = run_installer("update", str(repo), input="y\ny\ny\ny\n")
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 content = path.read_text()
                 self.assertIn("version: 2\n", content)
@@ -996,7 +1112,7 @@ class TestEdge(InstallerTestCase):
         self.assertEqual(declined.returncode, 1)
         self.assertEqual(before, self.snapshot(repo))
 
-        result = run_installer("update", str(repo), input="y\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\n")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("migration 0.9.0:", result.stdout)
         self.assertEqual(active.read_bytes(), original)
@@ -1033,7 +1149,7 @@ class TestEdge(InstallerTestCase):
         self.assertEqual(declined.returncode, 1)
         self.assertEqual(before, self.snapshot(repo))
 
-        result = run_installer("update", str(repo), input="y\n")
+        result = run_installer("update", str(repo), input="y\ny\n")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("migration 0.10.0:", result.stdout)
         self.assertNotIn("migration 0.9.0:", result.stdout)
@@ -1052,7 +1168,7 @@ class TestEdge(InstallerTestCase):
         repo = self.install()
         docs, source, _, index_block = self.prepare_stale_record(repo)
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         output = result.stdout + result.stderr
@@ -1060,10 +1176,10 @@ class TestEdge(InstallerTestCase):
             match.group(0)
             for line in output.splitlines()
             if line.startswith("migration ")
-            for match in [re.search(r"\b0\.(?:3|4|6|7|8|9|10)\.0\b", line)]
+            for match in [re.search(r"\b0\.(?:3|4|6|7|8|9|10|11)\.0\b", line)]
             if match
         ]
-        self.assertEqual(announcement_versions, ["0.3.0", "0.4.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.10.0"], output)
+        self.assertEqual(announcement_versions, ["0.3.0", "0.4.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.10.0", "0.11.0"], output)
         self.assertFalse(source.exists())
         self.assertEqual((docs / "stale" / source.name).read_text(), "# Stale\n")
         self.assertNotIn(index_block, (docs / "index.md").read_text())

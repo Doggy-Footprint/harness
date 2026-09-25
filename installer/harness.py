@@ -324,6 +324,14 @@ def migrate_test_design_coverage(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_agents_md_definition(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "install now keeps only the project definition of a pre-existing AGENTS.md "
+        "and logs the original under agent-docs/logs/",
+        "leave this repository's AGENTS.md unchanged; review content outside the managed block manually",
+    ]
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -332,6 +340,7 @@ MIGRATIONS = (
     (parse_version("0.8.0"), "limit verifier to two invocations; uncap ordinary corrections", migrate_verifier_budget),
     (parse_version("0.9.0"), "bound verification scope and retain audit decisions", migrate_verification_scope),
     (parse_version("0.10.0"), "declare 29119-4 test design techniques and coverage targets", migrate_test_design_coverage),
+    (parse_version("0.11.0"), "keep only the project definition of a pre-existing AGENTS.md on install", migrate_agents_md_definition),
 )
 
 
@@ -543,7 +552,53 @@ HEADING_RE = re.compile(r"(?m)^#{1,2}\s+(.+?)\s*$")
 MARKER_RE = re.compile(r"<!-- harness:begin [^\n]*-->\n(.*?)<!-- harness:end -->\n?", re.DOTALL)
 
 
-def install_or_merge_agents_md(target: Path, dry_run: bool, report: dict):
+DEFINITION_TODO = "[#TODO]Alert user to set up definition & north-start of the project."
+DEFINITION_HEADING_RE = re.compile(
+    r"^(project\s+)?(definition|overview|description|summary|purpose|introduction|intro|goals?|mission|vision)$"
+    r"|^about(\s+(this|the)\s+(project|repo|repository))?$"
+    r"|^north[\s-]?star$"
+    r"|^what\s+is\s+this"
+    r"|^(프로젝트\s*)?(정의|개요|소개|목적|설명|목표)$",
+    re.IGNORECASE,
+)
+SECTION_HEADING_RE = re.compile(r"(?m)^(#{1,6})\s+(.+?)\s*#*\s*$")
+
+
+def extract_project_definition(text: str) -> str:
+    headings = [(m.start(), m.end(), len(m.group(1)), m.group(2).strip()) for m in SECTION_HEADING_RE.finditer(text)]
+    for i, (_, end, level, title) in enumerate(headings):
+        if level <= 3 and DEFINITION_HEADING_RE.search(title.strip(" :")):
+            stop = next((h[0] for h in headings[i + 1:] if h[2] <= level), len(text))
+            body = text[end:stop].strip()
+            if body:
+                return body
+    preamble = text[: headings[0][0]] if headings else text
+    if preamble.strip():
+        return preamble.strip()
+    # A leading "# <Project name>" title is commonly followed directly by the description.
+    if headings and headings[0][2] == 1:
+        stop = headings[1][0] if len(headings) > 1 else len(text)
+        body = text[headings[0][1]:stop].strip()
+        if body:
+            return body
+    return ""
+
+
+def archive_agents_md(target: Path, content: str, dry_run: bool) -> Path:
+    # Not named <hex>-<name>.md so verify_rules does not require index/stale files in agent-docs/logs.
+    directory = target / "agent-docs" / "logs"
+    path = directory / "agents-md-pre-harness.md"
+    counter = 2
+    while path.exists():
+        path = directory / f"agents-md-pre-harness-{counter}.md"
+        counter += 1
+    if not dry_run:
+        directory.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+    return path
+
+
+def install_or_merge_agents_md(target: Path, dry_run: bool, report: dict, fresh_install: bool = False):
     block_body = (SOURCE_HARNESS / "instructions" / "harness-block.md").read_text(encoding="utf-8")
     begin = f"<!-- harness:begin {VERSION} -->"
     end = "<!-- harness:end -->"
@@ -563,6 +618,19 @@ def install_or_merge_agents_md(target: Path, dry_run: bool, report: dict):
     if match:
         new_content = existing[: match.start()] + wrapped + existing[match.end():]
         external = existing[: match.start()] + existing[match.end():]
+    elif fresh_install and existing.strip():
+        log_path = archive_agents_md(target, existing, dry_run)
+        log_rel = str(log_path.relative_to(target))
+        report["write"].append(log_rel)
+        definition = extract_project_definition(existing)
+        if not definition:
+            definition = DEFINITION_TODO
+            report["manual review"].append("AGENTS.md: no project definition found; set up definition & north star")
+        new_content = f"# Project Definition\n\n{definition}\n\n" + wrapped
+        external = new_content[: -len(wrapped)]
+        report["manual review"].append(
+            f"AGENTS.md: kept only the project definition; original moved to {log_rel}"
+        )
     else:
         new_content = existing.rstrip("\n") + "\n\n" + wrapped
         external = existing
@@ -680,12 +748,12 @@ def collect_info_items(target: Path, report: dict):
                 report["info"].append(f"{line} present (not touched)")
 
 
-def finish_common(target: Path, dry_run: bool, report: dict):
+def finish_common(target: Path, dry_run: bool, report: dict, fresh_install: bool = False):
     agents_md_path = target / "AGENTS.md"
     original_agents_md = agents_md_path.read_bytes() if agents_md_path.exists() else None
 
     merge_hook_files(target, dry_run, report)
-    install_or_merge_agents_md(target, dry_run, report)
+    install_or_merge_agents_md(target, dry_run, report, fresh_install)
     install_claude_md(target, dry_run, report, original_agents_md)
     ensure_agent_docs_dirs(target, dry_run, report)
     ensure_gitignore(target, dry_run, report)
@@ -739,7 +807,7 @@ def cmd_install(target: Path, dry_run: bool, no_ci: bool) -> int:
         return 1
 
     new_manifest_files = apply_owned_files(target, owned, {}, dry_run, report)
-    finish_common(target, dry_run, report)
+    finish_common(target, dry_run, report, fresh_install=True)
 
     if not dry_run:
         manifest_path.parent.mkdir(parents=True, exist_ok=True)

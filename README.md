@@ -29,7 +29,7 @@ AI 에이전트로 작업할수록 문서·주석·docstring이 통제 불가능
 > 잘못된 설정 값 하나가 임의 경로 삭제로 이어지지 않도록, 자동화된 삭제 동작에는 항상 경로 포함 검증을 둡니다.
 
 ### 6. 기존 프로젝트와의 비파괴적 병합
-이미 `AGENTS.md`/`CLAUDE.md`, `.claude/settings.json`의 훅, Husky 같은 git hook 매니저가 있는 저장소에 설치할 때, 하네스는 자기 소유 항목만 추가/교체하고 나머지는 보존합니다. 이름이 충돌하는 agent/skill이 있으면 자동 병합 대신 설치를 중단하고 충돌 목록만 보고합니다.
+이미 `AGENTS.md`/`CLAUDE.md`, `.claude/settings.json`의 훅, Husky 같은 git hook 매니저가 있는 저장소에 설치할 때, 하네스는 자기 소유 항목만 추가/교체하고 나머지는 보존합니다. 단, 관리 블록이 없는 기존 `AGENTS.md`는 규칙 충돌을 막기 위해 project definition만 남기고 원본 전체를 `agent-docs/logs/agents-md-pre-harness.md`에 보관합니다(정의를 찾지 못하면 `[#TODO]` 안내를 기록). 이름이 충돌하는 agent/skill이 있으면 자동 병합 대신 설치를 중단하고 충돌 목록만 보고합니다.
 > 기존 템플릿의 경우, 수정사항을 반영하기 힘들고, 해당 프로젝트에 결합하는 문제가 있었습니다.
 
 ## 사용법
