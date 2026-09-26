@@ -1,57 +1,82 @@
 # harness
 
-Claude Code와 Codex 양쪽에서 동작하는, **임의의 git 저장소에 설치·갱신 가능한 AI 에이전트 하네스**입니다. 문서화 규칙, contract 기반 구현/테스트 워크플로우, 서브에이전트, 라이프사이클 훅, CI 체크를 하나의 패키지로 배포하고 버전 관리합니다.
+Claude Code와 Codex에 공통 규칙과 작업 도구를 설치하는 AI 에이전트 하네스입니다. Git 저장소에 설치할 수 있으며, 이 저장소의 `harness/`가 배포 원본입니다. 현재 버전은 [`harness/VERSION`](harness/VERSION)에서 확인할 수 있습니다.
 
-## 왜 만들었나
+## 빠른 시작
 
-AI 에이전트로 작업할수록 문서·주석·docstring이 통제 불가능하게 불어나고, 이는 사람에게도 에이전트 자신의 컨텍스트에도 오염원이 됩니다. 복사해서 쓰는 템플릿으로는 여러 프로젝트에 걸쳐 규칙을 유지·업그레이드할 수 없어서, **설치형 하네스**로 만들었습니다. 규칙은 가능한 한 LLM의 판단이 아니라 git hook으로 기계적으로 강제합니다(`harness/git/verify_rules.py`).
-
-## 핵심 기능과 설계 근거
-
-### 1. 단일 소스에서 Claude/Codex 두 포맷을 동시 생성
-서브에이전트 정의를 `harness/agents/<name>.md` 하나(공통 본문 + `claude.*`/`codex.*` frontmatter)로만 작성하면, `installer/generate.py`가 Claude용 Markdown+frontmatter와 Codex용 TOML로 각각 렌더링합니다. 훅 설정도 동일하게 `hooks.spec.json` 하나에서 `.claude/settings.json`과 `.codex/hooks.json`을 생성합니다.
-> 두 플랫폼 사이의 차이를 방지
-
-### 2. 3-way sha 비교 기반 안전한 갱신
-`update`는 `.harness/manifest.json`에 기록된 이전 sha256, 현재 디스크 상태, 새로 렌더링한 내용을 3방향으로 비교해 "하네스 원본과 동일 → 갱신", "사용자가 수정함 → 건너뛰고 보고", "더 이상 소유하지 않음 → 미변경 시 삭제"를 구분합니다. 건너뛴 파일은 manifest에 이전 sha가 그대로 남아, 이후 `doctor`가 drift를 계속 잡아냅니다.
-> 하네스가 배포하는 파일이라도 사용자가 수정했다면 그건 존중해야 할 로컬 변경입니다. 무조건 덮어쓰는 갱신은 신뢰할 수 없는 도구가 됩니다.
-
-### 3. Contract 기반 구현/테스트 워크플로우 (`contract-workflow` 스킬)
-구현과 테스트를 담당하는 두 서브에이전트(`implementer`, `test-implementer`)를 같은 Contract 문서(시그니처·엣지케이스·Intent)만 보고 서로 결과를 보지 못한 채 병렬로 작업시킵니다. 테스트의 기대값은 코드 실행이 아니라 명세에서만 도출하도록 강제합니다. 이후 `test-verifier`가 구현 코드 없이 테스트 스위트만 감사하고, 발견한 허점을 실제 파일에 주입(`Seed`)해 실증합니다.
-> AI agent의 테스트가 많고 쓸모 없는 이유 중 하나는 구현자와 테스트 구현자가 context를 공유하기 때문입니다. 이를 방지하고, test에 대해서는 한 번 더 검증합니다.
-
-### 4. 기계적으로 강제되는 문서화 규칙
-`AGENTS.md`의 관리 블록이 주석 최소화 정책, ADR/Rejection/Handoff 작성 규칙, 문서 디렉터리의 Index & Staleness 관리, 여러 위치에 흩어진 동일 주석의 동기화(`synced id`) 규칙을 정의합니다. 이 중 결정론적으로 검증 가능한 부분(파일 네이밍, index/stale 존재, sync 일관성, 필수 헤딩)은 커밋 시점에 `verify_rules.py`가 강제로 차단합니다.
-> 지시보다는 **rule**이 낫습니다. 검증 가능한 부분은 커밋 훅으로, 판단이 필요한 부분(ADR 작성 여부 등)만 에이전트/사용자 판단에 남겨둡니다.
-
-### 5. 경로 검증 기반 안전한 자동 삭제
-세션 종료 시 세션 한정 디렉터리(`agent-docs/contracts/`)를 자동 삭제하는 `cleanup.py`는, 삭제 대상 경로가 설정 가능한 `docs_root`와 저장소 루트 양쪽에 엄격히 포함되는지(`is_strictly_inside`) 확인한 뒤에만 지웁니다. 또한 `Seed` 결함 주입 도중 작업이 멈춰 `.seed/`에 원본 백업이 남아 있으면 삭제하지 않고 `python3 .harness/bin/seed.py restore` 실행을 안내합니다(SessionEnd, Codex `/clear`, git post-merge 공통).
-> 잘못된 설정 값 하나가 임의 경로 삭제로 이어지지 않도록, 자동화된 삭제 동작에는 항상 경로 포함 검증을 둡니다.
-
-### 6. 기존 프로젝트와의 비파괴적 병합
-이미 `AGENTS.md`/`CLAUDE.md`, `.claude/settings.json`의 훅, Husky 같은 git hook 매니저가 있는 저장소에 설치할 때, 하네스는 자기 소유 항목만 추가/교체하고 나머지는 보존합니다. 단, 관리 블록이 없는 기존 `AGENTS.md`는 규칙 충돌을 막기 위해 project definition만 남기고 원본 전체를 `agent-docs/logs/agents-md-pre-harness.md`에 보관합니다(정의를 찾지 못하면 `[#TODO]` 안내를 기록). 이름이 충돌하는 agent/skill이 있으면 자동 병합 대신 설치를 중단하고 충돌 목록만 보고합니다.
-> 기존 템플릿의 경우, 수정사항을 반영하기 힘들고, 해당 프로젝트에 결합하는 문제가 있었습니다.
-
-## 사용법
+Python 3와 Git이 필요합니다. 이 저장소에서 대상 Git 저장소의 경로를 지정해 실행합니다.
 
 ```bash
-python3 installer/harness.py install <target> [--dry-run] [--no-ci]
-python3 installer/harness.py update <target> [--dry-run] [--no-ci]
+python3 installer/harness.py install <target> --dry-run
+python3 installer/harness.py install <target>
 python3 installer/harness.py doctor <target>
-python3 installer/harness.py import <target> [--json]
 ```
 
-- `install`은 대상이 git worktree가 아니거나, 이미 설치돼 있거나, 충돌이 있으면 아무것도 쓰지 않고 종료합니다.
-- `update`는 하네스가 소유한 파일만 갱신하고, 사용자가 수정한 파일은 건너뜁니다.
-- `--no-ci`는 `.github/workflows/harness-comment-warning.yml` CI 체크 워크플로우를 설치/갱신 대상에서 제외합니다. GitHub Actions를 쓰지 않는 저장소에 설치할 때 사용합니다.
-- `import`는 설치된 대상 저장소가 하네스 파일을 어떻게 수정했는지 읽어 오는 읽기 전용 명령입니다. 아무것도 쓰지 않으며, 해석·제안·브랜치 생성은 `harness-import` 스킬이 담당합니다.
-- `doctor`는 설치 상태(파일 sha, 훅 등록, 문서 블록, git 훅 연동)를 점검하는 읽기 전용 명령입니다.
-- 이 저장소 자체도 자신을 설치해 도그푸딩합니다. `harness/`를 수정한 뒤에는 `python3 installer/harness.py update .`로 반영합니다.
+`--dry-run`은 변경 예정 항목만 보여줍니다. 대상에 이미 `.harness/manifest.json`이 있으면 `install` 대신 `update`를 사용하세요. GitHub Actions를 사용하지 않는 저장소에는 설치·갱신 명령에 `--no-ci`를 붙일 수 있습니다.
 
-## 테스트
+## 설치되는 것
 
-`tests/test_installer.py`는 mock 없이 실제 CLI/훅 스크립트를 임시 git 저장소에서 서브프로세스로 실행하는 black-box 테스트입니다. 멱등성(반복 업그레이드가 no-op인지), 사용자 수정 보존과 drift 감지, Claude/Codex 두 플랫폼 간 설정 일관성, 그리고 실제 프로세스의 생존/종료 상태를 이용한 세션 락 동시성 검증까지 다룹니다.
+| 위치 | 역할 |
+| --- | --- |
+| `.harness/` | 버전이 기록된 payload, 스크립트, 설정 원본과 소유 파일의 SHA manifest |
+| `AGENTS.md`, `CLAUDE.md` | 프로젝트 정의와 관리형 문서 규칙; Claude는 `@AGENTS.md`로 같은 규칙을 읽음 |
+| `.agents/skills/`, `.claude/skills/` | `workflow-approach`, `requirement-oracle`, `architecture-options`, `harness-import` 스킬과 Claude용 링크 |
+| `.claude/agents/`, `.codex/agents/` | 공통 원본에서 생성한 `implementer`, `test-implementer`, `test-verifier`, `code-explorer` 정의 |
+| `.claude/settings.json`, `.codex/hooks.json` | 세션·서브에이전트·도구 훅 |
+| `.harness/git/` | 커밋 전 문서 규칙 검증과 기존 Git hook 연결 |
+| `agent-docs/` | ADR, 거절 기록, handoff, 요구사항, spec 및 실행 기록의 위치 |
+| `.github/workflows/harness-comment-warning.yml` | PR에서 새 주석과 docstring을 알리는 선택적 GitHub Actions 워크플로우 |
+
+설치 시 기존 Claude/Codex hook 설정에는 하네스 항목을 병합합니다. 새로 설치하는 저장소에 기존 `AGENTS.md`가 있으면 프로젝트 정의만 남기고 원문을 `agent-docs/logs/`에 보관합니다. 기존 `CLAUDE.md`에는 필요하면 `@AGENTS.md`를 추가합니다. 파일이나 스킬 이름이 충돌하면 설치를 중단하고 경로를 보고합니다.
+
+Git hook 관리자가 없는 경우 `core.hooksPath`를 `.harness/git`으로 설정합니다. Husky 등 기존 관리자가 있으면 설정을 바꾸지 않고 수동 연결 방법을 출력합니다. 커밋 전 검사는 문서 파일명, index/stale 구조, 동기화된 주석의 메타데이터와 필수 제목처럼 기계적으로 판단할 수 있는 규칙을 검사합니다. PR의 주석 검사는 경고만 출력합니다.
+
+## 작업 흐름
+
+[`workflow-approach`](harness/skills/workflow-approach/SKILL.md)는 기능·수정 수준의 구현과 디버깅에 사용하는 명세 우선 워크플로우입니다. 단순 문서 수정이나 이름 변경에는 적용하지 않습니다.
+
+1. 메인 에이전트가 요구사항, 품질 목표, 검증 의무를 `agent-docs/specs/`의 버전별 spec에 작성하고 사용자 승인을 받습니다. 미결정 사항은 `requirement-oracle`이 선택에 필요한 근거를 정리합니다.
+2. `implementer`와 `test-implementer`가 같은 승인된 spec을 기준으로 병렬 작업합니다. 각 역할은 상대방의 결과물을 보지 않습니다.
+3. 테스트가 통과하면 `test-verifier`가 증거를 감사합니다. 메인 에이전트는 선택한 결함을 실제로 주입하고 테스트가 이를 잡는지 확인한 뒤 원본을 복원합니다. 검증 에이전트 호출은 한 실행당 최대 2회입니다.
+4. 완료·중단 상태의 spec은 `agent-docs/spec-logs/`에 보관합니다. 진행 중인 spec과 handoff는 다음 세션에서 이어갈 수 있도록 유지합니다.
+
+세션 및 도구 훅은 spec 생명주기, 동시 실행 표식, 테스트 명령 제한과 실행 이벤트를 관리합니다. 텔레메트리는 기본적으로 사용자 홈의 `~/.harness/telemetry/`에 JSONL로 기록되며, 기록 실패가 작업 흐름을 막지는 않습니다.
+
+문서 작성 기준과 ADR·거절 기록·handoff 규칙은 [`harness-block.md`](harness/instructions/harness-block.md)에 있습니다.
+
+## 갱신과 점검
 
 ```bash
-python3 -m unittest tests/test_installer.py
+python3 installer/harness.py update <target> --dry-run
+python3 installer/harness.py update <target>
+python3 installer/harness.py doctor <target>
+python3 installer/harness.py import <target> --json
 ```
+
+`update`는 설치된 버전부터 현재 버전까지 필요한 migration을 **버전별로 출력하고 각각 확인받은 뒤** 적용합니다. 하네스 소유 파일은 manifest의 이전 SHA, 디스크의 현재 SHA, 새 payload를 비교합니다. 사용자가 수정한 파일은 건너뛰고 보고하며 이전 SHA를 유지합니다. 더 이상 배포하지 않는 파일은 수정되지 않았을 때만 삭제합니다. `--dry-run`은 migration 계획과 파일 변경을 쓰지 않고 보여줍니다.
+
+`doctor`는 manifest의 파일 SHA, 설정의 hook 항목, `AGENTS.md` 관리 블록, `CLAUDE.md` 참조와 Git hook 연결을 읽기 전용으로 점검합니다. `import`는 설치본과 현재 원본의 차이를 읽기 전용으로 보여주며, `--json`으로 기계 판독용 결과를 출력합니다. 차이를 원본에 반영할지는 [`harness-import`](harness/skills/harness-import/SKILL.md) 스킬에서 검토합니다.
+
+## 이 저장소에서 개발하기
+
+배포 내용은 `harness/`에서만 수정합니다. `.harness/`, `.claude/`, `.codex/`, `.agents/`의 설치 결과물을 직접 편집하지 마세요. payload를 바꾼 뒤에는 자체 설치본을 갱신합니다.
+
+```bash
+python3 installer/harness.py update .
+python3 -m unittest discover -s tests
+```
+
+버전을 올릴 때는 [`installer/harness.py`](installer/harness.py)의 버전별 migration 단계를 추가해야 합니다. 에이전트 정의와 hook 설정은 각각 `harness/agents/`와 `harness/hooks/hooks.spec.json`에서 관리하고, [`installer/generate.py`](installer/generate.py)가 Claude/Codex 형식으로 생성합니다.
+
+# 세션 로그 분석 (개발 중)
+
+별도의 로컬 분석 화면은 `analytics/`에 있습니다. 실행하려면 Python 의존성과 프런트엔드를 빌드한 뒤 서버를 시작합니다.
+
+```bash
+python3 -m pip install -r analytics/requirements.txt
+npm ci --prefix analytics/frontend
+npm run build --prefix analytics/frontend
+python3 -m analytics.app
+```
+
+기본 주소는 `http://127.0.0.1:8000`입니다. 분석 화면은 사용자 홈의 텔레메트리와 Claude/Codex 세션 기록을 읽고, 로컬 SQLite 데이터베이스에 가져옵니다.
