@@ -26,3 +26,8 @@ File: 49e8d44acdf07bd5-iso-29119-4-test-coverage.md
 Summary: Rewrite workflow-approach, requirement-oracle and test agents so obligations declare 29119-4 techniques, coverage items and targets; add 0.10.0 migration
 Related Files: harness/skills/workflow-approach/SKILL.md, harness/skills/requirement-oracle/SKILL.md, harness/agents/test-implementer.md, harness/agents/test-verifier.md, harness/VERSION, installer/harness.py, tests/test_installer.py, tests/test_telemetry.py, tests/test_workflow_markers.py
 Related Symbols: Verification Obligations, migrate_verification_scope, MIGRATIONS, REQUIRED_HEADINGS
+---
+File: 09494007ed793b66-analytics-compliance-rules.md
+Summary: Completed runs show noncompliant because amend rule is stricter than the skill and a ;-chained marker duplicated start; fixes await user decision
+Related Files: analytics/compliance.py, harness/skills/workflow-approach/SKILL.md, harness/bin/workflow_marker.py, harness/lib/telemetry.py
+Related Symbols: evaluate, amend_without_retry_result, expected_one_start, workflow_start

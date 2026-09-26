@@ -312,6 +312,7 @@ def cached_sessions(connection: sqlite3.Connection) -> list[dict]:
         if parsed.get("client") == "claude" and Path(path).parent.name == "subagents":
             subagent_files.append(parsed)
         else:
+            parsed["child_sessions"] = 0
             sessions.append(parsed)
 
     parent_dir_index = {
@@ -325,4 +326,5 @@ def cached_sessions(connection: sqlite3.Connection) -> list[dict]:
         for field in ("input_tokens", "output_tokens", "cache_read_tokens",
                        "cache_write_5m_tokens", "cache_write_1h_tokens"):
             parent[field] = parent.get(field, 0) + child.get(field, 0)
+        parent["child_sessions"] += 1
     return sessions

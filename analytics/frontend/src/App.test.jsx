@@ -136,6 +136,41 @@ describe("spec v2 U2/F7/Q3 summary and detail field coverage", () => {
   });
 });
 
+describe("spec v4 (compliance-classification) VO5/F7 run and session class lines", () => {
+  beforeEach(() => { cleanup(); window.history.replaceState({}, "", "/"); global.fetch = vi.fn(); });
+  afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+  const classifiedSummary = {
+    ...emptySummary,
+    runs: 7, completed_runs: 6, compliant_runs: 3, handoff_runs: 1,
+    run_items: [{ run_id: "run-1", spec: "analytics", status: "complete", compliant: true }],
+    classification: {
+      runs: { compliant: 3, noncompliant: 2, excluded: 2 },
+      sessions: { compliant: 5, noncompliant: 1, partial: 2, unrelated: 4, excluded: 3 },
+    },
+  };
+
+  it("renders the run-class line with one span per class and the fixture counts", async () => {
+    fetch.mockReturnValue(response(classifiedSummary));
+    render(<App apiBase="" />);
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/summary"));
+
+    for (const [cls, value] of Object.entries(classifiedSummary.classification.runs)) {
+      expect(screen.getByText(String(value), { selector: `[data-metric='class-runs-${cls}']` })).toBeVisible();
+    }
+  });
+
+  it("renders the session-class line with one span per class and the fixture counts", async () => {
+    fetch.mockReturnValue(response(classifiedSummary));
+    render(<App apiBase="" />);
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/summary"));
+
+    for (const [cls, value] of Object.entries(classifiedSummary.classification.sessions)) {
+      expect(screen.getByText(String(value), { selector: `[data-metric='class-sessions-${cls}']` })).toBeVisible();
+    }
+  });
+});
+
 describe("spec v4 FR13/C13 workflow and other-sessions tabs", () => {
   beforeEach(() => { cleanup(); window.history.replaceState({}, "", "/"); global.fetch = vi.fn(); });
   afterEach(() => { cleanup(); vi.restoreAllMocks(); });

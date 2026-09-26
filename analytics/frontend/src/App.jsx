@@ -145,6 +145,22 @@ export default function App({ apiBase = "" }) {
         <p>Seeds run: {summary.seeds_run}</p>
         <p>Seeds detected: {summary.seeds_detected}</p>
         <p>Linked cost (USD): {summaryCost}</p>
+        {summary.classification && (
+          <>
+            <p>
+              Runs by class — compliant: <span data-metric="class-runs-compliant">{summary.classification.runs.compliant}</span>,
+              {" "}noncompliant: <span data-metric="class-runs-noncompliant">{summary.classification.runs.noncompliant}</span>,
+              {" "}excluded: <span data-metric="class-runs-excluded">{summary.classification.runs.excluded}</span>
+            </p>
+            <p>
+              Sessions by class — compliant: <span data-metric="class-sessions-compliant">{summary.classification.sessions.compliant}</span>,
+              {" "}noncompliant: <span data-metric="class-sessions-noncompliant">{summary.classification.sessions.noncompliant}</span>,
+              {" "}partial: <span data-metric="class-sessions-partial">{summary.classification.sessions.partial}</span>,
+              {" "}unrelated: <span data-metric="class-sessions-unrelated">{summary.classification.sessions.unrelated}</span>,
+              {" "}excluded: <span data-metric="class-sessions-excluded">{summary.classification.sessions.excluded}</span>
+            </p>
+          </>
+        )}
       </section>
       {summary.run_items.length === 0 ? (
         <p>No workflow runs yet.</p>

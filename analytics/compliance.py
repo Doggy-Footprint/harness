@@ -42,8 +42,8 @@ def evaluate(events: list[dict]) -> dict:
                     reasons.append("verify_without_prior_result")
                 awaiting_result = True
             elif phase == "amend":
-                if last_result != "retry" or awaiting_result:
-                    reasons.append("amend_without_retry_result")
+                if awaiting_result:
+                    reasons.append("amend_during_verify")
             else:
                 reasons.append("unknown_phase")
         elif name == "verifier_result":

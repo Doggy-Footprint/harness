@@ -65,6 +65,70 @@ def _linked_keys(events):
     return {(str(e.get("client")), str(e.get("session_id"))) for e in events if e.get("client") and e.get("session_id")}
 
 
+_HARNESS_SUBAGENTS = {"implementer", "test-implementer", "test-verifier"}
+
+
+def _run_class(events) -> str:
+    state = evaluate(events)
+    if state["compliant"] is None:
+        return "excluded"
+    return "compliant" if state["compliant"] else "noncompliant"
+
+
+def _session_linked_runs(grouped):
+    linked: dict[tuple, set[str]] = {}
+    for run_id, events in grouped.items():
+        for key in _linked_keys(events):
+            linked.setdefault(key, set()).add(run_id)
+    return linked
+
+
+def _has_harness_evidence(session, sessions_by_key) -> bool:
+    subagents = session.get("subagents") or {}
+    if any(name in _HARNESS_SUBAGENTS for name in subagents):
+        return True
+    if session.get("agent_type") in _HARNESS_SUBAGENTS:
+        return True
+    session_id = session.get("session_id")
+    if session_id is not None:
+        for other in sessions_by_key.values():
+            if other.get("parent_session_id") == session_id and other.get("agent_type") in _HARNESS_SUBAGENTS:
+                return True
+    return False
+
+
+def _classify_sessions(grouped, sessions_by_key, run_classes):
+    linked_runs = _session_linked_runs(grouped)
+    memo: dict[tuple, str] = {}
+
+    def classify(key, visiting):
+        if key in memo:
+            return memo[key]
+        if key in visiting:
+            return "unrelated"
+        session = sessions_by_key.get(key)
+        runs_for_key = linked_runs.get(key, set())
+        if len(runs_for_key) >= 2:
+            result = "noncompliant"
+        elif len(runs_for_key) == 1:
+            result = run_classes[next(iter(runs_for_key))]
+        elif session is not None and session.get("client") == "codex" and session.get("parent_session_id") \
+                and ("codex", session["parent_session_id"]) in sessions_by_key:
+            result = classify(("codex", session["parent_session_id"]), visiting | {key})
+        elif session is not None and _has_harness_evidence(session, sessions_by_key):
+            result = "partial"
+        else:
+            result = "unrelated"
+        memo[key] = result
+        return result
+
+    counts = {"compliant": 0, "noncompliant": 0, "partial": 0, "unrelated": 0, "excluded": 0}
+    for key, session in sessions_by_key.items():
+        cls = classify(key, frozenset())
+        counts[cls] += 1 + session.get("child_sessions", 0)
+    return counts
+
+
 def _linked_usage(events, sessions_by_key, prices):
     output = []
     for key in _linked_keys(events):
@@ -234,6 +298,11 @@ def create_app(database_path: Path, telemetry_dir: Path, price_path: Path, trans
         costs = [item["linked_cost_usd"] for item in details]
         workflow_keys = {key for events in grouped.values() for key in _linked_keys(events)}
         workflow_runs = [_workflow_entry(key, events, sessions, sessions_by_key, prices) for key, events in grouped.items()]
+        run_classes = {run_id: _run_class(events) for run_id, events in grouped.items()}
+        classification_runs = {"compliant": 0, "noncompliant": 0, "excluded": 0}
+        for run_class in run_classes.values():
+            classification_runs[run_class] += 1
+        classification = {"runs": classification_runs, "sessions": _classify_sessions(grouped, sessions_by_key, run_classes)}
         return {"runs": len(details), "completed_runs": len(completed), "compliant_runs": sum(item["compliant"] is True for item in completed),
                 "handoff_runs": sum(item["status"] == "handoff" for item in details),
                 "verifier_rounds": sum(item["verifier_rounds"] for item in details), "verifier_retries": sum(item["verifier_retries"] for item in details),
@@ -241,7 +310,8 @@ def create_app(database_path: Path, telemetry_dir: Path, price_path: Path, trans
                 "linked_cost_usd": None if any(x is None for x in costs) else sum(costs),
                 "run_items": [{key: item[key] for key in ("run_id", "spec", "status", "compliant")} for item in details],
                 "workflow": {"runs": workflow_runs},
-                "non_workflow": _non_workflow_section(sessions, workflow_keys, prices)}
+                "non_workflow": _non_workflow_section(sessions, workflow_keys, prices),
+                "classification": classification}
 
     @app.get("/api/runs/{run_id}")
     def run(run_id: str):

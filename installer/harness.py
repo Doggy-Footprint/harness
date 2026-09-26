@@ -332,6 +332,13 @@ def migrate_agents_md_definition(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_start_marker_chaining(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "install the workflow start marker chained after spec lifecycle start with &&",
+        "preserve existing specs, archived records, and telemetry",
+    ]
+
+
 MANAGED_DOC_RE = re.compile(r"^[0-9a-f]{16}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$")
 WORKFLOW_DOC_DIRS = {"specs", "spec-logs"}
 
@@ -366,6 +373,7 @@ MIGRATIONS = (
     (parse_version("0.10.0"), "declare 29119-4 test design techniques and coverage targets", migrate_test_design_coverage),
     (parse_version("0.11.0"), "keep only the project definition of a pre-existing AGENTS.md on install", migrate_agents_md_definition),
     (parse_version("0.12.0"), "require stale.md in every index-managed directory", migrate_missing_stale_records),
+    (parse_version("0.13.0"), "chain the workflow start marker after spec lifecycle start", migrate_start_marker_chaining),
 )
 
 
