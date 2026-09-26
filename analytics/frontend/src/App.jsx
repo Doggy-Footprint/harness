@@ -1,10 +1,69 @@
 import { useEffect, useState } from "react";
 
+function OtherSessions({ nonWorkflow }) {
+  if (!nonWorkflow) return null;
+  const byModel = nonWorkflow.cost?.by_model ?? {};
+  const tokensByModel = nonWorkflow.cost?.tokens_by_model ?? {};
+  const models = Object.keys(byModel);
+  return (
+    <section aria-label="Other sessions">
+      <h1>Other sessions</h1>
+      <p>Sessions: <span data-metric="non-workflow-sessions">{nonWorkflow.sessions}</span></p>
+      <h2>Tool usage</h2>
+      <table>
+        <thead><tr><th>Tool</th><th>Count</th></tr></thead>
+        <tbody>
+          {Object.entries(nonWorkflow.tools).map(([name, count]) => (
+            <tr key={name}><td>{name}</td><td>{count}</td></tr>
+          ))}
+        </tbody>
+      </table>
+      <h2>Cost by model</h2>
+      <table>
+        <thead><tr><th>Model</th><th>Input tokens</th><th>Output tokens</th><th>Cache read tokens</th><th>Cache write tokens</th><th>Cost (USD)</th></tr></thead>
+        <tbody>
+          {models.map(model => {
+            const tokens = tokensByModel[model] ?? {};
+            return (
+              <tr key={model}>
+                <td>{model}</td>
+                <td>{tokens.input_tokens}</td>
+                <td>{tokens.output_tokens}</td>
+                <td>{tokens.cache_read_tokens}</td>
+                <td>{tokens.cache_write_tokens}</td>
+                <td>{byModel[model] ?? "unknown cost"}</td>
+              </tr>
+            );
+          })}
+          <tr>
+            <td>Total</td>
+            <td colSpan={4} />
+            <td>{nonWorkflow.cost.total_usd}</td>
+          </tr>
+        </tbody>
+      </table>
+      {nonWorkflow.cost.unknown_models.length > 0 && (
+        <p>Unknown-priced models: {nonWorkflow.cost.unknown_models.join(", ")}</p>
+      )}
+      <h2>Subagents</h2>
+      <table>
+        <thead><tr><th>Type</th><th>Count</th></tr></thead>
+        <tbody>
+          {Object.entries(nonWorkflow.subagents).map(([type, count]) => (
+            <tr key={type}><td>{type}</td><td>{count}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
 export default function App({ apiBase = "" }) {
   const [summary, setSummary] = useState(null);
   const [selected, setSelected] = useState(null);
   const [detail, setDetail] = useState(null);
   const [error, setError] = useState(null);
+  const [tab, setTab] = useState("workflow");
   useEffect(() => {
     fetch(`${apiBase}/api/summary`).then(r => r.ok ? r.json() : Promise.reject(new Error("Unable to load analytics"))).then(setSummary).catch(e => setError(e.message));
   }, [apiBase]);
@@ -15,11 +74,21 @@ export default function App({ apiBase = "" }) {
   }, [apiBase, selected]);
   if (error) return <main role="alert"><h1>Analytics unavailable</h1><p>{error}</p></main>;
   if (!summary) return <main role="status" aria-busy="true"><h1>Loading analytics</h1></main>;
-  if (selected && !detail) return <main role="status" aria-busy="true"><h1>Loading run</h1></main>;
+  const tabs = (
+    <nav aria-label="Dashboard tabs">
+      <button aria-pressed={tab === "workflow"} onClick={() => setTab("workflow")}>Workflow</button>
+      <button aria-pressed={tab === "other"} onClick={() => setTab("other")}>Other sessions</button>
+    </nav>
+  );
+  if (tab === "other") {
+    return <main>{tabs}<OtherSessions nonWorkflow={summary.non_workflow} /></main>;
+  }
+  if (selected && !detail) return <main role="status" aria-busy="true">{tabs}<h1>Loading run</h1></main>;
   if (detail) {
     const detailCost = detail.linked_cost_usd ?? "unknown cost";
     return (
       <main>
+        {tabs}
         <button onClick={() => { setSelected(null); setDetail(null); }}>Back to runs</button>
         <h1>Run {detail.run_id}</h1>
         <dl>
@@ -64,6 +133,7 @@ export default function App({ apiBase = "" }) {
   const summaryCost = summary.linked_cost_usd ?? "unknown cost";
   return (
     <main>
+      {tabs}
       <h1>Harness analytics</h1>
       <section aria-label="Summary">
         <p>Runs: <span data-metric="runs">{summary.runs}</span></p>

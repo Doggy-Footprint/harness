@@ -1,4 +1,8 @@
+_WORKFLOW_EVENTS = {"workflow_start", "workflow_phase", "verifier_result", "workflow_end"}
+
+
 def evaluate(events: list[dict]) -> dict:
+    events = [event for event in events if event.get("event") in _WORKFLOW_EVENTS]
     reasons: list[str] = []
     if not events:
         return {"completed": False, "compliant": None, "reasons": []}

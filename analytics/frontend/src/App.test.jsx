@@ -1,5 +1,5 @@
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
@@ -133,5 +133,105 @@ describe("spec v2 U2/F7/Q3 summary and detail field coverage", () => {
     await waitFor(() => expect(fetch).toHaveBeenLastCalledWith("/api/runs/run-detail"));
     await screen.findByText(/cost/i, { selector: "dt" });
     expectLabelledValue(/cost/i, "unknown cost");
+  });
+});
+
+describe("spec v4 FR13/C13 workflow and other-sessions tabs", () => {
+  beforeEach(() => { cleanup(); window.history.replaceState({}, "", "/"); global.fetch = vi.fn(); });
+  afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+  // v4 Signatures fixes non_workflow's and workflow's shape exactly
+  // (F5 correction): non_workflow.{sessions:int, tools:{name:count},
+  // subagents:{type:count}, cost:{by_model:{model:usd|null},
+  // tokens_by_model, total_usd, unknown_models}}; workflow.runs is a list of
+  // FR12 run summaries.
+  const tabbedSummary = {
+    runs: 2, completed_runs: 2, compliant_runs: 2, handoff_runs: 0,
+    verifier_rounds: 2, verifier_retries: 0, seeds_run: 0, seeds_detected: 0,
+    linked_cost_usd: 3.5,
+    run_items: [{ run_id: "run-tab", spec: "analytics", status: "complete", compliant: true }],
+    workflow: { runs: [{ run_id: "run-tab", spec: "analytics", status: "complete", compliant: true }] },
+    non_workflow: {
+      sessions: 4,
+      tools: { Bash: 12, Read: 7, Write: 3 },
+      cost: {
+        by_model: { "known-model": 9.5, "mystery-model": null },
+        tokens_by_model: { "known-model": { input_tokens: 100, output_tokens: 50, cache_read_tokens: 0, cache_write_tokens: 0 } },
+        total_usd: 9.5,
+        unknown_models: ["mystery-model"],
+      },
+      subagents: { reviewer: 5, "general-purpose": 2 },
+    },
+  };
+
+  function renderWithTabbedSummary() {
+    fetch.mockReturnValue(response(tabbedSummary));
+    render(<App apiBase="" />);
+    return waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/summary"));
+  }
+
+  it("shows the Workflow tab's run summary by default", async () => {
+    await renderWithTabbedSummary();
+    expect(screen.getByRole("link", { name: /run-tab/ })).toBeVisible();
+    expect(screen.queryByText("Bash")).not.toBeInTheDocument();
+  });
+
+  function findOtherSessionsTab() {
+    return screen.getByText(/Other sessions/i);
+  }
+
+  // "9.5" (per-model cost and the cost total) and "mystery-model" (its
+  // model-cost row and the separate unknown-models note) each legitimately
+  // render in more than one place. Rather than weaken the check to "appears
+  // somewhere on the page", each assertion below is scoped to the single
+  // table row (accessible role "row", i.e. a <tr>) that also carries the
+  // row's other distinguishing cell, so it verifies the value against the
+  // specific record it belongs to.
+  function findRowContaining(...matchers) {
+    const rows = screen.getAllByRole("row");
+    const match = rows.find((row) => matchers.every((matcher) => within(row).queryAllByText(matcher).length > 0));
+    if (!match) throw new Error(`no table row found containing: ${matchers.join(", ")}`);
+    return match;
+  }
+
+  it("switching to the Other sessions tab renders the tool, model-cost, and subagent tables", async () => {
+    await renderWithTabbedSummary();
+    fireEvent.click(findOtherSessionsTab());
+    await screen.findByText("Bash");
+
+    const bashRow = findRowContaining("Bash", "12");
+    expect(within(bashRow).getByText("Bash")).toBeVisible();
+    expect(screen.getByText("Read")).toBeVisible();
+    expect(screen.getByText("Write")).toBeVisible();
+
+    const modelCostRow = findRowContaining("known-model", /9\.5/);
+    expect(within(modelCostRow).getByText(/9\.5/)).toBeVisible();
+    // The same 9.5 value also appears once more as the cost total.
+    expect(screen.getAllByText(/9\.5/)).toHaveLength(2);
+
+    const subagentRow = findRowContaining("reviewer", "5");
+    expect(within(subagentRow).getByText("5")).toBeVisible();
+    expect(screen.getByText("general-purpose")).toBeVisible();
+  });
+
+  it("switching back to the Workflow tab restores the run summary", async () => {
+    await renderWithTabbedSummary();
+    fireEvent.click(findOtherSessionsTab());
+    await screen.findByText("Bash");
+    fireEvent.click(screen.getByText(/^Workflow$/i));
+    expect(await screen.findByRole("link", { name: /run-tab/ })).toBeVisible();
+    expect(screen.queryByText("Bash")).not.toBeInTheDocument();
+  });
+
+  it("Other sessions tab shows an unknown-model indicator for unpriced models", async () => {
+    await renderWithTabbedSummary();
+    fireEvent.click(findOtherSessionsTab());
+    await screen.findByText("Bash");
+    // mystery-model's own model-cost row must show an unknown-cost indicator.
+    const mysteryRow = findRowContaining("mystery-model", /unknown/i);
+    expect(within(mysteryRow).getByText("mystery-model")).toBeVisible();
+    expect(within(mysteryRow).getByText(/unknown/i)).toBeVisible();
+    // It is also named a second time, in the separate unknown-models note.
+    expect(screen.getAllByText(/mystery-model/i)).toHaveLength(2);
   });
 });
