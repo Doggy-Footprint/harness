@@ -332,6 +332,30 @@ def migrate_agents_md_definition(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+MANAGED_DOC_RE = re.compile(r"^[0-9a-f]{16}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$")
+WORKFLOW_DOC_DIRS = {"specs", "spec-logs"}
+
+
+def migrate_missing_stale_records(target: Path, dry_run: bool) -> list[str]:
+    docs_root = target / "agent-docs"
+    if not docs_root.is_dir():
+        return []
+    directories = set()
+    for path in docs_root.rglob("*.md"):
+        parts = path.relative_to(docs_root).parts
+        if not path.is_file() or not MANAGED_DOC_RE.match(path.name):
+            continue
+        if "stale" in parts or parts[0] in WORKFLOW_DOC_DIRS:
+            continue
+        directories.add(path.parent)
+    missing = sorted(directory / "stale.md" for directory in directories if not (directory / "stale.md").exists())
+    planned = [f"create {path.relative_to(target)}" for path in missing]
+    if not dry_run:
+        for path in missing:
+            path.write_text(STALE_ARCHIVE_HEADER, encoding="utf-8")
+    return planned
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -341,6 +365,7 @@ MIGRATIONS = (
     (parse_version("0.9.0"), "bound verification scope and retain audit decisions", migrate_verification_scope),
     (parse_version("0.10.0"), "declare 29119-4 test design techniques and coverage targets", migrate_test_design_coverage),
     (parse_version("0.11.0"), "keep only the project definition of a pre-existing AGENTS.md on install", migrate_agents_md_definition),
+    (parse_version("0.12.0"), "require stale.md in every index-managed directory", migrate_missing_stale_records),
 )
 
 
