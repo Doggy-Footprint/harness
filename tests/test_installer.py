@@ -419,7 +419,7 @@ class TestNormal(InstallerTestCase):
         repo = self.install()
         docs, source, manifest_path, index_block = self.prepare_stale_record(repo)
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\n" * 11)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("stale", (result.stdout + result.stderr).lower())
@@ -438,7 +438,7 @@ class TestNormal(InstallerTestCase):
         docs, source, _, index_block = self.prepare_stale_record(repo)
         (docs / "index.md").write_text((docs / "index.md").read_text().replace(index_block, ""))
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\n" * 11)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertFalse(source.exists())
@@ -466,7 +466,7 @@ class TestNormal(InstallerTestCase):
         )
         (docs / "index.md").write_text(first + "\n---\n" + stale_block + "\n---\n" + second)
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\n" * 11)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual((docs / "index.md").read_text(), first.rstrip("\n") + "\n---\n" + second)
@@ -634,7 +634,7 @@ class TestBoundary(InstallerTestCase):
         result = run_installer("install", str(repo))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         agents_md = (repo / "AGENTS.md").read_text()
-        self.assertTrue(agents_md.startswith("# Local Rules\n\nTabs.\n\n<!-- harness:begin 0.13.0 -->"))
+        self.assertTrue(agents_md.startswith("# Local Rules\n\nTabs.\n\n<!-- harness:begin 0.14.0 -->"))
         self.assertNotIn("\nold\n", agents_md)
         self.assertFalse((repo / "agent-docs" / "logs").exists())
 
@@ -660,7 +660,7 @@ class TestBoundary(InstallerTestCase):
         manifest["version"] = "0.10.0"
         manifest_path.write_text(json.dumps(manifest))
 
-        result = run_installer("update", str(repo), input="y\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\n")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("migration 0.11.0:", result.stdout)
         self.assertIn("# Local Rules\n\nTabs.\n", agents_md.read_text())
@@ -701,11 +701,12 @@ class TestBoundary(InstallerTestCase):
         self.assertEqual(verify.returncode, 1, verify.stdout + verify.stderr)
         self.assertIn("agent-docs/notes/deep: missing required stale.md", verify.stdout + verify.stderr)
 
-        result = run_installer("update", str(repo), input="y\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("migration 0.12.0:", result.stdout)
         self.assertIn("migration 0.13.0:", result.stdout)
+        self.assertIn("migration 0.14.0:", result.stdout)
         self.assertIn("- create agent-docs/notes/deep/stale.md", result.stdout)
         self.assertEqual(
             (notes / "stale.md").read_text(),
@@ -719,7 +720,7 @@ class TestBoundary(InstallerTestCase):
             docs_root / "spec-logs" / "stale.md",
         ):
             self.assertFalse(path.exists(), path)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.13.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.14.0")
         verify = self.run_verify_rules(repo)
         self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
 
@@ -761,10 +762,11 @@ class TestBoundary(InstallerTestCase):
         self.assertIn("migration 0.13.0:", declined.stdout)
         self.assertEqual(before, self.snapshot(repo))
 
-        result = run_installer("update", str(repo), input="y\n")
+        result = run_installer("update", str(repo), input="y\ny\n")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("migration 0.13.0:", result.stdout)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.13.0")
+        self.assertIn("migration 0.14.0:", result.stdout)
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.14.0")
 
     def test_c13_installed_skill_chains_workflow_start_marker_after_spec_lifecycle_start(self):
         """Independent oracle for spec v4 VO6 (F8, C13): SKILL.md Telemetry
@@ -1188,7 +1190,7 @@ class TestEdge(InstallerTestCase):
                 result = run_installer("update", str(repo), "--dry-run")
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertEqual(before, self.snapshot(repo))
-                result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\n")
+                result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\n")
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 content = path.read_text()
                 self.assertIn("version: 2\n", content)
@@ -1253,7 +1255,7 @@ class TestEdge(InstallerTestCase):
         self.assertEqual(declined.returncode, 1)
         self.assertEqual(before, self.snapshot(repo))
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\n")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("migration 0.9.0:", result.stdout)
         self.assertEqual(active.read_bytes(), original)
@@ -1290,7 +1292,7 @@ class TestEdge(InstallerTestCase):
         self.assertEqual(declined.returncode, 1)
         self.assertEqual(before, self.snapshot(repo))
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\n")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("migration 0.10.0:", result.stdout)
         self.assertNotIn("migration 0.9.0:", result.stdout)
@@ -1309,7 +1311,7 @@ class TestEdge(InstallerTestCase):
         repo = self.install()
         docs, source, _, index_block = self.prepare_stale_record(repo)
 
-        result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\ny\ny\ny\n")
+        result = run_installer("update", str(repo), input="y\n" * 11)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         output = result.stdout + result.stderr
@@ -1317,10 +1319,10 @@ class TestEdge(InstallerTestCase):
             match.group(0)
             for line in output.splitlines()
             if line.startswith("migration ")
-            for match in [re.search(r"\b0\.(?:3|4|6|7|8|9|10|11|12|13)\.0\b", line)]
+            for match in [re.search(r"\b0\.(?:3|4|6|7|8|9|10|11|12|13|14)\.0\b", line)]
             if match
         ]
-        self.assertEqual(announcement_versions, ["0.3.0", "0.4.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.10.0", "0.11.0", "0.12.0", "0.13.0"], output)
+        self.assertEqual(announcement_versions, ["0.3.0", "0.4.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.10.0", "0.11.0", "0.12.0", "0.13.0", "0.14.0"], output)
         self.assertFalse(source.exists())
         self.assertEqual((docs / "stale" / source.name).read_text(), "# Stale\n")
         self.assertNotIn(index_block, (docs / "index.md").read_text())
@@ -1470,6 +1472,388 @@ class TestEdge(InstallerTestCase):
 
         self.assertEqual(restore.returncode, 0, restore.stdout + restore.stderr)
         self.assertEqual((repo / "app.py").read_bytes(), b"original\n")
+
+
+def load_installer_module():
+    sys.path.insert(0, str(REPO_ROOT / "installer"))
+    import harness as installer_module
+
+    return installer_module
+
+
+class TestGitignoreGuard(InstallerTestCase):
+    """Spec be4f57b2715f7898 v1. Expected Conflict lines are written literally
+    from the spec's format "<relpath> is ignored by git (<source>:<n>:<pattern>)"."""
+
+    HARNESS_BIN_LINES = [
+        ".harness/bin/seed.py is ignored by git (.gitignore:1:bin/)",
+        ".harness/bin/spec_lifecycle.py is ignored by git (.gitignore:1:bin/)",
+        ".harness/bin/workflow_marker.py is ignored by git (.gitignore:1:bin/)",
+    ]
+
+    def ignore_lines(self, result):
+        items = [line.strip() for line in result.stdout.splitlines() if " is ignored by git (" in line]
+        return [item[2:] if item.startswith("- ") else item for item in items]
+
+    def set_manifest_version(self, repo, version):
+        path = repo / ".harness" / "manifest.json"
+        manifest = json.loads(path.read_text())
+        manifest["version"] = version
+        path.write_text(json.dumps(manifest, indent=2) + "\n")
+        return path
+
+    def ignored_fresh_repo(self, rules="bin/\n"):
+        repo = self.make_repo()
+        (repo / ".gitignore").write_text(rules)
+        return repo
+
+    def installed_ignored_repo(self, rules="bin/\n"):
+        repo = self.install()
+        (repo / ".gitignore").write_text(rules)
+        return repo
+
+    def assert_conflict_only(self, result, expected_lines):
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertEqual(sorted(self.ignore_lines(result)), sorted(expected_lines), result.stdout)
+
+    # VO1 EP1 / VO3 P1 (C1)
+    def test_c1_ep1_p1_install_reports_ignored_harness_bin_and_writes_nothing(self):
+        repo = self.ignored_fresh_repo()
+        before = self.snapshot(repo)
+
+        result = run_installer("install", str(repo))
+
+        self.assert_conflict_only(result, self.HARNESS_BIN_LINES)
+        self.assertEqual(before, self.snapshot(repo))
+        self.assertEqual(list(before), [".gitignore"])
+
+    # VO1 EP2 (C2)
+    def test_c2_ep2_update_aborts_before_migration_and_keeps_manifest(self):
+        repo = self.installed_ignored_repo()
+        manifest_path = self.set_manifest_version(repo, "0.13.0")
+        before = self.snapshot(repo)
+
+        result = run_installer("update", str(repo), input="y\n")
+
+        self.assert_conflict_only(result, self.HARNESS_BIN_LINES)
+        self.assertNotIn("migration", (result.stdout + result.stderr).lower())
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.13.0")
+        self.assertEqual(before, self.snapshot(repo))
+
+    # VO1 EP3 (C3)
+    def test_c3_ep3_doctor_reports_ignored_files_of_installed_repo(self):
+        repo = self.installed_ignored_repo()
+        before = self.snapshot(repo)
+
+        result = run_installer("doctor", str(repo))
+
+        self.assert_conflict_only(result, self.HARNESS_BIN_LINES)
+        self.assertEqual(before, self.snapshot(repo))
+
+    # VO1 EP4 (C9)
+    def test_c9_ep4_install_dry_run_reports_conflict_and_writes_nothing(self):
+        repo = self.ignored_fresh_repo()
+        before = self.snapshot(repo)
+
+        result = run_installer("install", str(repo), "--dry-run")
+
+        self.assert_conflict_only(result, self.HARNESS_BIN_LINES)
+        self.assertEqual(before, self.snapshot(repo))
+
+    # VO1 EP5 (C9)
+    def test_c9_ep5_update_dry_run_reports_conflict_and_writes_nothing(self):
+        repo = self.installed_ignored_repo()
+        manifest_path = self.set_manifest_version(repo, "0.13.0")
+        before = self.snapshot(repo)
+
+        result = run_installer("update", str(repo), "--dry-run")
+
+        self.assert_conflict_only(result, self.HARNESS_BIN_LINES)
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.13.0")
+        self.assertEqual(before, self.snapshot(repo))
+
+    # VO2 R1 (C4)
+    def test_c4_r1_no_ignore_rules_install_update_doctor_succeed(self):
+        repo = self.make_repo()
+
+        install = run_installer("install", str(repo))
+        self.assertEqual(install.returncode, 0, install.stdout + install.stderr)
+        self.assertEqual(self.ignore_lines(install), [])
+        self.set_manifest_version(repo, "0.13.0")
+        update = run_installer("update", str(repo), input="y\ny\n")
+        self.assertEqual(update.returncode, 0, update.stdout + update.stderr)
+        self.assertEqual(self.ignore_lines(update), [])
+        doctor = run_installer("doctor", str(repo))
+        self.assertEqual(doctor.returncode, 0, doctor.stdout + doctor.stderr)
+        self.assertEqual(self.ignore_lines(doctor), [])
+
+    # VO2 R2 is covered by test_c1_ep1_p1 (rule match, untracked -> conflict).
+
+    # VO2 R3 (C5)
+    def test_c5_r3_negated_pattern_exempts_path(self):
+        repo = self.ignored_fresh_repo("bin/\n!.harness/bin/\n")
+
+        result = run_installer("install", str(repo))
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.ignore_lines(result), [])
+        self.assertTrue((repo / ".harness" / "bin" / "seed.py").exists())
+
+    # VO2 R3 variant: file-level negations, which check-ignore -v does print
+    def test_c5_r3_file_level_negations_exempt_paths(self):
+        repo = self.ignored_fresh_repo(
+            ".harness/bin/*.py\n"
+            "!.harness/bin/seed.py\n"
+            "!.harness/bin/spec_lifecycle.py\n"
+            "!.harness/bin/workflow_marker.py\n"
+        )
+
+        result = run_installer("install", str(repo))
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.ignore_lines(result), [])
+        self.assertTrue((repo / ".harness" / "bin" / "seed.py").exists())
+
+    # VO2 R4 (C6)
+    def test_c6_r4_tracked_files_matching_a_rule_are_not_conflicts(self):
+        repo = self.install()
+        run_git(repo, "add", "-f", ".harness/bin/seed.py", ".harness/bin/spec_lifecycle.py", ".harness/bin/workflow_marker.py")
+        run_git(repo, "commit", "-q", "-m", "track harness bin")
+        (repo / ".gitignore").write_text("bin/\n")
+
+        doctor = run_installer("doctor", str(repo))
+        self.assertEqual(doctor.returncode, 0, doctor.stdout + doctor.stderr)
+        self.assertEqual(self.ignore_lines(doctor), [])
+
+        self.set_manifest_version(repo, "0.13.0")
+        update = run_installer("update", str(repo), input="y\ny\n")
+        self.assertEqual(update.returncode, 0, update.stdout + update.stderr)
+        self.assertEqual(self.ignore_lines(update), [])
+
+    # VO3 P2 (C7)
+    def test_c7_p2_managed_agents_md_ignored(self):
+        repo = self.ignored_fresh_repo("AGENTS.md\n")
+        before = self.snapshot(repo)
+
+        result = run_installer("install", str(repo))
+
+        self.assert_conflict_only(result, ["AGENTS.md is ignored by git (.gitignore:1:AGENTS.md)"])
+        self.assertEqual(before, self.snapshot(repo))
+
+    # VO3 P3 (C10)
+    def test_c10_p3_codex_agent_toml_ignored_via_info_exclude(self):
+        repo = self.make_repo()
+        (repo / ".git" / "info" / "exclude").write_text("*.toml\n")
+        names = sorted(p.stem for p in (REPO_ROOT / "harness" / "agents").glob("*.md"))
+        self.assertTrue(names)
+        before = self.snapshot(repo)
+
+        result = run_installer("install", str(repo))
+
+        self.assert_conflict_only(
+            result,
+            [f".codex/agents/{name}.toml is ignored by git (.git/info/exclude:1:*.toml)" for name in names],
+        )
+        self.assertEqual(before, self.snapshot(repo))
+
+    # VO3 P4 (C8)
+    def test_c8_p4_ci_files_are_not_guarded_with_no_ci(self):
+        repo = self.ignored_fresh_repo(".github/\n")
+
+        result = run_installer("install", str(repo), "--no-ci")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.ignore_lines(result), [])
+        self.assertFalse((repo / ".github").exists())
+
+    # VO4 M1, M2 (C12)
+    def test_c12_m1_m2_update_announces_0140_and_records_version(self):
+        repo = self.install()
+        manifest_path = self.set_manifest_version(repo, "0.13.0")
+        before = self.snapshot(repo)
+
+        dry_run = run_installer("update", str(repo), "--dry-run")
+        self.assertEqual(dry_run.returncode, 0, dry_run.stdout + dry_run.stderr)
+        self.assertIn("migration 0.14.0:", dry_run.stdout)
+        self.assertNotIn("migration 0.13.0:", dry_run.stdout)
+        self.assertEqual(before, self.snapshot(repo))
+
+        result = run_installer("update", str(repo), input="y\n")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.14.0")
+        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.14.0")
+
+    # VO4 M3: existing version-list assertions (test_c4_update_runs_..., 0120 tests,
+    # test_0110_install_with_existing_block..., test_c12_update_from_0120...) now include 0.14.0.
+
+    def make_check_repo(self, rules):
+        repo = self.make_repo()
+        (repo / ".gitignore").write_text(rules)
+        return repo
+
+    def recording_run_git(self, module, override=None):
+        calls = []
+        real = module.run_git
+
+        def wrapper(target, args, stdin=None):
+            calls.append(list(args))
+            if override is not None and "check-ignore" in args:
+                return override(real(target, args, stdin))
+            return real(target, args, stdin)
+
+        return calls, wrapper
+
+    # VO5 G1 (C11)
+    def test_c11_g1_git_failure_reported_as_single_failure_line(self):
+        from unittest import mock
+
+        module = load_installer_module()
+        repo = self.make_check_repo("bin/\n")
+
+        def fail(real_result):
+            stderr = "fatal: boom\nsecond line\n"
+            if isinstance(real_result.stderr, bytes):
+                stderr = stderr.encode()
+            return subprocess.CompletedProcess(real_result.args, 128, real_result.stdout, stderr)
+
+        calls, wrapper = self.recording_run_git(module, fail)
+        with mock.patch.object(module, "run_git", wrapper):
+            lines = module.find_ignored_paths(repo, [".harness/bin/seed.py", "AGENTS.md"])
+
+        self.assertTrue(any("check-ignore" in c for c in calls))
+        self.assertEqual(lines, ["git check-ignore failed: fatal: boom"])
+
+    def failing_check_ignore(self, module):
+        def fail(real_result):
+            stderr = "fatal: boom\n"
+            if isinstance(real_result.stderr, bytes):
+                stderr = stderr.encode()
+            return subprocess.CompletedProcess(real_result.args, 128, real_result.stdout, stderr)
+
+        return self.recording_run_git(module, fail)
+
+    def run_main_with_git_failure(self, argv):
+        import contextlib
+        import io
+        from unittest import mock
+
+        module = load_installer_module()
+        _, wrapper = self.failing_check_ignore(module)
+        out = io.StringIO()
+        with mock.patch.object(module, "run_git", wrapper), \
+                mock.patch("builtins.input", side_effect=AssertionError("prompted")), \
+                contextlib.redirect_stdout(out):
+            code = module.main(argv)
+        return code, out.getvalue()
+
+    def assert_git_failure_conflict(self, code, stdout):
+        self.assertEqual(code, 1, stdout)
+        self.assertIn("== conflict ==", stdout)
+        section = stdout[stdout.index("== conflict =="):]
+        self.assertIn("git check-ignore failed: fatal: boom", section)
+
+    # VO5 G1 (Q3): install aborts with exit 1 and writes nothing
+    def test_q3_g1_install_git_failure_exits_1_and_writes_nothing(self):
+        repo = self.make_repo()
+        (repo / "README.md").write_text("pre-existing\n")
+        before = self.snapshot(repo)
+
+        code, stdout = self.run_main_with_git_failure(["install", str(repo)])
+
+        self.assert_git_failure_conflict(code, stdout)
+        self.assertEqual(before, self.snapshot(repo))
+
+    # VO5 G1 (Q3): update aborts before migrations, manifest unchanged
+    def test_q3_g1_update_git_failure_exits_1_and_writes_nothing(self):
+        repo = self.install()
+        manifest_path = self.set_manifest_version(repo, "0.13.0")
+        before = self.snapshot(repo)
+
+        code, stdout = self.run_main_with_git_failure(["update", str(repo)])
+
+        self.assert_git_failure_conflict(code, stdout)
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.13.0")
+        self.assertEqual(before, self.snapshot(repo))
+
+    def test_q3_g1_dry_runs_and_doctor_report_git_failure(self):
+        fresh = self.make_repo()
+        installed = self.install()
+        self.set_manifest_version(installed, "0.13.0")
+        for argv, repo in (
+            (["install", "--dry-run", str(fresh)], fresh),
+            (["update", "--dry-run", str(installed)], installed),
+            (["doctor", str(installed)], installed),
+        ):
+            with self.subTest(argv=argv[:-1]):
+                before = self.snapshot(repo)
+                code, stdout = self.run_main_with_git_failure(argv)
+                self.assert_git_failure_conflict(code, stdout)
+                self.assertEqual(before, self.snapshot(repo))
+
+    MANAGED_PATHS = (
+        ".harness/manifest.json",
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".claude/settings.json",
+        ".codex/hooks.json",
+    )
+
+    def test_p2_each_managed_path_is_guarded_by_install_update_and_doctor(self):
+        for relpath in self.MANAGED_PATHS:
+            expected = [f"{relpath} is ignored by git (.gitignore:1:{relpath})"]
+            with self.subTest(command="install", path=relpath):
+                repo = self.ignored_fresh_repo(relpath + "\n")
+                before = self.snapshot(repo)
+                result = run_installer("install", str(repo))
+                self.assert_conflict_only(result, expected)
+                self.assertEqual(before, self.snapshot(repo))
+            installed = self.installed_ignored_repo(relpath + "\n")
+            with self.subTest(command="doctor", path=relpath):
+                self.assert_conflict_only(run_installer("doctor", str(installed)), expected)
+            with self.subTest(command="update", path=relpath):
+                before = self.snapshot(installed)
+                result = run_installer("update", str(installed), input="y\n")
+                self.assert_conflict_only(result, expected)
+                self.assertEqual(before, self.snapshot(installed))
+
+    # VO6 B1 (Q1)
+    def test_q1_b1_many_paths_use_at_most_one_check_ignore_call(self):
+        from unittest import mock
+
+        module = load_installer_module()
+        repo = self.make_check_repo("bin/\n")
+        ignored = [f".harness/bin/tool{i:03d}.py" for i in range(60)]
+        clean = [f".harness/lib/mod{i:03d}.py" for i in range(60)]
+        paths = clean + ignored
+        calls, wrapper = self.recording_run_git(module)
+
+        with mock.patch.object(module, "run_git", wrapper):
+            lines = module.find_ignored_paths(repo, paths)
+
+        check_calls = [c for c in calls if "check-ignore" in c]
+        self.assertLessEqual(len(check_calls), 1, check_calls)
+        self.assertEqual(
+            lines,
+            [f"{p} is ignored by git (.gitignore:1:bin/)" for p in sorted(ignored)],
+        )
+
+    # VO7 S1 (Q2)
+    def test_q2_s1_path_with_space_reported_verbatim(self):
+        module = load_installer_module()
+        repo = self.make_check_repo("my dir/\n")
+
+        lines = module.find_ignored_paths(repo, ["my dir/file.txt", "other/file.txt"])
+
+        self.assertEqual(lines, ["my dir/file.txt is ignored by git (.gitignore:1:my dir/)"])
+
+    # VO7 S2 (Q2)
+    def test_q2_s2_path_with_hangul_reported_verbatim(self):
+        module = load_installer_module()
+        repo = self.make_check_repo("*.txt\n")
+
+        lines = module.find_ignored_paths(repo, ["my dir/한글 파일.txt", "my dir/keep.md"])
+
+        self.assertEqual(lines, ["my dir/한글 파일.txt is ignored by git (.gitignore:1:*.txt)"])
 
 
 if __name__ == "__main__":

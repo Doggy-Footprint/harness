@@ -339,6 +339,13 @@ def migrate_start_marker_chaining(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_gitignore_guard(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "install and update abort with a conflict when git ignores harness files, without writing anything",
+        "doctor reports harness files that git ignores; edit .gitignore manually (no automatic change)",
+    ]
+
+
 MANAGED_DOC_RE = re.compile(r"^[0-9a-f]{16}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$")
 WORKFLOW_DOC_DIRS = {"specs", "spec-logs"}
 
@@ -374,6 +381,7 @@ MIGRATIONS = (
     (parse_version("0.11.0"), "keep only the project definition of a pre-existing AGENTS.md on install", migrate_agents_md_definition),
     (parse_version("0.12.0"), "require stale.md in every index-managed directory", migrate_missing_stale_records),
     (parse_version("0.13.0"), "chain the workflow start marker after spec lifecycle start", migrate_start_marker_chaining),
+    (parse_version("0.14.0"), "abort install/update when git ignores harness files", migrate_gitignore_guard),
 )
 
 
@@ -439,10 +447,40 @@ def sha256_of(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def run_git(target: Path, args: list):
+def run_git(target: Path, args: list, stdin: str | None = None):
     return subprocess.run(
-        ["git", "-C", str(target)] + args, capture_output=True, text=True
+        ["git", "-C", str(target)] + args, capture_output=True, text=True, input=stdin
     )
+
+
+GUARDED_MANAGED_PATHS = (
+    ".harness/manifest.json",
+    "AGENTS.md",
+    "CLAUDE.md",
+    ".claude/settings.json",
+    ".codex/hooks.json",
+)
+
+
+def find_ignored_paths(target: Path, relpaths) -> list[str]:
+    paths = sorted(set(relpaths))
+    result = run_git(
+        target,
+        ["check-ignore", "--stdin", "-z", "-v"],
+        stdin="\0".join(paths) + "\0",
+    )
+    if result.returncode not in (0, 1):
+        lines = result.stderr.strip().splitlines()
+        return [f"git check-ignore failed: {lines[0] if lines else ''}"]
+    fields = result.stdout.split("\0")
+    conflicts = {}
+    for i in range(0, len(fields) - 3, 4):
+        source, linenum, pattern, path = fields[i:i + 4]
+        # -v also prints matches of negated patterns; those paths are not ignored.
+        if pattern.startswith("!"):
+            continue
+        conflicts[path] = f"{path} is ignored by git ({source}:{linenum}:{pattern})"
+    return [conflicts[path] for path in sorted(conflicts)]
 
 
 def is_git_worktree(target: Path) -> bool:
@@ -824,6 +862,7 @@ def cmd_install(target: Path, dry_run: bool, no_ci: bool) -> int:
     owned = render_owned_files(no_ci)
     for c in check_owned_conflicts(target, owned, {}):
         report["conflict"].append(c)
+    report["conflict"].extend(find_ignored_paths(target, list(owned) + list(GUARDED_MANAGED_PATHS)))
 
     for skill_src in iter_skill_dirs():
         skill_dir = target / ".agents" / "skills" / skill_src.name
@@ -879,6 +918,7 @@ def cmd_update(target: Path, dry_run: bool, no_ci: bool) -> int:
     owned = render_owned_files(no_ci)
     for c in check_owned_conflicts(target, owned, old_files):
         report["conflict"].append(c)
+    report["conflict"].extend(find_ignored_paths(target, list(owned) + list(GUARDED_MANAGED_PATHS)))
 
     check_settings_json_validity(target, report)
 
@@ -935,6 +975,9 @@ def cmd_doctor(target: Path) -> int:
                 report["conflict"].append(f"{relpath}: missing")
             elif sha256_of(path) != sha:
                 report["conflict"].append(f"{relpath}: modified (sha mismatch)")
+        report["conflict"].extend(
+            find_ignored_paths(target, list(manifest.get("files", {})) + list(GUARDED_MANAGED_PATHS))
+        )
 
     hooks_spec = generate.load_hooks_spec(SOURCE_HARNESS / "hooks" / "hooks.spec.json")
     renders = (

@@ -1,8 +1,8 @@
 {
-  "version": "0.13.0",
+  "version": "0.14.0",
   "files": {
     ".harness/config.default.json": "c21d7705713f2a9bc8cd9527d87b8964b58c7ae1b5e63e83446371b2c68a4dbd",
-    ".harness/VERSION": "d84c9e596c7d6a94e5f74579ef8d8912a807b0d28582474900ad35dfb3edfcf4",
+    ".harness/VERSION": "065582655aacd6fc83ff742a5715c04bb4a57395bf3ee4559798fa42c2ce4589",
     ".harness/instructions/harness-block.md": "5699fbdccfa64cca5c701faaef9f9062c51317834adb89fae9ed2d335a63626b",
     ".harness/bin/workflow_marker.py": "3481c0c2953a524b680e2ae64ff12143bba0089bc4cad8ffa0877d4e7d16c3ba",
     ".harness/bin/spec_lifecycle.py": "589dda545410e92dc00e7acc86e3a54775b01ccdc40d9e487a49223448a74cff",
