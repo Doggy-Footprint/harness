@@ -68,9 +68,9 @@ python3 -m unittest discover -s tests
 
 버전을 올릴 때는 [`installer/harness.py`](installer/harness.py)의 버전별 migration 단계를 추가해야 합니다. 에이전트 정의와 hook 설정은 각각 `harness/agents/`와 `harness/hooks/hooks.spec.json`에서 관리하고, [`installer/generate.py`](installer/generate.py)가 Claude/Codex 형식으로 생성합니다.
 
-# 세션 로그 분석 (개발 중)
+## 세션 로그 분석 (개발 중)
 
-별도의 로컬 분석 화면은 `analytics/`에 있습니다. 실행하려면 Python 의존성과 프런트엔드를 빌드한 뒤 서버를 시작합니다.
+`analytics/`의 목표는 [trace](https://opentelemetry.io/docs/concepts/signals/traces/)를 통해 하네스의 성과를 정량적으로 파악하는 것입니다. 여기서 말하는 trace는 개념상 OpenTelemetry의 trace에서 아이디어를 얻었습니다. 별도의 로컬 분석 화면이며, 설치 payload에는 포함되지 않습니다. 실행하려면 Python 의존성과 프런트엔드를 빌드한 뒤 서버를 시작합니다.
 
 ```bash
 python3 -m pip install -r analytics/requirements.txt
@@ -79,4 +79,18 @@ npm run build --prefix analytics/frontend
 python3 -m analytics.app
 ```
 
-기본 주소는 `http://127.0.0.1:8000`입니다. 분석 화면은 사용자 홈의 텔레메트리와 Claude/Codex 세션 기록을 읽고, 로컬 SQLite 데이터베이스에 가져옵니다.
+기본 주소는 `http://127.0.0.1:8000`입니다. 분석 화면은 하네스 텔레메트리와 Claude/Codex 세션 기록을 로컬 SQLite 데이터베이스로 가져와 다음을 보여줍니다.
+
+- workflow 실행별 상태와 규칙 준수 여부. amend는 검증 에이전트 결과를 기다리는 동안에만 위반으로 봅니다.
+- 실행 분류(`compliant`, `noncompliant`, `excluded`)와 세션 분류(`compliant`, `noncompliant`, `partial`, `unrelated`, `excluded`)
+- 세션 기록 기반 토큰 사용량과 [`analytics/config.yaml`](analytics/config.yaml)의 모델 단가로 계산한 비용
+
+| 환경 변수 | 기본값 |
+| --- | --- |
+| `ANALYTICS_HOST` / `ANALYTICS_PORT` | `127.0.0.1` / `8000` |
+| `ANALYTICS_DATABASE_PATH` | `~/.harness/analytics.sqlite3` |
+| `ANALYTICS_TELEMETRY_DIR` | `~/.harness/telemetry` |
+| `ANALYTICS_CLAUDE_TRANSCRIPT_DIR` | `~/.claude/projects` |
+| `ANALYTICS_CODEX_TRANSCRIPT_DIR` | `~/.codex/sessions` |
+| `ANALYTICS_PRICE_PATH` | `analytics/config.yaml` |
+| `ANALYTICS_FRONTEND_DIR` | `analytics/frontend/dist` |
