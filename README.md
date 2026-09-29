@@ -1,5 +1,7 @@
 # harness
 
+> 관련 블로그 글: [https://blog-steel-ten-13.vercel.app/posts/harness](https://blog-steel-ten-13.vercel.app/posts/harness)
+
 Claude Code와 Codex에 공통 규칙과 작업 도구를 설치하는 AI 에이전트 하네스입니다. Git 저장소에 설치할 수 있으며, 이 저장소의 `harness/`가 배포 원본입니다. 현재 버전은 [`harness/VERSION`](harness/VERSION)에서 확인할 수 있습니다.
 
 ## 빠른 시작
