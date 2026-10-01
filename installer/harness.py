@@ -61,6 +61,10 @@ class MigrationDeclined(Exception):
     pass
 
 
+class IgnoreConflict(Exception):
+    pass
+
+
 class InvalidManifestVersion(Exception):
     pass
 
@@ -346,6 +350,20 @@ def migrate_gitignore_guard(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_gitignore_exceptions(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "warn and request consent before adding targeted root .gitignore exceptions for ignored harness paths",
+        "recheck all harness paths and restore .gitignore if any remain ignored",
+    ]
+
+
+def migrate_gitignore_needed_parents(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "install and update --dry-run exit 1 after printing the full plan when git ignores harness files",
+        "add .gitignore parent-directory exceptions only for parents that git reports as ignored",
+    ]
+
+
 MANAGED_DOC_RE = re.compile(r"^[0-9a-f]{16}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$")
 WORKFLOW_DOC_DIRS = {"specs", "spec-logs"}
 
@@ -382,6 +400,8 @@ MIGRATIONS = (
     (parse_version("0.12.0"), "require stale.md in every index-managed directory", migrate_missing_stale_records),
     (parse_version("0.13.0"), "chain the workflow start marker after spec lifecycle start", migrate_start_marker_chaining),
     (parse_version("0.14.0"), "abort install/update when git ignores harness files", migrate_gitignore_guard),
+    (parse_version("0.15.0"), "offer targeted .gitignore exceptions for ignored harness files", migrate_gitignore_exceptions),
+    (parse_version("0.15.1"), "fail dry-run on ignored harness files and add only needed parent exceptions", migrate_gitignore_needed_parents),
 )
 
 
@@ -390,6 +410,7 @@ def run_migrations(
     installed_version: str,
     dry_run: bool,
     input_fn: Callable[[str], str],
+    before_apply: Callable[[], None] | None = None,
 ) -> bool:
     installed = parse_version(installed_version)
     current = parse_version(VERSION)
@@ -419,6 +440,9 @@ def run_migrations(
         version = format_version(migration_version)
         if input_fn(f"Apply migration {version} ({label})? [y/N] ").strip().lower() != "y":
             raise MigrationDeclined()
+
+    if before_apply is not None:
+        before_apply()
 
     for _migration_version, _label, migration, _planned in planned_migrations:
         migration(target, dry_run=False)
@@ -462,7 +486,7 @@ GUARDED_MANAGED_PATHS = (
 )
 
 
-def find_ignored_paths(target: Path, relpaths) -> list[str]:
+def check_ignored_paths(target: Path, relpaths) -> tuple[dict[str, str], str | None]:
     paths = sorted(set(relpaths))
     result = run_git(
         target,
@@ -471,7 +495,7 @@ def find_ignored_paths(target: Path, relpaths) -> list[str]:
     )
     if result.returncode not in (0, 1):
         lines = result.stderr.strip().splitlines()
-        return [f"git check-ignore failed: {lines[0] if lines else ''}"]
+        return {}, f"git check-ignore failed: {lines[0] if lines else ''}"
     fields = result.stdout.split("\0")
     conflicts = {}
     for i in range(0, len(fields) - 3, 4):
@@ -480,7 +504,94 @@ def find_ignored_paths(target: Path, relpaths) -> list[str]:
         if pattern.startswith("!"):
             continue
         conflicts[path] = f"{path} is ignored by git ({source}:{linenum}:{pattern})"
+    return conflicts, None
+
+
+def find_ignored_paths(target: Path, relpaths) -> list[str]:
+    conflicts, failure = check_ignored_paths(target, relpaths)
+    if failure is not None:
+        return [failure]
     return [conflicts[path] for path in sorted(conflicts)]
+
+
+def gitignore_literal_path(path: str, directory: bool = False) -> str:
+    components = path.split("/")
+    escaped = []
+    for component in components:
+        part = "".join("\\" + char if char in "\\*?[]" else char for char in component)
+        if part.endswith(" "):
+            part = part.rstrip(" ") + "\\ " * (len(part) - len(part.rstrip(" ")))
+        escaped.append(part)
+    return "!/" + "/".join(escaped) + ("/" if directory else "")
+
+
+def guarded_parent_paths(paths) -> list[str]:
+    parents = set()
+    for path in paths:
+        parts = path.split("/")
+        for end in range(1, len(parts)):
+            parents.add("/".join(parts[:end]) + "/")
+    return sorted(parents, key=lambda path: (path.count("/"), path))
+
+
+def planned_gitignore_exceptions(paths: list[str], ignored_directories: set[str], existing: bytes) -> list[str]:
+    candidates = []
+    for parent in guarded_parent_paths(paths):
+        if parent not in ignored_directories:
+            continue
+        exception = gitignore_literal_path(parent[:-1], directory=True)
+        candidates.append(exception)
+        candidates.append(exception[1:] + "*")
+    candidates.extend(gitignore_literal_path(path) for path in sorted(paths))
+    existing_lines = set(existing.decode("utf-8").splitlines())
+    return [line for line in candidates if line not in existing_lines]
+
+
+def add_gitignore_exceptions(target: Path, ignored: dict[str, str], ignored_directories: set[str], relpaths, dry_run: bool, report: dict) -> bool:
+    for path in sorted(ignored):
+        print(f"warning: {ignored[path]}")
+    gitignore = target / ".gitignore"
+    try:
+        original = gitignore.read_bytes() if gitignore.exists() else None
+        lines = planned_gitignore_exceptions(sorted(ignored), ignored_directories, original or b"")
+    except (OSError, UnicodeError) as error:
+        report["conflict"].append(f".gitignore cannot be read: {error}")
+        return False
+    for line in lines:
+        print(f"planned .gitignore exception: {line}")
+    if dry_run:
+        report["conflict"].append("ignored harness paths: .gitignore exceptions require consent (dry-run)")
+        return True
+    try:
+        answer = input("Add .gitignore exceptions for these harness paths and continue? [y/N] ")
+    except EOFError:
+        answer = ""
+    if answer.strip().lower() != "y":
+        report["conflict"].append("ignored harness paths: .gitignore exceptions were not confirmed")
+        return False
+    try:
+        if lines:
+            newline = b"\r\n" if original is not None and b"\r\n" in original else b"\n"
+            prefix = b"" if not original or original.endswith((b"\n", b"\r")) else newline
+            gitignore.write_bytes((original or b"") + prefix + newline.join(line.encode("utf-8") for line in lines) + newline)
+        remaining, failure = check_ignored_paths(target, relpaths)
+        if failure is None and not remaining:
+            if lines:
+                report["merge" if original is not None else "write"].append(".gitignore exceptions")
+            return True
+        report["conflict"].append(failure or "ignored harness paths remain after .gitignore exceptions")
+        for path in sorted(remaining):
+            report["conflict"].append(remaining[path])
+    except OSError as error:
+        report["conflict"].append(f".gitignore exception update failed: {error}")
+    try:
+        if original is None:
+            gitignore.unlink(missing_ok=True)
+        else:
+            gitignore.write_bytes(original)
+    except OSError as error:
+        report["conflict"].append(f".gitignore rollback failed: {error}")
+    return False
 
 
 def is_git_worktree(target: Path) -> bool:
@@ -528,6 +639,37 @@ def check_owned_conflicts(target: Path, owned: dict, old_manifest_files: dict) -
         if (target / relpath).exists():
             conflicts.append(f"{relpath} already exists")
     return conflicts
+
+
+def check_write_path_obstructions(target: Path, owned: dict) -> list[str]:
+    skill_links = {f".claude/skills/{skill_src.name}" for skill_src in iter_skill_dirs()}
+    planned = set(owned) | {
+        ".harness/manifest.json", "AGENTS.md", "CLAUDE.md", ".gitignore",
+        ".claude/settings.json", ".codex/hooks.json",
+        "agent-docs/logs/agents-md-pre-harness.md",
+    }
+    for name in ("adr", "rejections", "handoff", "requirements"):
+        planned.add(f"agent-docs/{name}/index.md")
+        planned.add(f"agent-docs/{name}/stale.md")
+        planned.add(f"agent-docs/{name}/stale/.gitkeep")
+    planned.update(skill_links)
+
+    conflicts = []
+    parents = set()
+    for relpath in planned:
+        path = Path(relpath)
+        for parent in path.parents:
+            if parent == Path("."):
+                break
+            parents.add(parent.as_posix())
+        disk_path = target / path
+        if disk_path.is_dir() and relpath not in skill_links:
+            conflicts.append(f"{relpath} is a directory; expected a file")
+    for relpath in sorted(parents):
+        disk_path = target / relpath
+        if (disk_path.exists() or disk_path.is_symlink()) and not disk_path.is_dir():
+            conflicts.append(f"{relpath} is not a directory")
+    return sorted(set(conflicts))
 
 
 def apply_owned_files(target: Path, owned: dict, old_manifest_files: dict, dry_run: bool, report: dict) -> dict:
@@ -779,16 +921,17 @@ def ensure_gitignore(target: Path, dry_run: bool, report: dict):
     path = target / ".gitignore"
     if not path.exists():
         if not dry_run:
-            path.write_text("\n".join(GITIGNORE_LINES) + "\n", encoding="utf-8")
+            path.write_bytes(("\n".join(GITIGNORE_LINES) + "\n").encode("utf-8"))
         report["write"].append(".gitignore")
         return
-    existing = path.read_text(encoding="utf-8")
-    existing_lines = set(existing.splitlines())
+    existing = path.read_bytes()
+    existing_lines = set(existing.decode("utf-8").splitlines())
     missing = [line for line in GITIGNORE_LINES if line not in existing_lines]
     if missing:
-        prefix = "" if existing == "" or existing.endswith("\n") else "\n"
+        newline = b"\r\n" if b"\r\n" in existing else b"\n"
+        prefix = b"" if not existing or existing.endswith((b"\n", b"\r")) else newline
         if not dry_run:
-            path.write_text(existing + prefix + "\n".join(missing) + "\n", encoding="utf-8")
+            path.write_bytes(existing + prefix + newline.join(line.encode("utf-8") for line in missing) + newline)
         report["merge"].append(".gitignore")
 
 
@@ -860,9 +1003,15 @@ def cmd_install(target: Path, dry_run: bool, no_ci: bool) -> int:
         return 1
 
     owned = render_owned_files(no_ci)
+    guarded_paths = list(owned) + list(GUARDED_MANAGED_PATHS)
     for c in check_owned_conflicts(target, owned, {}):
         report["conflict"].append(c)
-    report["conflict"].extend(find_ignored_paths(target, list(owned) + list(GUARDED_MANAGED_PATHS)))
+    report["conflict"].extend(check_write_path_obstructions(target, owned))
+    scanned, git_failure = check_ignored_paths(target, guarded_paths + guarded_parent_paths(guarded_paths))
+    ignored = {path: scanned[path] for path in guarded_paths if path in scanned}
+    ignored_directories = set(scanned).intersection(guarded_parent_paths(guarded_paths))
+    if git_failure is not None:
+        report["conflict"].append(git_failure)
 
     for skill_src in iter_skill_dirs():
         skill_dir = target / ".agents" / "skills" / skill_src.name
@@ -878,6 +1027,11 @@ def cmd_install(target: Path, dry_run: bool, no_ci: bool) -> int:
         print_report(report)
         return 1
 
+    if ignored and not add_gitignore_exceptions(target, ignored, ignored_directories, guarded_paths, dry_run, report):
+        print_report(report)
+        return 1
+
+    dry_run_ignored = dry_run and bool(ignored)
     new_manifest_files = apply_owned_files(target, owned, {}, dry_run, report)
     finish_common(target, dry_run, report, fresh_install=True)
 
@@ -890,7 +1044,7 @@ def cmd_install(target: Path, dry_run: bool, no_ci: bool) -> int:
     report["write"].append(".harness/manifest.json")
 
     print_report(report)
-    return 0
+    return 1 if dry_run_ignored else 0
 
 
 def cmd_update(target: Path, dry_run: bool, no_ci: bool) -> int:
@@ -916,9 +1070,15 @@ def cmd_update(target: Path, dry_run: bool, no_ci: bool) -> int:
 
     old_files = manifest.get("files", {})
     owned = render_owned_files(no_ci)
+    guarded_paths = list(owned) + list(GUARDED_MANAGED_PATHS)
     for c in check_owned_conflicts(target, owned, old_files):
         report["conflict"].append(c)
-    report["conflict"].extend(find_ignored_paths(target, list(owned) + list(GUARDED_MANAGED_PATHS)))
+    report["conflict"].extend(check_write_path_obstructions(target, owned))
+    scanned, git_failure = check_ignored_paths(target, guarded_paths + guarded_parent_paths(guarded_paths))
+    ignored = {path: scanned[path] for path in guarded_paths if path in scanned}
+    ignored_directories = set(scanned).intersection(guarded_parent_paths(guarded_paths))
+    if git_failure is not None:
+        report["conflict"].append(git_failure)
 
     check_settings_json_validity(target, report)
 
@@ -926,8 +1086,17 @@ def cmd_update(target: Path, dry_run: bool, no_ci: bool) -> int:
         print_report(report)
         return 1
 
+    dry_run_ignored = dry_run and bool(ignored)
+    if dry_run_ignored and not add_gitignore_exceptions(target, ignored, ignored_directories, guarded_paths, True, report):
+        print_report(report)
+        return 1
+
+    def before_migration_writes():
+        if ignored and not add_gitignore_exceptions(target, ignored, ignored_directories, guarded_paths, False, report):
+            raise IgnoreConflict()
+
     try:
-        run_migrations(target, manifest.get("version"), dry_run, input)
+        run_migrations(target, manifest.get("version"), dry_run, input, before_migration_writes)
     except InvalidManifestVersion:
         report["conflict"].append("InvalidManifestVersion: .harness/manifest.json version is absent or malformed")
         print_report(report)
@@ -938,6 +1107,9 @@ def cmd_update(target: Path, dry_run: bool, no_ci: bool) -> int:
         return 1
     except MigrationDeclined:
         report["conflict"].append("MigrationDeclined: migration was not confirmed")
+        print_report(report)
+        return 1
+    except IgnoreConflict:
         print_report(report)
         return 1
 
@@ -953,7 +1125,7 @@ def cmd_update(target: Path, dry_run: bool, no_ci: bool) -> int:
     report["write"].append(".harness/manifest.json")
 
     print_report(report)
-    return 0
+    return 1 if dry_run_ignored else 0
 
 
 def cmd_doctor(target: Path) -> int:
