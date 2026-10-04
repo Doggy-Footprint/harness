@@ -378,6 +378,38 @@ def migrate_codex_explorer_model(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_requirements(target: Path, dry_run: bool) -> list[str]:
+    directory = target / "agent-docs" / "requirements"
+    if not directory.exists() and not directory.is_symlink():
+        return []
+    scaffolding = {
+        "index.md": {b""},
+        "stale.md": {b"", STALE_ARCHIVE_TITLE.encode(), STALE_ARCHIVE_HEADER.encode()},
+        "stale/.gitkeep": {b""},
+    }
+    has_content = directory.is_symlink() or not directory.is_dir()
+    if not has_content:
+        for path in directory.rglob("*"):
+            relative = path.relative_to(directory).as_posix()
+            if path.is_symlink():
+                has_content = True
+            elif path.is_dir():
+                has_content |= relative != "stale"
+            elif relative not in scaffolding or not path.is_file():
+                has_content = True
+            else:
+                has_content |= path.read_bytes() not in scaffolding[relative]
+    if has_content:
+        raise MigrationConflict([
+            "agent-docs/requirements contains legacy content; back up its contents, "
+            "delete agent-docs/requirements, then retry the update"
+        ])
+    planned = ["remove empty legacy agent-docs/requirements"]
+    if not dry_run:
+        shutil.rmtree(directory)
+    return planned
+
+
 MANAGED_DOC_RE = re.compile(r"^[0-9a-f]{16}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$")
 WORKFLOW_DOC_DIRS = {"specs", "spec-logs"}
 
@@ -418,6 +450,7 @@ MIGRATIONS = (
     (parse_version("0.15.1"), "fail dry-run on ignored harness files and add only needed parent exceptions", migrate_gitignore_needed_parents),
     (parse_version("0.16.0"), "update Codex workflow role defaults to gpt-6.1-sol", migrate_codex_workflow_model),
     (parse_version("0.16.1"), "set Codex code-explorer default to gpt-6.1-sol", migrate_codex_explorer_model),
+    (parse_version("0.16.2"), "remove legacy requirements directory", migrate_requirements),
 )
 
 
@@ -446,13 +479,15 @@ def run_migrations(
         print(f"migration {version}: {label}")
         for item in planned:
             print(f"- {item}")
-        if dry_run:
+        if dry_run and not (migration is migrate_requirements):
             print("- confirmation required (dry-run: not requested)")
 
     if dry_run:
         return True
 
     for migration_version, label, _migration, _planned in planned_migrations:
+        if _migration is migrate_requirements:
+            continue
         version = format_version(migration_version)
         if input_fn(f"Apply migration {version} ({label})? [y/N] ").strip().lower() != "y":
             raise MigrationDeclined()
@@ -664,7 +699,7 @@ def check_write_path_obstructions(target: Path, owned: dict) -> list[str]:
         ".claude/settings.json", ".codex/hooks.json",
         "agent-docs/logs/agents-md-pre-harness.md",
     }
-    for name in ("adr", "rejections", "handoff", "requirements"):
+    for name in ("adr", "rejections", "handoff"):
         planned.add(f"agent-docs/{name}/index.md")
         planned.add(f"agent-docs/{name}/stale.md")
         planned.add(f"agent-docs/{name}/stale/.gitkeep")
@@ -905,7 +940,7 @@ def install_claude_md(target: Path, dry_run: bool, report: dict, original_agents
 
 
 def ensure_agent_docs_dirs(target: Path, dry_run: bool, report: dict):
-    for name in ("adr", "rejections", "handoff", "requirements"):
+    for name in ("adr", "rejections", "handoff"):
         directory = target / "agent-docs" / name
         path = directory / "index.md"
         if not path.exists():
