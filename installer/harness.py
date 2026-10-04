@@ -364,6 +364,20 @@ def migrate_gitignore_needed_parents(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_codex_workflow_model(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "replace the Codex implementer, test-implementer, and test-verifier default model with gpt-6.1-sol",
+        "preserve medium reasoning effort and existing Claude model defaults",
+    ]
+
+
+def migrate_codex_explorer_model(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "set the Codex code-explorer default model to gpt-6.1-sol",
+        "preserve inherited reasoning effort, read-only sandbox, and Claude defaults",
+    ]
+
+
 MANAGED_DOC_RE = re.compile(r"^[0-9a-f]{16}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$")
 WORKFLOW_DOC_DIRS = {"specs", "spec-logs"}
 
@@ -402,6 +416,8 @@ MIGRATIONS = (
     (parse_version("0.14.0"), "abort install/update when git ignores harness files", migrate_gitignore_guard),
     (parse_version("0.15.0"), "offer targeted .gitignore exceptions for ignored harness files", migrate_gitignore_exceptions),
     (parse_version("0.15.1"), "fail dry-run on ignored harness files and add only needed parent exceptions", migrate_gitignore_needed_parents),
+    (parse_version("0.16.0"), "update Codex workflow role defaults to gpt-6.1-sol", migrate_codex_workflow_model),
+    (parse_version("0.16.1"), "set Codex code-explorer default to gpt-6.1-sol", migrate_codex_explorer_model),
 )
 
 
