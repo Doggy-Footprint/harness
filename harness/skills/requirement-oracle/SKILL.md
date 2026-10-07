@@ -8,14 +8,11 @@ description: Help a user make unresolved functional or ISO quality decisions for
 Help the user make informed decisions; never decide unspecified behavior merely
 to unblock the workflow.
 
-Read the relevant code, tests, configuration, and project documentation before
-asking questions that the repository can answer. For remaining choices, explain:
-
-- the decision and why the spec needs it;
-- codebase and domain context that changes the answer;
-- 2–3 meaningful options, their consequences and trade-offs;
-- a recommended option and the evidence supporting it;
-- what evidence would reduce remaining uncertainty.
+Read the relevant code, tests, configuration, and project documentation to resolve repository-answerable questions first. For remaining choices, state the decision and why it is needed in plain language, explaining necessary technical terms.
+Compare 2–3 meaningful options through concrete examples of resulting behavior
+and trade-offs. Recommend one with relevant codebase or domain evidence, and name
+any uncertainty and the evidence needed to reduce it. End with the specific choice
+the user needs to make.
 
 Resolve functional intent, observable failure behavior, boundaries and state
 transitions together with verification scope. Distinguish observable target surfaces

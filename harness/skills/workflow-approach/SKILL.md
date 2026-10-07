@@ -17,12 +17,15 @@ and never choose missing behavior.
 4. Frontmatter fields are `version`, `run_id`, `status`, `base_commit`,
    `max_verifier_invocations`, and `handoff`. Status is `draft`, `active`,
    `complete`, `limit`, or `aborted`; use `handoff: none` when absent.
-5. Amendment increments `version` and adds a Version Log entry. Never change an
-   approved expectation silently. Reconfirm any behavior, quality target, or
-   verification policy changed by an amendment.
-6. Before dispatch, the user approves the whole spec. If a required decision is
-   unresolved, pause. Use `requirement-oracle` when the user lacks enough domain
-   or codebase evidence to decide.
+5. Amendment increments `version` and adds a Version Log entry. Request approval
+   for changed behavior, quality targets, or verification policy by explaining
+   current → proposed expectations, why they must change, and their impact.
+6. Before dispatch, obtain whole-spec approval. For every spec approval or decision
+   request, link its path and version, state what the user is deciding, and explain
+   behavior, scope, and acceptance criteria in plain language with a concrete
+   example; explain necessary technical terms. Distinguish whole-spec approval
+   from an amendment or unresolved choice. Pause on unresolved required decisions;
+   use `requirement-oracle` when the user needs evidence or options to decide.
 7. Only after the user explicitly delegates an unresolved required decision may
    the main agent choose a default. Preserve safety, security, compatibility,
    data, and existing observable behavior in that order; record the choice,
