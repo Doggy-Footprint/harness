@@ -1,11 +1,12 @@
 {
-  "version": "0.17.0",
+  "version": "0.18.0",
   "files": {
     ".harness/config.default.json": "c21d7705713f2a9bc8cd9527d87b8964b58c7ae1b5e63e83446371b2c68a4dbd",
-    ".harness/VERSION": "02d38e98e88f4a8dc2ea40dbb769338601066fc94920b52882a14f21ad97f7ee",
+    ".harness/VERSION": "f5e9382967c9833066a55808829f3750fc8e1181b170cafd222c37048bb49a77",
     ".harness/instructions/harness-block.md": "63a0e344859c2a5fdf9cd231ec4033c72006ad84fc2aaf691a240dda179719a9",
     ".harness/bin/workflow_marker.py": "f6413c2d0d2121639d7cd13cd632d8b6578406163d22de6701cddbcdc3232308",
     ".harness/bin/spec_lifecycle.py": "589dda545410e92dc00e7acc86e3a54775b01ccdc40d9e487a49223448a74cff",
+    ".harness/bin/test_scan.py": "76b885ff58b131090948927fd90ef044dc6fbb4469a77ee90488de39ffbff459",
     ".harness/bin/seed.py": "f15b194b90812d09eb778b7e2fff9cf24d68629a7b00ad7d4e359c71ad54b430",
     ".harness/ci/harness-comment-warning.yml": "b1baf0b786612e52762ea4666b449ff89f745c54a553097ee00d0a113feb63d0",
     ".harness/agents/code-explorer.md": "3dc326aad0f1ff73d858fcccc0b3cbd812f17da51f96941f01398b0998e317a9",
@@ -28,6 +29,8 @@
     ".harness/skills/requirement-oracle/SKILL.md": "f2a45ac87e4962d4a711dadd742973a08e7e61f13188776808d881d7bb9c2edb",
     ".harness/skills/workflow-approach/SKILL.md": "1fdb31f809686f99a9edb6f1662783d2c22522e709a84682b20c4b64c021b123",
     ".harness/skills/architecture-options/SKILL.md": "823b98a7677813aec396750337c10474bbd445a64d961277a80c8f825dc9f3a9",
+    ".harness/skills/test-audit/SKILL.md": "073afdafd5b6a7df5d41f309c549018f26828cbe8ede7643e9f429b9b676d95c",
+    ".harness/skills/test-audit/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
     ".claude/agents/code-explorer.md": "36950610e12c2ab903d1e56290a5cf99465f642f6808ae6a057271c4da5e2cce",
     ".codex/agents/code-explorer.toml": "8ceb10dffc5af550075c671ca4e0771f013d80d20990ea30d0974302ff50c34c",
     ".claude/agents/implementer.md": "79731b2445946a440aeba52c26090ae6651f96e902cef3e3adc3609536130322",
@@ -41,6 +44,8 @@
     ".agents/skills/architecture-options/SKILL.md": "823b98a7677813aec396750337c10474bbd445a64d961277a80c8f825dc9f3a9",
     ".agents/skills/harness-import/SKILL.md": "947f1f83390047246bd40ed2a82afa2abde46c0d189db77ead76f49c20724208",
     ".agents/skills/requirement-oracle/SKILL.md": "f2a45ac87e4962d4a711dadd742973a08e7e61f13188776808d881d7bb9c2edb",
+    ".agents/skills/test-audit/SKILL.md": "073afdafd5b6a7df5d41f309c549018f26828cbe8ede7643e9f429b9b676d95c",
+    ".agents/skills/test-audit/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
     ".agents/skills/workflow-approach/SKILL.md": "1fdb31f809686f99a9edb6f1662783d2c22522e709a84682b20c4b64c021b123",
     ".github/workflows/harness-comment-warning.yml": "b1baf0b786612e52762ea4666b449ff89f745c54a553097ee00d0a113feb63d0"
   }
