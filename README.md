@@ -12,6 +12,7 @@ Python 3와 Git이 필요합니다. 이 저장소에서 대상 Git 저장소의 
 python3 installer/harness.py install <target> --dry-run
 python3 installer/harness.py install <target>
 python3 installer/harness.py doctor <target>
+python3 installer/harness.py doctor <target-a> <target-b>
 ```
 
 `--dry-run`은 변경 예정 항목만 보여줍니다. 대상에 이미 `.harness/manifest.json`이 있으면 `install` 대신 `update`를 사용하세요. GitHub Actions를 사용하지 않는 저장소에는 설치·갱신 명령에 `--no-ci`를 붙일 수 있습니다.
@@ -51,11 +52,12 @@ Git hook 관리자가 없는 경우 `core.hooksPath`를 `.harness/git`으로 설
 ```bash
 python3 installer/harness.py update <target> --dry-run
 python3 installer/harness.py update <target>
+python3 installer/harness.py update <target-a> <target-b>
 python3 installer/harness.py doctor <target>
 python3 installer/harness.py import <target> --json
 ```
 
-`update`는 설치된 버전부터 현재 버전까지 필요한 migration을 **버전별로 출력하고 각각 확인받은 뒤** 적용합니다. 하네스 소유 파일은 manifest의 이전 SHA, 디스크의 현재 SHA, 새 payload를 비교합니다. 사용자가 수정한 파일은 건너뛰고 보고하며 이전 SHA를 유지합니다. 더 이상 배포하지 않는 파일은 수정되지 않았을 때만 삭제합니다. `--dry-run`은 migration 계획과 파일 변경을 쓰지 않고 보여줍니다.
+`update`는 설치된 버전부터 현재 버전까지 필요한 migration을 **버전별로 출력하고 각각 확인받은 뒤** 적용합니다. 하네스 소유 파일은 manifest의 이전 SHA, 디스크의 현재 SHA, 새 payload를 비교합니다. 사용자가 수정한 파일은 건너뛰고 보고하며 이전 SHA를 유지합니다. 더 이상 배포하지 않는 파일은 수정되지 않았을 때만 삭제합니다. `--dry-run`은 migration 계획과 파일 변경을 쓰지 않고 보여줍니다. `update`와 `doctor`는 디렉터리를 여러 개 받아 순서대로 각각 처리하며, 하나가 실패해도 나머지를 계속 처리하고 하나라도 실패하면 종료 코드 1을 반환합니다.
 
 `doctor`는 manifest의 파일 SHA, 설정의 hook 항목, `AGENTS.md` 관리 블록, `CLAUDE.md` 참조와 Git hook 연결을 읽기 전용으로 점검합니다. `import`는 설치본과 현재 원본의 차이를 읽기 전용으로 보여주며, `--json`으로 기계 판독용 결과를 출력합니다. 차이를 원본에 반영할지는 [`harness-import`](harness/skills/harness-import/SKILL.md) 스킬에서 검토합니다.
 

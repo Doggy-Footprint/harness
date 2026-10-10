@@ -534,6 +534,33 @@ class TestBoundary(InstallerTestCase):
         self.assertIn("installer/harness.py update", readme)
         self.assertNotIn("installer/harness.py upgrade", readme)
 
+    def test_update_and_doctor_accept_multiple_directories_and_report_any_failure(self):
+        first, second = self.install(), self.install()
+        not_installed = self.make_repo()
+        for repo in (first, second):
+            manifest_path = repo / ".harness" / "manifest.json"
+            manifest = json.loads(manifest_path.read_text())
+            manifest["version"] = "0.17.0"
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+
+        ok = run_installer("update", str(first), str(second))
+        self.assertEqual(ok.returncode, 0, ok.stdout + ok.stderr)
+        self.assertIn(f"== {first} ==", ok.stdout)
+        self.assertIn(f"== {second} ==", ok.stdout)
+
+        mixed = run_installer("update", str(not_installed), str(second))
+        self.assertEqual(mixed.returncode, 1, mixed.stdout + mixed.stderr)
+        self.assertIn(f"== {second} ==", mixed.stdout)
+
+        doctor = run_installer("doctor", str(first), str(second))
+        self.assertEqual(doctor.returncode, 0, doctor.stdout + doctor.stderr)
+        self.assertIn(f"== {first} ==", doctor.stdout)
+        self.assertIn(f"== {second} ==", doctor.stdout)
+        self.assertEqual(run_installer("doctor", str(first), str(not_installed)).returncode, 1)
+
+        rejected = run_installer("import", str(first), str(second))
+        self.assertEqual(rejected.returncode, 2, rejected.stdout + rejected.stderr)
+
     def test_b_claude_md_only(self):
         repo = self.make_repo()
         (repo / "CLAUDE.md").write_text("hello")

@@ -1379,20 +1379,32 @@ def cmd_import(target: Path, as_json: bool) -> int:
 def main(argv) -> int:
     parser = argparse.ArgumentParser(prog="harness.py")
     parser.add_argument("command", choices=["install", "update", "upgrade", "doctor", "import"])
-    parser.add_argument("target")
+    parser.add_argument("target", nargs="+", help="repository directory (update and doctor accept several)")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--no-ci", action="store_true")
     parser.add_argument("--json", action="store_true", help="machine-readable output (import only)")
     args = parser.parse_args(argv)
-    target = Path(args.target).resolve()
+    multi = args.command in ("update", "upgrade", "doctor")
+    if len(args.target) > 1 and not multi:
+        parser.error(f"{args.command} accepts exactly one directory")
 
+    if multi:
+        run = cmd_doctor if args.command == "doctor" else (
+            lambda directory: cmd_update(directory, args.dry_run, args.no_ci)
+        )
+        status = 0
+        for index, directory in enumerate(args.target):
+            if len(args.target) > 1:
+                print(f"{'' if index == 0 else chr(10)}== {directory} ==")
+            status = max(status, run(Path(directory).resolve()))
+        return status
+
+    target = Path(args.target[0]).resolve()
     if args.command == "install":
         return cmd_install(target, args.dry_run, args.no_ci)
-    if args.command in ("update", "upgrade"):
-        return cmd_update(target, args.dry_run, args.no_ci)
     if args.command == "import":
         return cmd_import(target, args.json)
-    return cmd_doctor(target)
+    raise AssertionError(args.command)
 
 
 if __name__ == "__main__":
