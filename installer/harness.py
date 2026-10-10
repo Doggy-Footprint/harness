@@ -1401,10 +1401,17 @@ def main(argv) -> int:
             lambda directory: cmd_update(directory, args.dry_run, args.no_ci)
         )
         status = 0
+        results = []
         for index, directory in enumerate(args.target):
             if len(args.target) > 1:
                 print(f"{'' if index == 0 else chr(10)}== {directory} ==")
-            status = max(status, run(Path(directory).resolve()))
+            code = run(Path(directory).resolve())
+            results.append((directory, code))
+            status = max(status, code)
+        if len(args.target) > 1:
+            print("\n== summary ==")
+            for directory, code in results:
+                print(f"{'success' if code == 0 else 'fail'}: {directory}")
         return status
 
     target = Path(args.target[0]).resolve()
