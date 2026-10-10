@@ -24,11 +24,16 @@ def _connection(path: Path):
     return connection
 
 
+_VERIFICATION_COUNTS = ("fuzz_execs", "fuzz_violations", "mutants", "killed", "survived", "equivalent", "overturned")
+
+
 def _metrics(events):
     results = [event for event in events if event.get("event") == "verifier_result"]
     return {"verifier_rounds": len(results), "verifier_retries": sum(event.get("result") == "retry" for event in results),
             "seeds_run": sum(int(event.get("seeds_run") or 0) for event in events),
-            "seeds_detected": sum(int(event.get("seeds_detected") or 0) for event in events)}
+            "seeds_detected": sum(int(event.get("seeds_detected") or 0) for event in events),
+            **{name: sum(int(event.get(name) or 0) for event in events if event.get("event") == "verification_result")
+               for name in _VERIFICATION_COUNTS}}
 
 
 def _session_cost(session: dict, prices: dict) -> float | None:
@@ -307,6 +312,7 @@ def create_app(database_path: Path, telemetry_dir: Path, price_path: Path, trans
                 "handoff_runs": sum(item["status"] == "handoff" for item in details),
                 "verifier_rounds": sum(item["verifier_rounds"] for item in details), "verifier_retries": sum(item["verifier_retries"] for item in details),
                 "seeds_run": sum(item["seeds_run"] for item in details), "seeds_detected": sum(item["seeds_detected"] for item in details),
+                **{name: sum(item[name] for item in details) for name in _VERIFICATION_COUNTS},
                 "linked_cost_usd": None if any(x is None for x in costs) else sum(costs),
                 "run_items": [{key: item[key] for key in ("run_id", "spec", "status", "compliant")} for item in details],
                 "workflow": {"runs": workflow_runs},

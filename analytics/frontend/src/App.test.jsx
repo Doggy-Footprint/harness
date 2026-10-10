@@ -86,6 +86,20 @@ describe("spec v2 U2/F7/Q3 summary and detail field coverage", () => {
     expect(screen.getByText(/cost.*12\.34/i)).toBeVisible();
   });
 
+  it("summary view shows fuzz and mutation-tool counters", async () => {
+    fetch.mockReturnValue(response({ ...richSummary, fuzz_execs: 700, fuzz_violations: 2, mutants: 41,
+      killed: 33, survived: 8, equivalent: 5, overturned: 1 }));
+    render(<App apiBase="" />);
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/summary"));
+    expect(screen.getByText(/fuzz executions\D*700/i)).toBeVisible();
+    expect(screen.getByText(/fuzz violations\D*2/i)).toBeVisible();
+    expect(screen.getByText(/tool mutants\D*41/i)).toBeVisible();
+    expect(screen.getByText(/mutants killed\D*33/i)).toBeVisible();
+    expect(screen.getByText(/mutants survived\D*8/i)).toBeVisible();
+    expect(screen.getByText(/equivalent mutants\D*5/i)).toBeVisible();
+    expect(screen.getByText(/verdicts overturned\D*1/i)).toBeVisible();
+  });
+
   it("summary view renders unknown cost when linked_cost_usd is null", async () => {
     fetch.mockReturnValue(response({ ...richSummary, linked_cost_usd: null }));
     render(<App apiBase="" />);

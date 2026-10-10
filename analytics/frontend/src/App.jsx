@@ -110,6 +110,20 @@ export default function App({ apiBase = "" }) {
           <dd>{detail.seeds_run}</dd>
           <dt>Seeds detected</dt>
           <dd>{detail.seeds_detected}</dd>
+          <dt>Fuzz executions</dt>
+          <dd>{detail.fuzz_execs}</dd>
+          <dt>Fuzz violations</dt>
+          <dd>{detail.fuzz_violations}</dd>
+          <dt>Tool mutants</dt>
+          <dd>{detail.mutants}</dd>
+          <dt>Mutants killed</dt>
+          <dd>{detail.killed}</dd>
+          <dt>Mutants survived</dt>
+          <dd>{detail.survived}</dd>
+          <dt>Equivalent mutants</dt>
+          <dd>{detail.equivalent}</dd>
+          <dt>Triage verdicts overturned</dt>
+          <dd>{detail.overturned}</dd>
           <dt>Linked cost (USD)</dt>
           <dd>{detailCost}</dd>
         </dl>
@@ -144,6 +158,13 @@ export default function App({ apiBase = "" }) {
         <p>Verifier retries: {summary.verifier_retries}</p>
         <p>Seeds run: {summary.seeds_run}</p>
         <p>Seeds detected: {summary.seeds_detected}</p>
+        <p>Fuzz executions: {summary.fuzz_execs}</p>
+        <p>Fuzz violations: {summary.fuzz_violations}</p>
+        <p>Tool mutants: {summary.mutants}</p>
+        <p>Mutants killed: {summary.killed}</p>
+        <p>Mutants survived: {summary.survived}</p>
+        <p>Equivalent mutants: {summary.equivalent}</p>
+        <p>Triage verdicts overturned: {summary.overturned}</p>
         <p>Linked cost (USD): {summaryCost}</p>
         {summary.classification && (
           <>

@@ -99,6 +99,27 @@ class WorkflowMarkerTestCase(InstallerTestCase):
         self.assertEqual(events[0]["spec"], "checkout")
         self.assertEqual(events[0]["spec_version"], 3)
 
+    def test_verification_marker_records_fuzz_and_mutation_tool_counts(self):
+        repo, telemetry_dir = self.install_with_telemetry()
+        env = self.environment(telemetry_dir)
+        self.marker(repo, env, "start", "--run-id", "run-v", "--spec", "orders", "--spec-version", "1")
+        counts = {"fuzz_execs": 5000, "fuzz_violations": 1, "mutants": 40, "killed": 31,
+                  "survived": 9, "equivalent": 6, "overturned": 1}
+        args = [item for key, value in counts.items() for item in (f"--{key.replace('_', '-')}", str(value))]
+
+        result = self.marker(repo, env, "verification", "--run-id", "run-v", *args)
+
+        self.assertEqual((result.returncode, result.stdout + result.stderr), (0, ""))
+        events = self.events(telemetry_dir, repo)
+        self.assertEqual([event["event"] for event in events], ["workflow_start", "verification_result"])
+        self.assertEqual({key: events[1][key] for key in counts}, counts)
+        self.assertEqual((events[1]["workflow_run_id"], events[1]["spec"]), ("run-v", "orders"))
+
+        for bad in (args[:-2], args[:-1] + ["-1"], ["--run-id", "other"]):
+            rejected = self.marker(repo, env, "verification", *(bad if bad[0] == "--run-id" else ["--run-id", "run-v", *bad]))
+            self.assertEqual((rejected.returncode, rejected.stdout + rejected.stderr), (0, ""))
+        self.assertEqual(len(self.events(telemetry_dir, repo)), 2)
+
     def test_m2_phase_verifier_and_end_are_semantic_and_end_clears_active_run(self):
         repo, telemetry_dir = self.install_with_telemetry()
         env = self.environment(telemetry_dir)

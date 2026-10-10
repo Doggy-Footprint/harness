@@ -66,6 +66,19 @@ class ApiTests(unittest.TestCase):
         rewritten = self.client.get("/api/summary").json()
         self.assertEqual(rewritten, appended)
 
+    def test_verification_result_counts_aggregate_per_run_and_summary(self):
+        counts = {"fuzz_execs": 100, "fuzz_violations": 1, "mutants": 12, "killed": 9,
+                  "survived": 3, "equivalent": 2, "overturned": 1}
+        first = self.completed()
+        second = self.completed("run-2")
+        self.write_events(first[:-1] + [self.event("verification_result", **counts)] + first[-1:]
+                          + second[:-1] + [self.event("verification_result", "run-2", **counts)] * 2 + second[-1:])
+        detail = self.client.get("/api/runs/run-2").json()
+        self.assertEqual({key: detail[key] for key in counts}, {key: 2 * value for key, value in counts.items()})
+        summary = self.client.get("/api/summary").json()
+        self.assertEqual({key: summary[key] for key in counts}, {key: 3 * value for key, value in counts.items()})
+        self.assertEqual((summary["compliant_runs"], summary["seeds_run"]), (2, 4))
+
     def test_v1_malformed_middle_and_partial_tail_preserve_retry_position(self):
         first, second = self.completed()[:2]
         path = self.telemetry_dir / "broken.jsonl"

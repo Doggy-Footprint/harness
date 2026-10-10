@@ -414,6 +414,15 @@ MANAGED_DOC_RE = re.compile(r"^[0-9a-f]{16}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$")
 WORKFLOW_DOC_DIRS = {"specs", "spec-logs"}
 
 
+def migrate_mutation_fuzzing(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "install 8-10 hand mutation, spec-declared fuzzing, and mutation-tool instructions with a 40% survival threshold",
+        "install the mutant-triager agent and the verification telemetry marker",
+        "preserve existing specs, archived records, and verifier counts; before resume, "
+        "declare Fuzzing and Mutation tool in the active spec for user approval",
+    ]
+
+
 def migrate_missing_stale_records(target: Path, dry_run: bool) -> list[str]:
     docs_root = target / "agent-docs"
     if not docs_root.is_dir():
@@ -451,6 +460,7 @@ MIGRATIONS = (
     (parse_version("0.16.0"), "update Codex workflow role defaults to gpt-6.1-sol", migrate_codex_workflow_model),
     (parse_version("0.16.1"), "set Codex code-explorer default to gpt-6.1-sol", migrate_codex_explorer_model),
     (parse_version("0.16.2"), "remove legacy requirements directory", migrate_requirements),
+    (parse_version("0.17.0"), "add fuzzing, mutation-tool triage, and 8-10 hand mutations", migrate_mutation_fuzzing),
 )
 
 

@@ -5,7 +5,7 @@ It ships documentation rules (the managed block below), the workflow-approach sk
 Source: `harness/` (payload), `installer/harness.py` (install / update / doctor), `tests/`. This repo installs itself into `.harness/` for dogfooding.
 Edit `harness/`, never `.harness/` or the generated `.claude/`, `.codex/`, `.agents/` files; then run `python3 installer/harness.py update .`. `update` MUST provide version-by-version migration steps.
 
-<!-- harness:begin 0.16.2 -->
+<!-- harness:begin 0.17.0 -->
 # Documentation Guide
 
 "Documentation" refers to standalone docs, inline comments, and docstrings.
@@ -126,7 +126,7 @@ Required file structure:
 - `## Next Step`
 - `## Open Questions`
 - `## Spec` (active or archived spec path, version, status, and run ID)
-- `## Execution Ledger` (findings and dispositions, evidence and mutation outcomes, correction and verifier counters)
+- `## Execution Ledger` (findings and dispositions, evidence, fuzz, and mutation outcomes (hand and tool), correction and verifier counters)
 
 An incomplete nonterminal workflow keeps its active spec in `agent-docs/specs/`
 and records this handoff path in the spec. A limit handoff points to the archived

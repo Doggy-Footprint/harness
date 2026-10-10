@@ -14,7 +14,8 @@ _FIELDS = {
     "v", "ts", "repo", "client", "session_id", "agent_id", "agent_type",
     "tool_use_id", "event", "workflow_run_id", "spec", "spec_version",
     "phase", "status", "result", "round", "findings", "seeds_run",
-    "seeds_detected",
+    "seeds_detected", "fuzz_execs", "fuzz_violations", "mutants", "killed",
+    "survived", "equivalent", "overturned",
 }
 
 
