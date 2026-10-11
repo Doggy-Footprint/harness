@@ -430,6 +430,13 @@ def migrate_test_audit(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_rearrange_docs(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "install the user-invoked rearrange-docs skill (.agents/skills/rearrange-docs, .claude/skills/rearrange-docs); "
+        "no existing files change",
+    ]
+
+
 def migrate_missing_stale_records(target: Path, dry_run: bool) -> list[str]:
     docs_root = target / "agent-docs"
     if not docs_root.is_dir():
@@ -469,6 +476,7 @@ MIGRATIONS = (
     (parse_version("0.16.2"), "remove legacy requirements directory", migrate_requirements),
     (parse_version("0.17.0"), "add fuzzing, mutation-tool triage, and 8-10 hand mutations", migrate_mutation_fuzzing),
     (parse_version("0.18.0"), "add user-invoked test-audit skill and rule-based test scanner", migrate_test_audit),
+    (parse_version("0.19.0"), "add user-invoked rearrange-docs skill", migrate_rearrange_docs),
 )
 
 

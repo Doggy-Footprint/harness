@@ -23,7 +23,7 @@ python3 installer/harness.py doctor <target-a> <target-b>
 | --- | --- |
 | `.harness/` | 버전이 기록된 payload, 스크립트, 설정 원본과 소유 파일의 SHA manifest |
 | `AGENTS.md`, `CLAUDE.md` | 프로젝트 정의와 관리형 문서 규칙; Claude는 `@AGENTS.md`로 같은 규칙을 읽음 |
-| `.agents/skills/`, `.claude/skills/` | `workflow-approach`, `requirement-oracle`, `architecture-options`, `harness-import` 스킬과 Claude용 링크 |
+| `.agents/skills/`, `.claude/skills/` | `workflow-approach`, `requirement-oracle`, `architecture-options`, `harness-import`, `test-audit`, `rearrange-docs` 스킬과 Claude용 링크 |
 | `.claude/agents/`, `.codex/agents/` | 공통 원본에서 생성한 `implementer`, `test-implementer`, `test-verifier`, `code-explorer` 정의 |
 | `.claude/settings.json`, `.codex/hooks.json` | 세션·서브에이전트·도구 훅 |
 | `.harness/git/` | 커밋 전 문서 규칙 검증과 기존 Git hook 연결 |
