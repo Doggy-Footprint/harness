@@ -437,6 +437,14 @@ def migrate_rearrange_docs(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_spec_briefs(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "replace the no-unspecified-decisions rule with ask-or-default-with-veto in the managed AGENTS.md block",
+        "workflow-approach: confirm understanding before drafting and approve specs through chat-only briefs; "
+        "spec format unchanged; existing Assumptions and Defaults rows are kept",
+    ]
+
+
 def migrate_missing_stale_records(target: Path, dry_run: bool) -> list[str]:
     docs_root = target / "agent-docs"
     if not docs_root.is_dir():
@@ -477,6 +485,7 @@ MIGRATIONS = (
     (parse_version("0.17.0"), "add fuzzing, mutation-tool triage, and 8-10 hand mutations", migrate_mutation_fuzzing),
     (parse_version("0.18.0"), "add user-invoked test-audit skill and rule-based test scanner", migrate_test_audit),
     (parse_version("0.19.0"), "add user-invoked rearrange-docs skill", migrate_rearrange_docs),
+    (parse_version("0.20.0"), "approve specs through chat briefs with default-and-veto decisions", migrate_spec_briefs),
 )
 
 

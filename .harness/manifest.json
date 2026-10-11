@@ -1,9 +1,9 @@
 {
-  "version": "0.19.0",
+  "version": "0.20.0",
   "files": {
     ".harness/config.default.json": "c21d7705713f2a9bc8cd9527d87b8964b58c7ae1b5e63e83446371b2c68a4dbd",
-    ".harness/VERSION": "06c53dd4f22b2e0038ca2bb9af32cc1ab7e69898d99cc3bfa22bd965f21aac8f",
-    ".harness/instructions/harness-block.md": "63a0e344859c2a5fdf9cd231ec4033c72006ad84fc2aaf691a240dda179719a9",
+    ".harness/VERSION": "8da6a2ee5c36bb2770de645cbcd689209f5935b380d68729e107d0250a633b53",
+    ".harness/instructions/harness-block.md": "9c524950c60393285652c4e513ef262050dc8ed2f165095898c5edbd1335b6ab",
     ".harness/bin/workflow_marker.py": "f6413c2d0d2121639d7cd13cd632d8b6578406163d22de6701cddbcdc3232308",
     ".harness/bin/spec_lifecycle.py": "589dda545410e92dc00e7acc86e3a54775b01ccdc40d9e487a49223448a74cff",
     ".harness/bin/test_scan.py": "76b885ff58b131090948927fd90ef044dc6fbb4469a77ee90488de39ffbff459",
@@ -27,8 +27,8 @@
     ".harness/git/verify_rules.py": "092dd8ed88997dcd412c0b43bd129b9cc751f3e633639a5fb6faf9aeb7dd2f55",
     ".harness/skills/harness-import/SKILL.md": "947f1f83390047246bd40ed2a82afa2abde46c0d189db77ead76f49c20724208",
     ".harness/skills/rearrange-docs/SKILL.md": "d7918bf19c7de055b6853fc301880a0da3a2f7c2d3725098d74966d9f0ac2ebb",
-    ".harness/skills/requirement-oracle/SKILL.md": "f2a45ac87e4962d4a711dadd742973a08e7e61f13188776808d881d7bb9c2edb",
-    ".harness/skills/workflow-approach/SKILL.md": "1fdb31f809686f99a9edb6f1662783d2c22522e709a84682b20c4b64c021b123",
+    ".harness/skills/requirement-oracle/SKILL.md": "85be8e6a0bc20ebe16c2e25e60d53b8d269c484035bb540f2a57340870335d8a",
+    ".harness/skills/workflow-approach/SKILL.md": "b0b216ecac59b939fc40bccf62539824cd1eda0c90f642e4c0c0651f66febcf8",
     ".harness/skills/architecture-options/SKILL.md": "823b98a7677813aec396750337c10474bbd445a64d961277a80c8f825dc9f3a9",
     ".harness/skills/test-audit/SKILL.md": "073afdafd5b6a7df5d41f309c549018f26828cbe8ede7643e9f429b9b676d95c",
     ".harness/skills/rearrange-docs/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
@@ -47,10 +47,10 @@
     ".agents/skills/harness-import/SKILL.md": "947f1f83390047246bd40ed2a82afa2abde46c0d189db77ead76f49c20724208",
     ".agents/skills/rearrange-docs/SKILL.md": "d7918bf19c7de055b6853fc301880a0da3a2f7c2d3725098d74966d9f0ac2ebb",
     ".agents/skills/rearrange-docs/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
-    ".agents/skills/requirement-oracle/SKILL.md": "f2a45ac87e4962d4a711dadd742973a08e7e61f13188776808d881d7bb9c2edb",
+    ".agents/skills/requirement-oracle/SKILL.md": "85be8e6a0bc20ebe16c2e25e60d53b8d269c484035bb540f2a57340870335d8a",
     ".agents/skills/test-audit/SKILL.md": "073afdafd5b6a7df5d41f309c549018f26828cbe8ede7643e9f429b9b676d95c",
     ".agents/skills/test-audit/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
-    ".agents/skills/workflow-approach/SKILL.md": "1fdb31f809686f99a9edb6f1662783d2c22522e709a84682b20c4b64c021b123",
+    ".agents/skills/workflow-approach/SKILL.md": "b0b216ecac59b939fc40bccf62539824cd1eda0c90f642e4c0c0651f66febcf8",
     ".github/workflows/harness-comment-warning.yml": "b1baf0b786612e52762ea4666b449ff89f745c54a553097ee00d0a113feb63d0"
   }
 }

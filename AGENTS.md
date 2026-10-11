@@ -5,7 +5,7 @@ It ships documentation rules (the managed block below), the workflow-approach sk
 Source: `harness/` (payload), `installer/harness.py` (install / update / doctor), `tests/`. This repo installs itself into `.harness/` for dogfooding.
 Edit `harness/`, never `.harness/` or the generated `.claude/`, `.codex/`, `.agents/` files; then run `python3 installer/harness.py update .`. `update` MUST provide version-by-version migration steps.
 
-<!-- harness:begin 0.19.0 -->
+<!-- harness:begin 0.20.0 -->
 # Documentation Guide
 
 "Documentation" refers to standalone docs, inline comments, and docstrings.
@@ -144,5 +144,5 @@ When the task completes, remove its entry from `index.md` and move the file to `
 
 ## User Decision
 
-DO NOT decide unspecified task details yourself. Talk back freely to resolve unspecified or ambiguous ones.
+Never decide unspecified task details silently. Resolve what the project, code, and conversation can answer. For the rest, either ask, or state a default (what you chose, why, and how to change it later) so the user can veto it before it takes effect. Ask instead when the choice is expensive or risky to reverse, or contradicts what the user or project has stated.
 <!-- harness:end -->

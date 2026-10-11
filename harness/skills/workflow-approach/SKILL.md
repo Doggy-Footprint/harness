@@ -13,9 +13,9 @@ A spec is the approved, versioned source of truth for one workflow run. The main
 2. Archived path: `agent-docs/spec-logs/<same-file-name>`.
 3. `specs/` and `spec-logs/` are excluded from Index & Staleness Management.
 4. Frontmatter fields are `version`, `run_id`, `status`, `base_commit`, `max_verifier_invocations`, and `handoff`. Status is `draft`, `active`, `complete`, `limit`, or `aborted`; use `handoff: none` when absent.
-5. Amendment increments `version` and adds a Version Log entry. Request approval for changed behavior, quality targets, or verification policy by explaining current → proposed expectations, why they must change, and their impact.
-6. Before dispatch, obtain whole-spec approval. For every spec approval or decision request, link its path and version, state what the user is deciding, and explain behavior, scope, and acceptance criteria in plain language with a concrete example; explain necessary technical terms. Distinguish whole-spec approval from an amendment or unresolved choice. Pause on unresolved required decisions; use `requirement-oracle` when the user needs evidence or options to decide.
-7. Only after the user explicitly delegates an unresolved required decision may the main agent choose a default. Preserve safety, security, compatibility, data, and existing observable behavior in that order; record the choice, evidence, uncertainty, and delegation in `# Assumptions and Defaults`. Optional quality characteristics may be excluded with a recorded reason.
+5. Amendment increments `version` and adds a Version Log entry. When it changes a brief item (understanding, an answer, a listed default, or the plain-words quality list), re-brief before continuing: show current → proposed, why it must change, and its impact. Log contract-only changes such as a technique, coverage-item naming, or an obligation split without interrupting the user.
+6. Before drafting, run the understanding round. Before dispatch, present the brief and obtain approval; approval covers every listed default the user did not veto. Pause on unanswered Ask items; use `requirement-oracle` when the user needs evidence or options to decide.
+7. Main chooses a default only by listing it in a brief. Prefer general good practice unless the user or project states otherwise, and preserve safety, security, compatibility, data, and existing observable behavior in that order. Record each choice, its evidence and uncertainty in `# Assumptions and Defaults`, with approval as `brief v<n> — approved`, `vetoed → <answer>`, or `user answer`. Optional quality characteristics may be excluded with a recorded reason.
 
 ## Required format
 
@@ -81,7 +81,7 @@ Mutation tool: <tool and command, sample cap and seed, survival threshold (defau
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 
 # Assumptions and Defaults
-| id | decision | evidence and uncertainty | user approval or explicit delegation |
+| id | decision | evidence and uncertainty | brief v<n> — approved / vetoed → <answer> / user answer |
 | --- | --- | --- | --- |
 
 # Traceability
@@ -108,9 +108,28 @@ Execution ledger (append attempts; preserve failed approaches):
 - <what changed and the evidence or decision that forced it>
 ````
 
-Every intent, requirement, Case, quality requirement, obligation, and assumption has a stable id. Each applicable quality characteristic has at least one quality requirement. Each quality requirement defines the measured property and context, method and input quantities, unit, threshold and pass direction, evidence procedure, and source. ISO/IEC 25023 supplies measure concepts and ISO/IEC/IEEE 29119-4 supplies test design techniques with their coverage measures; neither supplies project-specific pass thresholds or coverage targets. The user approves both.
+Prefix a Version Log entry with `[intent-mismatch]` when an intent mismatch found after approval forced it.
+
+Every intent, requirement, Case, quality requirement, obligation, and assumption has a stable id. Each applicable quality characteristic has at least one quality requirement. Each quality requirement defines the measured property and context, method and input quantities, unit, threshold and pass direction, evidence procedure, and source. ISO/IEC 25023 supplies measure concepts and ISO/IEC/IEEE 29119-4 supplies test design techniques with their coverage measures; neither supplies project-specific pass thresholds or coverage targets. The brief lists both for the user to approve or veto.
 
 `level` is `normal`, `boundary`, `error`, or `edge`; include every level or a `none — <reason>` row. Error rows name both signal and post-failure state. Implementation and Tests paths are disjoint. The implementer never reads Tests; test roles never read Implementation.
+
+# Brief
+
+The brief is how the user approves intent; the spec is the contract for subagents. Briefs exist only in chat: never write them into the spec or any other file, so later sessions read decisions, not briefs.
+
+Write for a developer with 4 years of experience, explain anything beyond that, and link the spec path and version for deeper review.
+
+**Understanding round.** Before drafting, state "Here's what I understood": what the project is, where this task fits, what success looks like, and what this task will NOT do. Build it from every available source (project definition, README, docs, code, history, prior specs and handoffs, the conversation), not from any single required file. Include blocking Ask items. Draft only after the user confirms or corrects it.
+
+**Approval brief.** Classify every decision the spec depends on:
+- *Ask*: not easy to fix later, or contradicts what the user or project stated. Not easy to fix later means persisted data, schemas or formats; interfaces others depend on (CLI flags, API fields, file formats); external side effects (sending, deleting, publishing); security boundaries; and money.
+- *Decided for you*: one line each with the choice, why, and how to change it later. Thresholds, coverage targets, and test techniques normally belong here.
+- *New concept*: a decision that depends on knowledge the user may lack. First ask whether the user already knows the concept; ask fresh every run. Then give one sentence on what it is, why it matters here, a concrete consequence of each option, and the choice, treated as Ask or Decided by the rules above.
+
+Ask at most 3 items per round, ranked by cost to reverse times the chance the user disagrees. Overflow becomes Decided unless it is not easy to fix later; such overflow waits for the next round.
+
+State quality expectations in plain words for applicable characteristics only (for example "must not crash on a broken log line"); mention a non-applicable one only when that may surprise the user. ISO terms stay in the spec.
 
 # Verification model
 
@@ -155,7 +174,7 @@ Emit `start` before the initial dispatch. Emit `implement_test` before the paral
 # Workflow
 
 1. **Recover or ground (main).** Before creating a spec, inspect `specs/`. If an active spec exists, do not start another workflow. If its handoff is valid, resume only when requested. Without a handoff, compare `base_commit` to HEAD, summarize progress and drift, and ask the user whether to resume or archive it as aborted. Read deciding code yourself; delegate only location discovery. For pre-0.10 specs, reconcile obligations and audit state with the verification model before dispatch, giving each obligation a technique, coverage items and target. Do not infer prior acceptance from a passing suite. Obtain approval for changed verification policy and preserve invocation counts and history.
-2. **Draft and approve (main).** Derive functional requirements and all nine quality applicability decisions. Use `requirement-oracle` for decisions the user cannot assess. Define measures, thresholds, 29119-4 techniques, coverage items and targets, evidence, and traceability with `max_verifier_invocations: 2`. Obtain whole-spec approval, set status `active`, then run and check: `python3 .harness/bin/spec_lifecycle.py start --spec PATH --run-id ID`. Emit telemetry start only after lifecycle start succeeds.
+2. **Understand, draft, and approve (main).** Run the understanding round and wait for the user's confirmation or correction. Derive functional requirements and all nine quality applicability decisions. Use `requirement-oracle` for decisions the user cannot assess. Define measures, thresholds, 29119-4 techniques, coverage items and targets, evidence, and traceability with `max_verifier_invocations: 2`. Present the approval brief and obtain approval, set status `active`, then run and check: `python3 .harness/bin/spec_lifecycle.py start --spec PATH --run-id ID`. Emit telemetry start only after lifecycle start succeeds.
 3. **Implement + test (parallel).** Emit `implement_test`; dispatch both roles on the same spec version without sharing outputs. Instructions are task-specific and complete:
    - implementer: path/version, implementation direction, quality constraints, risks, allowed non-Test checks, and excluded approaches;
    - test-implementer: path/version, conventions, risk model, 29119-4 techniques and coverage items, independent oracle, automated and review evidence, test level, and excluded approaches.
