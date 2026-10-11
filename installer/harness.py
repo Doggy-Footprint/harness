@@ -452,6 +452,14 @@ def migrate_test_audit_rules(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_test_audit_language_files(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "add per-language review files under .agents/skills/test-audit/languages/; "
+        "test-audit reads only the files for languages found by the scan",
+        "the test-audit Flag review table keeps only language-independent false positives; no existing project files change",
+    ]
+
+
 def migrate_missing_stale_records(target: Path, dry_run: bool) -> list[str]:
     docs_root = target / "agent-docs"
     if not docs_root.is_dir():
@@ -494,6 +502,7 @@ MIGRATIONS = (
     (parse_version("0.19.0"), "add user-invoked rearrange-docs skill", migrate_rearrange_docs),
     (parse_version("0.20.0"), "approve specs through chat briefs with default-and-veto decisions", migrate_spec_briefs),
     (parse_version("0.21.0"), "expand test-audit scanner rules to more languages, flags, and runners", migrate_test_audit_rules),
+    (parse_version("0.22.0"), "split test-audit language guidance into per-language files", migrate_test_audit_language_files),
 )
 
 

@@ -9,24 +9,26 @@ argument-hint: "[path]"
 
 The argument is a path to audit; without one, audit the whole repository. Run `python3 .harness/bin/test_scan.py <path>` first. It lists test files and tests in python, javascript/typescript, go, rust, java, kotlin, csharp/C#, swift, php, ruby, and C/C++, suspicious signals (`skip`, `xfail`, `focused`, `no_assert`, `empty`, `sleep`, `heavy_mock`, `duplicate_name`, `trivial_assert`, `mock_only_assert`, `snapshot_only`, `broad_exception`, `swallowed_error`, `nondeterministic`, `retry`, `incomplete`), runner candidates, and `predates_harness`. Read only flagged files and files relevant to a feature under review, to save tokens. The scanner is rule-based and approximate for non-Python languages; verify a flag by reading before relying on it.
 
+For each `language` in the scan's `files`, read `languages/<language>.md` next to this file before reviewing those files. It lists what the scanner misses, framework-specific checks, false positives per flag, and how to run one test and collect coverage. Also read it for a language whose test files appear only in `inventory`, since the scanner misses some frameworks. Skip other languages.
+
 # Flag review
 
-| flag | confirm by reading | known false positives |
+| flag | confirm by reading | false positives in any language |
 | --- | --- | --- |
-| `skip` | the skip is unconditional or still applies; group-level skips cover this test | conditional skips (platform, `testing.Short()`) that run in CI; `skip` in a name or string |
+| `skip` | the skip is unconditional or still applies; group-level skips cover this test | conditional skips that run in CI; `skip` in a name or string |
 | `xfail` | the expected failure is still real and tracked | known-issue wrappers around code that does pass |
 | `focused` | `only`/`fit`/`focus` is a leftover that hides sibling tests | intentional focus in a local-only draft |
-| `no_assert` | no check at all, not even a helper or implicit one | Rust tests relying on `unwrap()`/`?`; assertions inside helper functions or fixtures; custom matchers |
+| `no_assert` | no check at all, not even a helper or implicit one | assertions inside helper functions or fixtures; custom matchers |
 | `empty` | the body has no statements | tests whose work is in setup hooks or attributes |
-| `sleep` | the sleep waits on real time instead of a condition | Kotlin `runTest { delay() }` virtual time; sleeps in a string or comment |
+| `sleep` | the sleep waits on real time instead of a condition | sleeps in a string or comment |
 | `heavy_mock` | mock setup dominates and the unit itself is barely exercised | many stubs for a legitimately wide collaborator |
-| `duplicate_name` | a second test shadows or repeats the first | RSpec same titles in different `describe` blocks; gtest or overloads in different scopes |
-| `trivial_assert` | the assertion cannot fail | `assertTrue(true)` placeholders inside generated code or fixtures |
+| `duplicate_name` | a second test shadows or repeats the first | the same name in different classes or groups of one file |
+| `trivial_assert` | the assertion cannot fail | placeholders inside generated code or fixtures |
 | `mock_only_assert` | the test checks only that mocks were called, not behavior | verifying a side-effect-only collaborator is the real contract |
 | `snapshot_only` | the snapshot is reviewed and meaningful, not auto-accepted | snapshots of small stable values that are real contracts |
 | `broad_exception` | the expected error type or message is not pinned | exception base type is the documented contract |
 | `swallowed_error` | the caught error is neither asserted nor rethrown | deliberate best-effort cleanup; body boundaries are approximate when braces appear in strings |
-| `nondeterministic` | time, randomness, or ids reach an assertion unfixed | guards in shared helper files; value only logged |
+| `nondeterministic` | time, randomness, or ids reach an assertion unfixed | guards in shared helper files; value only logged or used for timing |
 | `retry` | retries hide a flaky test instead of fixing it | retry attribute on a test of retry logic |
 | `incomplete` | the test is a stub, todo, or pending placeholder | `TODO` text in a test of todo-list features |
 
@@ -42,8 +44,8 @@ Confirm what the project does at product level before judging any test.
 
 1. Use the detected runner from the scan; ask the user when several candidates exist or none does.
 2. Run the suite. Record failures, skips, and slow tests.
-3. Rerun each failure to separate flaky from deterministic failures.
-4. Collect coverage if the project already supports it; do not install tooling.
+3. Rerun each failure alone, using the single-test command from the language file, to separate flaky from deterministic failures.
+4. Collect coverage if the project already supports it, as described in the language file; do not install tooling.
 
 # Spec check
 
