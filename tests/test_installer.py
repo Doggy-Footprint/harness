@@ -562,7 +562,6 @@ class TestNormal(InstallerTestCase):
                 return ast.literal_eval(node.value)
         self.fail("LANGUAGE_ORDER not found")
 
-    # 0.22.0: one language file per scanner language, each with the four review sections
     def test_language_files_match_scanner_languages_and_sections(self):
         languages = self.scanner_languages()
         source = REPO_ROOT / "harness" / "skills" / "test-audit" / "languages"
@@ -572,7 +571,6 @@ class TestNormal(InstallerTestCase):
                 headings = [l for l in (source / f"{language}.md").read_text().splitlines() if l.startswith("## ")]
                 self.assertEqual(headings, self.LANGUAGE_SECTIONS)
 
-    # 0.22.0: install ships the language files through both skill paths and SKILL.md points to them
     def test_install_provides_language_files_and_skill_reference(self):
         repo = self.install()
         languages = self.scanner_languages()
@@ -582,7 +580,6 @@ class TestNormal(InstallerTestCase):
         skill = (repo / ".agents" / "skills" / "test-audit" / "SKILL.md").read_text()
         self.assertIn("languages/<language>.md", skill)
 
-    # 0.22.0: update from 0.21.0 announces the language-file migration and installs the files
     def test_update_from_0210_announces_language_file_migration(self):
         repo = self.install()
         shutil.rmtree(repo / ".agents" / "skills" / "test-audit" / "languages")
@@ -2460,7 +2457,6 @@ class TestGitignoreConsent(InstallerTestCase):
         self.assertEqual(len(calls), 2, calls)
         self.assertFalse(self.ignored(repo, self.GUARDED_BIN[0]))
 
-    # ---- Spec 43566c0a9bdc1f1f v1 ----
     DRY_CONFLICT = "ignored harness paths: .gitignore exceptions require consent (dry-run)"
     PLANNED = "planned .gitignore exception: "
 
@@ -2522,7 +2518,7 @@ class TestGitignoreConsent(InstallerTestCase):
         self.assertEqual(consumed, 0)
         self.assertEqual(self.snapshot(repo), before)
 
-    # R2 VO1 decision table (F1,F2,Q3 / C1-C4): 5 rules
+    # spec 43566c0a9bdc1f1f v1 R2 VO1 decision table (F1,F2,Q3 / C1-C4): 5 rules
     def test_r2vo1_install_ignored_dry_run_fails_with_full_plan(self):
         self.assert_dry_ignored_row("install")
 
@@ -2543,7 +2539,7 @@ class TestGitignoreConsent(InstallerTestCase):
         self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
         self.assert_dry_clear_row("update", repo)
 
-    # R2 VO2 classification tree (F3,Q1,Q2,Q4 / C5-C7)
+    # spec 43566c0a9bdc1f1f v1 R2 VO2 classification tree (F3,Q1,Q2,Q4 / C5-C7)
     def reference_dirs_and_paths(self):
         ref = self.make_repo()
         self.assertEqual(run_installer("install", str(ref)).returncode, 0)
@@ -2607,7 +2603,7 @@ class TestGitignoreConsent(InstallerTestCase):
         self.assertNotIn("!/.harness/", lines)
         self.assertNotIn("!/.codex/", lines)
 
-    # R2 VO3 state transition (F4,Q5 / C8)
+    # spec 43566c0a9bdc1f1f v1 R2 VO3 state transition (F4,Q5 / C8)
     def test_r2vo3_update_from_0150_announces_0151_only_and_records_it(self):
         repo = self.make_repo()
         self.assertEqual(run_installer("install", str(repo)).returncode, 0)

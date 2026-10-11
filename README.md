@@ -24,10 +24,10 @@ python3 installer/harness.py doctor <target-a> <target-b>
 | `.harness/` | 버전이 기록된 payload, 스크립트, 설정 원본과 소유 파일의 SHA manifest |
 | `AGENTS.md`, `CLAUDE.md` | 프로젝트 정의와 관리형 문서 규칙; Claude는 `@AGENTS.md`로 같은 규칙을 읽음 |
 | `.agents/skills/`, `.claude/skills/` | `workflow-approach`, `requirement-oracle`, `architecture-options`, `harness-import`, `test-audit`, `rearrange-docs` 스킬과 Claude용 링크 |
-| `.claude/agents/`, `.codex/agents/` | 공통 원본에서 생성한 `implementer`, `test-implementer`, `test-verifier`, `code-explorer` 정의 |
+| `.claude/agents/`, `.codex/agents/` | 공통 원본에서 생성한 `implementer`, `test-implementer`, `test-verifier`, `mutant-triager`, `code-explorer` 정의 |
 | `.claude/settings.json`, `.codex/hooks.json` | 세션·서브에이전트·도구 훅 |
 | `.harness/git/` | 커밋 전 문서 규칙 검증과 기존 Git hook 연결 |
-| `agent-docs/` | ADR, 거절 기록, handoff, 요구사항, spec 및 실행 기록의 위치 |
+| `agent-docs/` | ADR, 거절 기록, handoff, spec 및 실행 기록의 위치 |
 | `.github/workflows/harness-comment-warning.yml` | PR에서 새 주석과 docstring을 알리는 선택적 GitHub Actions 워크플로우 |
 
 설치 시 기존 Claude/Codex hook 설정에는 하네스 항목을 병합합니다. 새로 설치하는 저장소에 기존 `AGENTS.md`가 있으면 프로젝트 정의만 남기고 원문을 `agent-docs/logs/`에 보관합니다. 기존 `CLAUDE.md`에는 필요하면 `@AGENTS.md`를 추가합니다. 파일이나 스킬 이름이 충돌하면 설치를 중단하고 경로를 보고합니다.

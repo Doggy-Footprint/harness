@@ -7,7 +7,7 @@ argument-hint: "[path]"
 
 # Scope
 
-The argument is a path to audit; without one, audit the whole repository. Run `python3 .harness/bin/test_scan.py <path>` first. It lists test files and tests in python, javascript/typescript, go, rust, java, kotlin, csharp/C#, swift, php, ruby, and C/C++, suspicious signals (`skip`, `xfail`, `focused`, `no_assert`, `empty`, `sleep`, `heavy_mock`, `duplicate_name`, `trivial_assert`, `mock_only_assert`, `snapshot_only`, `broad_exception`, `swallowed_error`, `nondeterministic`, `retry`, `incomplete`), runner candidates, and `predates_harness`. Read only flagged files and files relevant to a feature under review, to save tokens. The scanner is rule-based and approximate for non-Python languages; verify a flag by reading before relying on it.
+The argument is a path to audit; without one, audit the whole repository. Run `python3 .harness/bin/test_scan.py <path>` first. It lists test files and tests in python, javascript/typescript, go, rust, java, kotlin, csharp/C#, swift, php, ruby, and C/C++, suspicious signals (see Flag review), runner candidates, and `predates_harness`. Read only flagged files and files relevant to a feature under review, to save tokens. The scanner is rule-based and approximate for non-Python languages; verify a flag by reading before relying on it.
 
 For each `language` in the scan's `files`, read `languages/<language>.md` next to this file before reviewing those files. It lists what the scanner misses, framework-specific checks, false positives per flag, and how to run one test and collect coverage. Also read it for a language whose test files appear only in `inventory`, since the scanner misses some frameworks. Skip other languages.
 

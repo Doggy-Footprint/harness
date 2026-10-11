@@ -15,7 +15,6 @@
 
 ## False positives
 - `duplicate_name`: the same title in different `describe`/`context` blocks.
-- `no_assert`: custom matchers or helper methods.
 - `nondeterministic`: `travel_to`/`Timecop` in an `around` hook of `spec_helper.rb`.
 
 ## Run and coverage

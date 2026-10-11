@@ -89,7 +89,6 @@ def test_name(lang, ident):
     }[lang]
 
 
-# ---------------------------------------------------------------- rendering
 class T:
     """One test to render. Lines in prefix/body/after carry no indentation."""
 
@@ -340,7 +339,6 @@ class RuleScanCase(ScanTestCase):
                     self.assertNotIn(flag, found[n]["flags"])
 
 
-# ---------------------------------------------------------------- rule data
 ND_PY = ["random.randint(1, 6)", "datetime.now()", "datetime.utcnow()", "date.today()", "time.time()", "uuid.uuid4()"]
 RULES = {
     "python": [
@@ -736,7 +734,6 @@ class TestVO7Guards(RuleScanCase):
         self.assertIn("nondeterministic", self.entry_tests(data, "x.test.js")[0]["flags"])
 
 
-# ---------------------------------------------------------------- VO1
 class TestVO1FileDetection(ScanTestCase):
     # VO1 (FR1, E2): equivalence partitioning, 19 globs + 6 content-requirement items
     GLOBS = {
@@ -847,7 +844,6 @@ class TestVO1FileDetection(ScanTestCase):
                 self.assertEqual([t["name"] for t in paths[f"r{n}.rs"]["tests"]], ["t"])
 
 
-# ---------------------------------------------------------------- VO2
 class TestVO2StartForms(ScanTestCase):
     # VO2 (FR2, N1, G2, G3): equivalence partitioning over every start form
 
@@ -1080,7 +1076,6 @@ class TestVO2StartForms(ScanTestCase):
                 self.assertNotIn("duplicate_name", test["flags"])
 
 
-# ---------------------------------------------------------------- VO3
 ND_BOUNDARY = {
     "javascript": "Math.random()", "typescript": "Math.random()", "go": "time.Now()", "rust": "rand::rng()",
     "java": "Math.random()", "kotlin": "Random.nextInt()", "csharp": "Guid.NewGuid()", "swift": "UUID()",
@@ -1284,7 +1279,6 @@ class TestVO3BodyModel(RuleScanCase):
         self.assertIn("skip", by_name["inside"])
 
 
-# ---------------------------------------------------------------- VO5
 class TestVO5GroupPropagation(RuleScanCase):
     # VO5 (FR6, B1, B2): inside the group -> flag, outside -> none
 
@@ -1430,7 +1424,6 @@ class TestVO5GroupPropagation(RuleScanCase):
         self.assert_in_out("B1", flags, ["inside"], ["after"], "skip")
 
 
-# ---------------------------------------------------------------- VO8
 NEW_RUNNERS = ["dotnet", "rspec", "rake", "swift", "phpunit", "composer", "ctest"]
 
 
@@ -1585,7 +1578,6 @@ class TestVO8Runners(ScanTestCase):
         self.assertLess(max(old), min(new))
 
 
-# ---------------------------------------------------------------- VO10
 class TestVO10Robustness(ScanTestCase):
     # VO10 (Errors, E1, E2, QR2, QR3): error guessing; no coverage target
     OTHER = "def test_ok():\n    assert 1\n"
@@ -1686,7 +1678,6 @@ class TestVO10Robustness(ScanTestCase):
         )
 
 
-# ---------------------------------------------------------------- correction batch 2
 NESTED = {
     "go": "if x {\n\t\tf()\n\t}", "rust": "if x {\n        f();\n    }", "swift": "if x {\n            f()\n        }",
     "php": "if ($x) {\n            f();\n        }", "cpp": "if (x) {\n    f();\n  }",

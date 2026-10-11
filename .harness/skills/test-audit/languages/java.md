@@ -16,7 +16,6 @@
 ## False positives
 - `no_assert`: AssertJ BDD `then(x).isEqualTo(...)` and Hamcrest-only helpers not named `assert*`.
 - `skip`: `Assumptions.assume*` skips only under specific conditions.
-- `mock_only_assert`: `verify` of a side-effect-only collaborator is the real contract.
 
 ## Run and coverage
 - Single test: `mvn -Dtest=FooTest#bar test` or `./gradlew test --tests 'FooTest.bar'`; `mvn verify` runs failsafe `*IT` tests.

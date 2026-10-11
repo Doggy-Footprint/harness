@@ -13,7 +13,7 @@
 - Memory errors and undefined behavior hidden by a passing run; use sanitizer builds when the project has them.
 
 ## False positives
-- `no_assert`: project-specific assertion macros or helper functions.
+- `no_assert`: project-specific assertion macros.
 - `sleep`: `sleep_for` in tests that deliberately exercise timing.
 - `nondeterministic`: `std::random_device` used only to seed a generator whose seed is logged.
 

@@ -14,8 +14,7 @@
 - `pytest.approx` tolerances wide enough to hide a wrong result.
 
 ## False positives
-- `no_assert`: assertions inside helpers or fixtures; Hypothesis tests that assert through helpers.
-- `duplicate_name`: the same method name in different classes of one file.
+- `no_assert`: Hypothesis tests that assert through helpers.
 - `sleep`: `asyncio.sleep(0)` used to yield control.
 - `nondeterministic`: a seed or `freeze_time` set in `conftest.py` (another file); `time.time()` used only to measure duration.
 - `skip`: `skipif` on a platform condition that is false in CI.
