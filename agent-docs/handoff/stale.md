@@ -40,3 +40,8 @@ File: 286944a68391e237-verification-loop-improvements.md
 Summary: General workflow changes to complete verifier audits before one routed, batched correction cycle
 Related Files: harness/skills/contract-workflow/SKILL.md, harness/agents/test-implementer.md, harness/agents/test-verifier.md, harness/agents/implementer.md, tests/test_installer.py
 Related Symbols: Verification Obligations, coverage map, finding ledger, correction batch
+---
+File: fb75c4b9bf034034-selfcheck-m1-verifier-limit.md
+Summary: selfcheck M1 (SWE-bench scorer and fixtures) stopped at the verifier limit with EG9–EG11 and SC4 open; fixtures and review evidence R1–R6 produced
+Related Files: selfcheck/, agent-docs/spec-logs/323a0faf25256262-selfcheck-scorer-fixtures.md, agent-docs/adr/5c4c01bdc91769f7-selfcheck-swe-bench-baseline.md
+Related Symbols: leak_check, score_prediction, evaluate, docker_exec, calibrate_instance

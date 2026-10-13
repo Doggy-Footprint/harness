@@ -1,0 +1,29 @@
+{
+  "test_patterns": [
+    "(^|/)(tests?|testing)(/|$)",
+    "(^|/)test_[^/]*$",
+    "_tests?\\.py$",
+    "(^|/)conftest\\.py$"
+  ],
+  "excluded": [
+    ".harness/**",
+    ".claude/**",
+    ".agents/**",
+    ".codex/**",
+    "agent-docs/**",
+    "AGENTS.md",
+    "CLAUDE.md",
+    ".githooks/**",
+    ".github/workflows/harness-comment-warning.yml",
+    ".gitignore",
+    "mutants/**",
+    ".mutmut-cache",
+    ".hypothesis/**",
+    ".coverage*",
+    "htmlcov/**",
+    "**/*.orig",
+    "**/*.rej",
+    "**/__pycache__/**",
+    "**/*.pyc"
+  ]
+}

@@ -1,0 +1,5289 @@
+[
+ {
+  "instance_id": "astropy__astropy-12907",
+  "patch_files": [
+   "astropy/modeling/separable.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/modeling/tests/test_separable.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-13033",
+  "patch_files": [
+   "astropy/timeseries/core.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/timeseries/tests/test_sampled.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-13236",
+  "patch_files": [
+   "astropy/table/table.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/table/tests/test_mixin.py",
+   "astropy/table/tests/test_table.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-13398",
+  "patch_files": [
+   "astropy/coordinates/builtin_frames/__init__.py",
+   "astropy/coordinates/builtin_frames/intermediate_rotation_transforms.py",
+   "astropy/coordinates/builtin_frames/itrs.py",
+   "astropy/coordinates/builtin_frames/itrs_observed_transforms.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/coordinates/tests/test_intermediate_transformations.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-13453",
+  "patch_files": [
+   "astropy/io/ascii/html.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/io/ascii/tests/test_html.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-13579",
+  "patch_files": [
+   "astropy/wcs/wcsapi/wrappers/sliced_wcs.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/wcs/wcsapi/wrappers/tests/test_sliced_wcs.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-13977",
+  "patch_files": [
+   "astropy/units/quantity.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/units/tests/test_quantity.py",
+   "astropy/units/tests/test_quantity_ufuncs.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-14096",
+  "patch_files": [
+   "astropy/coordinates/sky_coordinate.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/coordinates/tests/test_sky_coord.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-14182",
+  "patch_files": [
+   "astropy/io/ascii/rst.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/io/ascii/tests/test_rst.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-14309",
+  "patch_files": [
+   "astropy/io/fits/connect.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/io/fits/tests/test_connect.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-14365",
+  "patch_files": [
+   "astropy/io/ascii/qdp.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/io/ascii/tests/test_qdp.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-14369",
+  "patch_files": [
+   "astropy/units/format/cds.py",
+   "astropy/units/format/cds_parsetab.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/units/tests/test_format.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-14508",
+  "patch_files": [
+   "astropy/io/fits/card.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/io/fits/tests/test_header.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-14539",
+  "patch_files": [
+   "astropy/io/fits/diff.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/io/fits/tests/test_diff.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-14598",
+  "patch_files": [
+   "astropy/io/fits/card.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/io/fits/tests/test_header.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-14995",
+  "patch_files": [
+   "astropy/nddata/mixins/ndarithmetic.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/nddata/mixins/tests/test_ndarithmetic.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-7166",
+  "patch_files": [
+   "astropy/utils/misc.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/utils/tests/test_misc.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-7336",
+  "patch_files": [
+   "astropy/units/decorators.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/units/tests/test_quantity_annotations.py",
+   "astropy/units/tests/test_quantity_decorator.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-7606",
+  "patch_files": [
+   "astropy/units/core.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/units/tests/test_units.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-7671",
+  "patch_files": [
+   "astropy/utils/introspection.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/utils/tests/test_introspection.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-8707",
+  "patch_files": [
+   "astropy/io/fits/card.py",
+   "astropy/io/fits/header.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/io/fits/tests/test_header.py"
+  ]
+ },
+ {
+  "instance_id": "astropy__astropy-8872",
+  "patch_files": [
+   "astropy/units/quantity.py"
+  ],
+  "repo": "astropy/astropy",
+  "test_patch_files": [
+   "astropy/units/tests/test_quantity.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-10097",
+  "patch_files": [
+   "django/core/validators.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/validators/invalid_urls.txt",
+   "tests/validators/valid_urls.txt"
+  ]
+ },
+ {
+  "instance_id": "django__django-10554",
+  "patch_files": [
+   "django/db/models/sql/compiler.py",
+   "django/db/models/sql/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/queries/test_qs_combinators.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-10880",
+  "patch_files": [
+   "django/db/models/aggregates.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/aggregation/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-10914",
+  "patch_files": [
+   "django/conf/global_settings.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/test_utils/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-10973",
+  "patch_files": [
+   "django/db/backends/postgresql/client.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/dbshell/test_postgresql.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-10999",
+  "patch_files": [
+   "django/utils/dateparse.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/utils_tests/test_dateparse.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11066",
+  "patch_files": [
+   "django/contrib/contenttypes/management/__init__.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/contenttypes_tests/test_operations.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11087",
+  "patch_files": [
+   "django/db/models/deletion.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/delete/models.py",
+   "tests/delete/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11095",
+  "patch_files": [
+   "django/contrib/admin/options.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/generic_inline_admin/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11099",
+  "patch_files": [
+   "django/contrib/auth/validators.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/auth_tests/test_validators.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11119",
+  "patch_files": [
+   "django/template/engine.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/template_tests/test_engine.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11133",
+  "patch_files": [
+   "django/http/response.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/httpwrappers/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11138",
+  "patch_files": [
+   "django/db/backends/mysql/operations.py",
+   "django/db/backends/oracle/operations.py",
+   "django/db/backends/sqlite3/base.py",
+   "django/db/backends/sqlite3/operations.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/timezones/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11141",
+  "patch_files": [
+   "django/db/migrations/loader.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_loader.py",
+   "tests/migrations/test_migrations_namespace_package/0001_initial.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11149",
+  "patch_files": [
+   "django/contrib/admin/options.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_inlines/models.py",
+   "tests/admin_inlines/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11163",
+  "patch_files": [
+   "django/forms/models.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_forms/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11179",
+  "patch_files": [
+   "django/db/models/deletion.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/delete/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11206",
+  "patch_files": [
+   "django/utils/numberformat.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/utils_tests/test_numberformat.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11211",
+  "patch_files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/prefetch_related/models.py",
+   "tests/prefetch_related/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11239",
+  "patch_files": [
+   "django/db/backends/postgresql/client.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/dbshell/test_postgresql.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11265",
+  "patch_files": [
+   "django/db/models/sql/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/filtered_relation/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11276",
+  "patch_files": [
+   "django/utils/html.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_docs/test_views.py",
+   "tests/auth_tests/test_forms.py",
+   "tests/forms_tests/tests/test_forms.py",
+   "tests/forms_tests/widget_tests/base.py",
+   "tests/forms_tests/widget_tests/test_clearablefileinput.py",
+   "tests/model_forms/tests.py",
+   "tests/template_tests/filter_tests/test_addslashes.py",
+   "tests/template_tests/filter_tests/test_make_list.py",
+   "tests/template_tests/filter_tests/test_title.py",
+   "tests/template_tests/filter_tests/test_urlize.py",
+   "tests/template_tests/syntax_tests/test_url.py",
+   "tests/utils_tests/test_html.py",
+   "tests/view_tests/tests/test_csrf.py",
+   "tests/view_tests/tests/test_debug.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11292",
+  "patch_files": [
+   "django/core/management/base.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/user_commands/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11299",
+  "patch_files": [
+   "django/db/models/sql/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_operations.py",
+   "tests/queries/test_query.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11333",
+  "patch_files": [
+   "django/urls/base.py",
+   "django/urls/resolvers.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/urlpatterns/test_resolvers.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11400",
+  "patch_files": [
+   "django/contrib/admin/filters.py",
+   "django/db/models/fields/__init__.py",
+   "django/db/models/fields/reverse_related.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_filters/tests.py",
+   "tests/model_fields/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11433",
+  "patch_files": [
+   "django/forms/models.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_forms/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11451",
+  "patch_files": [
+   "django/contrib/auth/backends.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/auth_tests/test_auth_backends.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11477",
+  "patch_files": [
+   "django/urls/resolvers.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/i18n/patterns/tests.py",
+   "tests/i18n/patterns/urls/default.py",
+   "tests/urlpatterns/path_urls.py",
+   "tests/urlpatterns/tests.py",
+   "tests/urlpatterns_reverse/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11490",
+  "patch_files": [
+   "django/db/models/sql/compiler.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/queries/test_qs_combinators.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11532",
+  "patch_files": [
+   "django/core/mail/message.py",
+   "django/core/mail/utils.py",
+   "django/core/validators.py",
+   "django/utils/encoding.py",
+   "django/utils/html.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/mail/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11551",
+  "patch_files": [
+   "django/contrib/admin/checks.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/modeladmin/test_checks.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11555",
+  "patch_files": [
+   "django/db/models/sql/compiler.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/ordering/models.py",
+   "tests/ordering/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11603",
+  "patch_files": [
+   "django/db/models/aggregates.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/aggregation/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11728",
+  "patch_files": [
+   "django/contrib/admindocs/utils.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_docs/test_views.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11734",
+  "patch_files": [
+   "django/db/models/fields/__init__.py",
+   "django/db/models/fields/related_lookups.py",
+   "django/db/models/sql/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/queries/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11740",
+  "patch_files": [
+   "django/db/migrations/autodetector.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_autodetector.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11749",
+  "patch_files": [
+   "django/core/management/__init__.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/user_commands/management/commands/mutually_exclusive_required.py",
+   "tests/user_commands/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11790",
+  "patch_files": [
+   "django/contrib/auth/forms.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/auth_tests/test_forms.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11815",
+  "patch_files": [
+   "django/db/migrations/serializer.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_writer.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11820",
+  "patch_files": [
+   "django/db/models/base.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/invalid_models_tests/test_models.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11848",
+  "patch_files": [
+   "django/utils/http.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/utils_tests/test_http.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11880",
+  "patch_files": [
+   "django/forms/fields.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/forms_tests/tests/test_forms.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11885",
+  "patch_files": [
+   "django/contrib/admin/utils.py",
+   "django/db/models/deletion.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/delete/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11951",
+  "patch_files": [
+   "django/db/models/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/bulk_create/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11964",
+  "patch_files": [
+   "django/db/models/enums.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_enums/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-11999",
+  "patch_files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_fields/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12039",
+  "patch_files": [
+   "django/db/backends/ddl_references.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/indexes/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12050",
+  "patch_files": [
+   "django/db/models/sql/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/queries/test_query.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12125",
+  "patch_files": [
+   "django/db/migrations/serializer.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_writer.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12143",
+  "patch_files": [
+   "django/contrib/admin/options.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_changelist/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12155",
+  "patch_files": [
+   "django/contrib/admindocs/utils.py",
+   "django/contrib/admindocs/views.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_docs/test_utils.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12193",
+  "patch_files": [
+   "django/forms/widgets.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/forms_tests/widget_tests/test_checkboxinput.py",
+   "tests/postgres_tests/test_array.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12209",
+  "patch_files": [
+   "django/db/models/base.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/serializers/models/data.py",
+   "tests/serializers/test_data.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12262",
+  "patch_files": [
+   "django/template/library.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/template_tests/templatetags/inclusion.py",
+   "tests/template_tests/test_custom.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12273",
+  "patch_files": [
+   "django/db/models/base.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_inheritance_regress/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12276",
+  "patch_files": [
+   "django/forms/widgets.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/forms_tests/tests/test_forms.py",
+   "tests/forms_tests/widget_tests/test_fileinput.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12304",
+  "patch_files": [
+   "django/db/models/enums.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_enums/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12308",
+  "patch_files": [
+   "django/contrib/admin/utils.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_utils/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12325",
+  "patch_files": [
+   "django/db/models/base.py",
+   "django/db/models/options.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/invalid_models_tests/test_models.py",
+   "tests/invalid_models_tests/test_relative_fields.py",
+   "tests/migrations/test_state.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12406",
+  "patch_files": [
+   "django/db/models/fields/related.py",
+   "django/forms/models.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_forms/models.py",
+   "tests/model_forms/test_modelchoicefield.py",
+   "tests/model_forms/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12419",
+  "patch_files": [
+   "django/conf/global_settings.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/project_template/test_settings.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12663",
+  "patch_files": [
+   "django/db/models/sql/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/expressions/models.py",
+   "tests/expressions/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12708",
+  "patch_files": [
+   "django/db/backends/base/schema.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_base.py",
+   "tests/migrations/test_operations.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12713",
+  "patch_files": [
+   "django/contrib/admin/options.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_widgets/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12741",
+  "patch_files": [
+   "django/core/management/commands/flush.py",
+   "django/db/backends/base/operations.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/backends/base/test_operations.py",
+   "tests/backends/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12754",
+  "patch_files": [
+   "django/db/migrations/autodetector.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_autodetector.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12774",
+  "patch_files": [
+   "django/db/models/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/lookup/models.py",
+   "tests/lookup/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12858",
+  "patch_files": [
+   "django/db/models/base.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/invalid_models_tests/test_models.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-12965",
+  "patch_files": [
+   "django/db/models/sql/compiler.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/delete/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13012",
+  "patch_files": [
+   "django/db/models/expressions.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/expressions/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13023",
+  "patch_files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_fields/test_decimalfield.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13028",
+  "patch_files": [
+   "django/db/models/sql/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/queries/models.py",
+   "tests/queries/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13033",
+  "patch_files": [
+   "django/db/models/sql/compiler.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/ordering/models.py",
+   "tests/ordering/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13089",
+  "patch_files": [
+   "django/core/cache/backends/db.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/cache/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13109",
+  "patch_files": [
+   "django/db/models/fields/related.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_forms/models.py",
+   "tests/model_forms/tests.py",
+   "tests/validation/models.py",
+   "tests/validation/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13112",
+  "patch_files": [
+   "django/db/models/fields/related.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_state.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13121",
+  "patch_files": [
+   "django/db/backends/base/operations.py",
+   "django/db/backends/mysql/operations.py",
+   "django/db/backends/sqlite3/operations.py",
+   "django/db/models/expressions.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/backends/base/test_operations.py",
+   "tests/expressions/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13128",
+  "patch_files": [
+   "django/db/models/expressions.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/expressions/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13158",
+  "patch_files": [
+   "django/db/models/sql/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/queries/test_qs_combinators.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13195",
+  "patch_files": [
+   "django/contrib/messages/storage/cookie.py",
+   "django/contrib/sessions/middleware.py",
+   "django/http/response.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/messages_tests/test_cookie.py",
+   "tests/responses/test_cookie.py",
+   "tests/sessions_tests/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13212",
+  "patch_files": [
+   "django/core/validators.py",
+   "django/forms/fields.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/forms_tests/tests/test_validators.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13279",
+  "patch_files": [
+   "django/contrib/sessions/backends/base.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/sessions_tests/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13297",
+  "patch_files": [
+   "django/views/generic/base.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/generic_views/test_base.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13315",
+  "patch_files": [
+   "django/forms/models.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_forms/models.py",
+   "tests/model_forms/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13343",
+  "patch_files": [
+   "django/db/models/fields/files.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/file_storage/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13344",
+  "patch_files": [
+   "django/contrib/sessions/middleware.py",
+   "django/middleware/cache.py",
+   "django/middleware/security.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/cache/tests.py",
+   "tests/deprecation/test_middleware_mixin.py",
+   "tests/runtests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13346",
+  "patch_files": [
+   "django/db/models/fields/json.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_fields/test_jsonfield.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13363",
+  "patch_files": [
+   "django/db/models/functions/datetime.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/db_functions/datetime/test_extract_trunc.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13401",
+  "patch_files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_fields/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13406",
+  "patch_files": [
+   "django/db/models/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/queryset_pickle/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13410",
+  "patch_files": [
+   "django/core/files/locks.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/files/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13417",
+  "patch_files": [
+   "django/db/models/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/queries/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13449",
+  "patch_files": [
+   "django/db/models/expressions.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/expressions_window/models.py",
+   "tests/expressions_window/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13512",
+  "patch_files": [
+   "django/contrib/admin/utils.py",
+   "django/forms/fields.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_utils/tests.py",
+   "tests/forms_tests/field_tests/test_jsonfield.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13513",
+  "patch_files": [
+   "django/views/debug.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/view_tests/tests/test_debug.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13516",
+  "patch_files": [
+   "django/core/management/base.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/user_commands/management/commands/outputwrapper.py",
+   "tests/user_commands/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13551",
+  "patch_files": [
+   "django/contrib/auth/tokens.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/auth_tests/models/__init__.py",
+   "tests/auth_tests/models/with_custom_email_field.py",
+   "tests/auth_tests/test_models.py",
+   "tests/auth_tests/test_tokens.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13568",
+  "patch_files": [
+   "django/contrib/auth/checks.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/auth_tests/test_checks.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13569",
+  "patch_files": [
+   "django/db/models/functions/math.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/aggregation/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13590",
+  "patch_files": [
+   "django/db/models/sql/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/expressions/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13658",
+  "patch_files": [
+   "django/core/management/__init__.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_scripts/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13670",
+  "patch_files": [
+   "django/utils/dateformat.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/utils_tests/test_dateformat.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13741",
+  "patch_files": [
+   "django/contrib/auth/forms.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/auth_tests/test_forms.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13786",
+  "patch_files": [
+   "django/db/migrations/operations/models.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_optimizer.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13794",
+  "patch_files": [
+   "django/utils/functional.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/template_tests/filter_tests/test_add.py",
+   "tests/utils_tests/test_functional.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13807",
+  "patch_files": [
+   "django/db/backends/sqlite3/base.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/backends/models.py",
+   "tests/backends/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13809",
+  "patch_files": [
+   "django/core/management/commands/runserver.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_scripts/tests.py",
+   "tests/utils_tests/test_autoreload.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13810",
+  "patch_files": [
+   "django/core/handlers/base.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/middleware_exceptions/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13820",
+  "patch_files": [
+   "django/db/migrations/loader.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_loader.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13821",
+  "patch_files": [
+   "django/db/backends/sqlite3/base.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/backends/sqlite/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13837",
+  "patch_files": [
+   "django/utils/autoreload.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/utils_tests/test_autoreload.py",
+   "tests/utils_tests/test_module/__main__.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13925",
+  "patch_files": [
+   "django/db/models/base.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/check_framework/test_model_checks.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13933",
+  "patch_files": [
+   "django/forms/models.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/forms_tests/tests/test_error_messages.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-13964",
+  "patch_files": [
+   "django/db/models/base.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/many_to_one/models.py",
+   "tests/many_to_one/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14007",
+  "patch_files": [
+   "django/db/models/sql/compiler.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/custom_pk/fields.py",
+   "tests/custom_pk/models.py",
+   "tests/custom_pk/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14011",
+  "patch_files": [
+   "django/core/servers/basehttp.py",
+   "django/db/backends/sqlite3/features.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "django/test/testcases.py",
+   "tests/servers/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14017",
+  "patch_files": [
+   "django/db/models/query_utils.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/expressions/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14034",
+  "patch_files": [
+   "django/forms/boundfield.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/forms_tests/field_tests/test_multivaluefield.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14053",
+  "patch_files": [
+   "django/contrib/staticfiles/storage.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/staticfiles_tests/test_storage.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14089",
+  "patch_files": [
+   "django/utils/datastructures.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/utils_tests/test_datastructures.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14122",
+  "patch_files": [
+   "django/db/models/sql/compiler.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/ordering/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14140",
+  "patch_files": [
+   "django/db/models/query_utils.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/expressions/tests.py",
+   "tests/queries/test_q.py",
+   "tests/queryset_pickle/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14155",
+  "patch_files": [
+   "django/urls/resolvers.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/urlpatterns_reverse/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14170",
+  "patch_files": [
+   "django/db/backends/base/operations.py",
+   "django/db/models/lookups.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/db_functions/datetime/test_extract_trunc.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14238",
+  "patch_files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_fields/test_autofield.py",
+   "tests/model_options/test_default_pk.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14311",
+  "patch_files": [
+   "django/utils/autoreload.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/utils_tests/test_autoreload.py",
+   "tests/utils_tests/test_module/main_module.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14315",
+  "patch_files": [
+   "django/db/backends/base/client.py",
+   "django/db/backends/postgresql/client.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/backends/base/test_client.py",
+   "tests/dbshell/test_postgresql.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14349",
+  "patch_files": [
+   "django/core/validators.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/validators/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14351",
+  "patch_files": [
+   "django/db/models/lookups.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/aggregation_regress/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14373",
+  "patch_files": [
+   "django/utils/dateformat.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/utils_tests/test_dateformat.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14376",
+  "patch_files": [
+   "django/db/backends/mysql/base.py",
+   "django/db/backends/mysql/client.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/dbshell/test_mysql.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14404",
+  "patch_files": [
+   "django/contrib/admin/sites.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_views/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14434",
+  "patch_files": [
+   "django/db/backends/base/schema.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/schema/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14493",
+  "patch_files": [
+   "django/contrib/staticfiles/storage.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/staticfiles_tests/storage.py",
+   "tests/staticfiles_tests/test_storage.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14500",
+  "patch_files": [
+   "django/db/migrations/executor.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_executor.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14534",
+  "patch_files": [
+   "django/forms/boundfield.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/forms_tests/tests/test_forms.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14539",
+  "patch_files": [
+   "django/utils/html.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/utils_tests/test_html.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14559",
+  "patch_files": [
+   "django/db/models/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/queries/test_bulk_update.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14580",
+  "patch_files": [
+   "django/db/migrations/serializer.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_writer.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14608",
+  "patch_files": [
+   "django/forms/formsets.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_views/tests.py",
+   "tests/forms_tests/tests/test_formsets.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14631",
+  "patch_files": [
+   "django/forms/boundfield.py",
+   "django/forms/forms.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/forms_tests/tests/test_forms.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14672",
+  "patch_files": [
+   "django/db/models/fields/reverse_related.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/invalid_models_tests/test_models.py",
+   "tests/m2m_through/models.py",
+   "tests/m2m_through/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14725",
+  "patch_files": [
+   "django/forms/models.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_formsets/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14752",
+  "patch_files": [
+   "django/contrib/admin/views/autocomplete.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_views/test_autocomplete_view.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14765",
+  "patch_files": [
+   "django/db/migrations/state.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_state.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14771",
+  "patch_files": [
+   "django/utils/autoreload.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/utils_tests/test_autoreload.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14787",
+  "patch_files": [
+   "django/utils/decorators.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/decorators/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14792",
+  "patch_files": [
+   "django/utils/timezone.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/utils_tests/test_timezone.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14855",
+  "patch_files": [
+   "django/contrib/admin/helpers.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_views/admin.py",
+   "tests/admin_views/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14915",
+  "patch_files": [
+   "django/forms/models.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_forms/test_modelchoicefield.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-14999",
+  "patch_files": [
+   "django/db/migrations/operations/models.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_operations.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15022",
+  "patch_files": [
+   "django/contrib/admin/options.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_changelist/admin.py",
+   "tests/admin_changelist/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15037",
+  "patch_files": [
+   "django/core/management/commands/inspectdb.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/inspectdb/models.py",
+   "tests/inspectdb/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15098",
+  "patch_files": [
+   "django/utils/translation/trans_real.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/i18n/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15103",
+  "patch_files": [
+   "django/template/defaultfilters.py",
+   "django/utils/html.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/template_tests/filter_tests/test_json_script.py",
+   "tests/utils_tests/test_html.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15104",
+  "patch_files": [
+   "django/db/migrations/autodetector.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_autodetector.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15127",
+  "patch_files": [
+   "django/contrib/messages/apps.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/messages_tests/base.py",
+   "tests/messages_tests/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15128",
+  "patch_files": [
+   "django/db/models/sql/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/queries/models.py",
+   "tests/queries/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15161",
+  "patch_files": [
+   "django/db/models/expressions.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/expressions/tests.py",
+   "tests/migrations/test_writer.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15252",
+  "patch_files": [
+   "django/db/migrations/executor.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/backends/base/test_creation.py",
+   "tests/migrations/test_executor.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15268",
+  "patch_files": [
+   "django/db/migrations/operations/models.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_autodetector.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15277",
+  "patch_files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/expressions/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15278",
+  "patch_files": [
+   "django/db/backends/sqlite3/schema.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/schema/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15280",
+  "patch_files": [
+   "django/db/models/fields/related_descriptors.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/prefetch_related/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15315",
+  "patch_files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_fields/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15368",
+  "patch_files": [
+   "django/db/models/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/queries/test_bulk_update.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15375",
+  "patch_files": [
+   "django/db/models/aggregates.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/aggregation/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15380",
+  "patch_files": [
+   "django/db/migrations/autodetector.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_autodetector.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15382",
+  "patch_files": [
+   "django/db/models/expressions.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/expressions/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15467",
+  "patch_files": [
+   "django/contrib/admin/options.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_widgets/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15499",
+  "patch_files": [
+   "django/db/migrations/operations/models.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_optimizer.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15503",
+  "patch_files": [
+   "django/db/models/fields/json.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_fields/test_jsonfield.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15525",
+  "patch_files": [
+   "django/core/serializers/base.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/backends/sqlite/test_features.py",
+   "tests/fixtures_regress/fixtures/nk_with_foreign_key.json",
+   "tests/fixtures_regress/models.py",
+   "tests/fixtures_regress/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15554",
+  "patch_files": [
+   "django/db/models/sql/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/filtered_relation/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15561",
+  "patch_files": [
+   "django/db/backends/base/schema.py",
+   "django/db/models/fields/__init__.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/schema/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15563",
+  "patch_files": [
+   "django/db/models/sql/compiler.py",
+   "django/db/models/sql/subqueries.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_inheritance_regress/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15569",
+  "patch_files": [
+   "django/db/models/query_utils.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/custom_lookups/tests.py",
+   "tests/model_fields/test_jsonfield.py",
+   "tests/schema/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15572",
+  "patch_files": [
+   "django/template/autoreload.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/template_tests/test_autoreloader.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15629",
+  "patch_files": [
+   "django/db/backends/base/schema.py",
+   "django/db/backends/oracle/features.py",
+   "django/db/backends/sqlite3/schema.py",
+   "django/db/models/fields/related.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_base.py",
+   "tests/migrations/test_operations.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15695",
+  "patch_files": [
+   "django/db/migrations/operations/models.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_operations.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15731",
+  "patch_files": [
+   "django/db/models/manager.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/basic/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15732",
+  "patch_files": [
+   "django/db/backends/base/schema.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_operations.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15741",
+  "patch_files": [
+   "django/utils/formats.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/i18n/tests.py",
+   "tests/template_tests/filter_tests/test_date.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15814",
+  "patch_files": [
+   "django/db/models/sql/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/proxy_models/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15851",
+  "patch_files": [
+   "django/db/backends/postgresql/client.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/dbshell/test_postgresql.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15863",
+  "patch_files": [
+   "django/template/defaultfilters.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/template_tests/filter_tests/test_floatformat.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15916",
+  "patch_files": [
+   "django/forms/models.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_forms/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15930",
+  "patch_files": [
+   "django/db/models/expressions.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/expressions_case/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15957",
+  "patch_files": [
+   "django/db/models/fields/related_descriptors.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/prefetch_related/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15973",
+  "patch_files": [
+   "django/db/migrations/autodetector.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_autodetector.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-15987",
+  "patch_files": [
+   "django/core/management/commands/loaddata.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/fixtures_regress/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16032",
+  "patch_files": [
+   "django/db/models/fields/related_lookups.py",
+   "django/db/models/sql/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/annotations/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16082",
+  "patch_files": [
+   "django/db/models/expressions.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/expressions/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16100",
+  "patch_files": [
+   "django/contrib/admin/options.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_changelist/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16116",
+  "patch_files": [
+   "django/core/management/commands/makemigrations.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_commands.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16136",
+  "patch_files": [
+   "django/views/generic/base.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/async/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16139",
+  "patch_files": [
+   "django/contrib/auth/forms.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/auth_tests/test_forms.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16145",
+  "patch_files": [
+   "django/core/management/commands/runserver.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_scripts/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16255",
+  "patch_files": [
+   "django/contrib/sitemaps/__init__.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/sitemaps_tests/test_http.py",
+   "tests/sitemaps_tests/urls/http.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16256",
+  "patch_files": [
+   "django/contrib/contenttypes/fields.py",
+   "django/db/models/fields/related_descriptors.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/async/models.py",
+   "tests/async/test_async_related_managers.py",
+   "tests/generic_relations/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16263",
+  "patch_files": [
+   "django/db/models/expressions.py",
+   "django/db/models/query_utils.py",
+   "django/db/models/sql/query.py",
+   "django/db/models/sql/where.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/aggregation/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16315",
+  "patch_files": [
+   "django/db/models/query.py",
+   "django/db/models/sql/compiler.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/bulk_create/models.py",
+   "tests/bulk_create/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16333",
+  "patch_files": [
+   "django/contrib/auth/forms.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/auth_tests/test_forms.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16429",
+  "patch_files": [
+   "django/utils/timesince.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/utils_tests/test_timesince.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16454",
+  "patch_files": [
+   "django/core/management/base.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/user_commands/management/commands/subparser_vanilla.py",
+   "tests/user_commands/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16485",
+  "patch_files": [
+   "django/template/defaultfilters.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/template_tests/filter_tests/test_floatformat.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16493",
+  "patch_files": [
+   "django/db/models/fields/files.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/file_storage/models.py",
+   "tests/file_storage/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16502",
+  "patch_files": [
+   "django/core/servers/basehttp.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/servers/test_basehttp.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16527",
+  "patch_files": [
+   "django/contrib/admin/templatetags/admin_modify.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_views/test_templatetags.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16560",
+  "patch_files": [
+   "django/contrib/postgres/constraints.py",
+   "django/db/models/constraints.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/constraints/tests.py",
+   "tests/postgres_tests/test_constraints.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16569",
+  "patch_files": [
+   "django/forms/formsets.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/forms_tests/tests/test_formsets.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16595",
+  "patch_files": [
+   "django/db/migrations/operations/fields.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_optimizer.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16612",
+  "patch_files": [
+   "django/contrib/admin/sites.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_views/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16631",
+  "patch_files": [
+   "django/contrib/auth/__init__.py",
+   "django/contrib/auth/base_user.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/auth_tests/test_basic.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16642",
+  "patch_files": [
+   "django/http/response.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/responses/test_fileresponse.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16661",
+  "patch_files": [
+   "django/contrib/admin/options.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/modeladmin/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16662",
+  "patch_files": [
+   "django/db/migrations/writer.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_writer.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16667",
+  "patch_files": [
+   "django/forms/widgets.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/forms_tests/field_tests/test_datefield.py",
+   "tests/forms_tests/widget_tests/test_selectdatewidget.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16801",
+  "patch_files": [
+   "django/db/models/fields/files.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_fields/test_imagefield.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16819",
+  "patch_files": [
+   "django/db/migrations/operations/models.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_optimizer.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16877",
+  "patch_files": [
+   "django/template/defaultfilters.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/template_tests/filter_tests/test_escapeseq.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16899",
+  "patch_files": [
+   "django/contrib/admin/checks.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/admin_checks/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16901",
+  "patch_files": [
+   "django/db/models/sql/where.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/xor_lookups/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16938",
+  "patch_files": [
+   "django/core/serializers/python.py",
+   "django/core/serializers/xml_serializer.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/serializers/models/base.py",
+   "tests/serializers/test_json.py",
+   "tests/serializers/test_jsonl.py",
+   "tests/serializers/test_xml.py",
+   "tests/serializers/test_yaml.py",
+   "tests/serializers/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-16950",
+  "patch_files": [
+   "django/forms/models.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/model_formsets/test_uuid.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-17029",
+  "patch_files": [
+   "django/apps/registry.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/apps/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-17084",
+  "patch_files": [
+   "django/db/models/sql/query.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/aggregation/tests.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-17087",
+  "patch_files": [
+   "django/db/migrations/serializer.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_writer.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-7530",
+  "patch_files": [
+   "django/core/management/commands/makemigrations.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/migrations/test_commands.py"
+  ]
+ },
+ {
+  "instance_id": "django__django-9296",
+  "patch_files": [
+   "django/core/paginator.py"
+  ],
+  "repo": "django/django",
+  "test_patch_files": [
+   "tests/pagination/tests.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-13989",
+  "patch_files": [
+   "lib/matplotlib/axes/_axes.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_axes.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-14623",
+  "patch_files": [
+   "lib/matplotlib/axes/_base.py",
+   "lib/matplotlib/ticker.py",
+   "lib/mpl_toolkits/mplot3d/axes3d.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_axes.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-20488",
+  "patch_files": [
+   "lib/matplotlib/image.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_image.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-20676",
+  "patch_files": [
+   "lib/matplotlib/widgets.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_widgets.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-20826",
+  "patch_files": [
+   "lib/matplotlib/axis.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_axes.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-20859",
+  "patch_files": [
+   "lib/matplotlib/legend.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_legend.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-21568",
+  "patch_files": [
+   "lib/matplotlib/dates.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_dates.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-22719",
+  "patch_files": [
+   "lib/matplotlib/category.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_category.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-22865",
+  "patch_files": [
+   "lib/matplotlib/colorbar.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_colorbar.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-22871",
+  "patch_files": [
+   "lib/matplotlib/dates.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_dates.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-23299",
+  "patch_files": [
+   "lib/matplotlib/__init__.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_rcparams.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-23314",
+  "patch_files": [
+   "lib/mpl_toolkits/mplot3d/axes3d.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_axes.py",
+   "lib/mpl_toolkits/tests/test_mplot3d.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-23412",
+  "patch_files": [
+   "lib/matplotlib/patches.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_patches.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-23476",
+  "patch_files": [
+   "lib/matplotlib/figure.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_figure.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-24026",
+  "patch_files": [
+   "lib/matplotlib/stackplot.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_axes.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-24149",
+  "patch_files": [
+   "lib/matplotlib/axes/_axes.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_axes.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-24177",
+  "patch_files": [
+   "lib/matplotlib/axes/_base.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_axes.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-24570",
+  "patch_files": [
+   "lib/matplotlib/offsetbox.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_offsetbox.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-24627",
+  "patch_files": [
+   "lib/matplotlib/axes/_base.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_axes.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-24637",
+  "patch_files": [
+   "lib/matplotlib/offsetbox.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_backend_svg.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-24870",
+  "patch_files": [
+   "lib/matplotlib/contour.py",
+   "lib/matplotlib/tri/_tricontour.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_contour.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-24970",
+  "patch_files": [
+   "lib/matplotlib/colors.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_colors.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-25122",
+  "patch_files": [
+   "lib/matplotlib/mlab.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_mlab.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-25287",
+  "patch_files": [
+   "lib/matplotlib/axis.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_axes.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-25311",
+  "patch_files": [
+   "lib/matplotlib/offsetbox.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_pickle.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-25332",
+  "patch_files": [
+   "lib/matplotlib/cbook.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_pickle.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-25479",
+  "patch_files": [
+   "lib/matplotlib/cm.py",
+   "lib/matplotlib/colors.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_colors.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-25775",
+  "patch_files": [
+   "lib/matplotlib/backends/backend_agg.py",
+   "lib/matplotlib/backends/backend_cairo.py",
+   "lib/matplotlib/text.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_text.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-25960",
+  "patch_files": [
+   "lib/matplotlib/figure.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_figure.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-26113",
+  "patch_files": [
+   "lib/matplotlib/axes/_axes.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_axes.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-26208",
+  "patch_files": [
+   "lib/matplotlib/axes/_base.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_axes.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-26291",
+  "patch_files": [
+   "lib/mpl_toolkits/axes_grid1/inset_locator.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/mpl_toolkits/axes_grid1/tests/test_axes_grid1.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-26342",
+  "patch_files": [
+   "lib/matplotlib/collections.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_contour.py"
+  ]
+ },
+ {
+  "instance_id": "matplotlib__matplotlib-26466",
+  "patch_files": [
+   "lib/matplotlib/text.py"
+  ],
+  "repo": "matplotlib/matplotlib",
+  "test_patch_files": [
+   "lib/matplotlib/tests/test_text.py"
+  ]
+ },
+ {
+  "instance_id": "mwaskom__seaborn-3069",
+  "patch_files": [
+   "seaborn/_core/plot.py"
+  ],
+  "repo": "mwaskom/seaborn",
+  "test_patch_files": [
+   "tests/_core/test_plot.py"
+  ]
+ },
+ {
+  "instance_id": "mwaskom__seaborn-3187",
+  "patch_files": [
+   "seaborn/_core/scales.py",
+   "seaborn/utils.py"
+  ],
+  "repo": "mwaskom/seaborn",
+  "test_patch_files": [
+   "tests/_core/test_plot.py",
+   "tests/test_relational.py"
+  ]
+ },
+ {
+  "instance_id": "pallets__flask-5014",
+  "patch_files": [
+   "src/flask/blueprints.py"
+  ],
+  "repo": "pallets/flask",
+  "test_patch_files": [
+   "tests/test_blueprints.py"
+  ]
+ },
+ {
+  "instance_id": "psf__requests-1142",
+  "patch_files": [
+   "requests/models.py"
+  ],
+  "repo": "psf/requests",
+  "test_patch_files": [
+   "test_requests.py"
+  ]
+ },
+ {
+  "instance_id": "psf__requests-1724",
+  "patch_files": [
+   "requests/sessions.py"
+  ],
+  "repo": "psf/requests",
+  "test_patch_files": [
+   "test_requests.py"
+  ]
+ },
+ {
+  "instance_id": "psf__requests-1766",
+  "patch_files": [
+   "requests/auth.py"
+  ],
+  "repo": "psf/requests",
+  "test_patch_files": [
+   "test_requests.py"
+  ]
+ },
+ {
+  "instance_id": "psf__requests-1921",
+  "patch_files": [
+   "requests/sessions.py"
+  ],
+  "repo": "psf/requests",
+  "test_patch_files": [
+   "test_requests.py"
+  ]
+ },
+ {
+  "instance_id": "psf__requests-2317",
+  "patch_files": [
+   "requests/sessions.py"
+  ],
+  "repo": "psf/requests",
+  "test_patch_files": [
+   "test_requests.py"
+  ]
+ },
+ {
+  "instance_id": "psf__requests-2931",
+  "patch_files": [
+   "requests/models.py"
+  ],
+  "repo": "psf/requests",
+  "test_patch_files": [
+   "test_requests.py"
+  ]
+ },
+ {
+  "instance_id": "psf__requests-5414",
+  "patch_files": [
+   "requests/models.py"
+  ],
+  "repo": "psf/requests",
+  "test_patch_files": [
+   "tests/test_requests.py"
+  ]
+ },
+ {
+  "instance_id": "psf__requests-6028",
+  "patch_files": [
+   "requests/utils.py"
+  ],
+  "repo": "psf/requests",
+  "test_patch_files": [
+   "tests/test_utils.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-2905",
+  "patch_files": [
+   "xarray/core/variable.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_variable.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-3095",
+  "patch_files": [
+   "xarray/core/indexing.py",
+   "xarray/core/variable.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_variable.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-3151",
+  "patch_files": [
+   "xarray/core/combine.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_combine.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-3305",
+  "patch_files": [
+   "xarray/core/dataset.py",
+   "xarray/core/variable.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_dataarray.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-3677",
+  "patch_files": [
+   "xarray/core/dataset.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_merge.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-3993",
+  "patch_files": [
+   "xarray/core/dataarray.py",
+   "xarray/core/dataset.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_dataset.py",
+   "xarray/tests/test_units.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-4075",
+  "patch_files": [
+   "xarray/core/weighted.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_weighted.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-4094",
+  "patch_files": [
+   "xarray/core/dataarray.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_dataset.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-4356",
+  "patch_files": [
+   "xarray/core/nanops.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_duck_array_ops.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-4629",
+  "patch_files": [
+   "xarray/core/merge.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_merge.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-4687",
+  "patch_files": [
+   "xarray/core/computation.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_computation.py",
+   "xarray/tests/test_units.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-4695",
+  "patch_files": [
+   "xarray/core/dataarray.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_dataarray.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-4966",
+  "patch_files": [
+   "xarray/coding/variables.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_coding.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-6461",
+  "patch_files": [
+   "xarray/core/computation.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_computation.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-6599",
+  "patch_files": [
+   "xarray/core/computation.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_computation.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-6721",
+  "patch_files": [
+   "xarray/core/common.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_dataset.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-6744",
+  "patch_files": [
+   "xarray/core/rolling.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_rolling.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-6938",
+  "patch_files": [
+   "xarray/core/dataset.py",
+   "xarray/core/variable.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_variable.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-6992",
+  "patch_files": [
+   "xarray/core/dataset.py",
+   "xarray/core/indexes.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_dataarray.py",
+   "xarray/tests/test_dataset.py",
+   "xarray/tests/test_groupby.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-7229",
+  "patch_files": [
+   "xarray/core/computation.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_computation.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-7233",
+  "patch_files": [
+   "xarray/core/rolling.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_coarsen.py"
+  ]
+ },
+ {
+  "instance_id": "pydata__xarray-7393",
+  "patch_files": [
+   "xarray/core/indexing.py"
+  ],
+  "repo": "pydata/xarray",
+  "test_patch_files": [
+   "xarray/tests/test_indexes.py"
+  ]
+ },
+ {
+  "instance_id": "pylint-dev__pylint-4551",
+  "patch_files": [
+   "pylint/pyreverse/diagrams.py",
+   "pylint/pyreverse/inspector.py",
+   "pylint/pyreverse/utils.py",
+   "pylint/pyreverse/writer.py"
+  ],
+  "repo": "pylint-dev/pylint",
+  "test_patch_files": [
+   "tests/unittest_pyreverse_writer.py"
+  ]
+ },
+ {
+  "instance_id": "pylint-dev__pylint-4604",
+  "patch_files": [
+   "pylint/checkers/variables.py",
+   "pylint/constants.py"
+  ],
+  "repo": "pylint-dev/pylint",
+  "test_patch_files": [
+   "tests/checkers/unittest_variables.py"
+  ]
+ },
+ {
+  "instance_id": "pylint-dev__pylint-4661",
+  "patch_files": [
+   "pylint/config/__init__.py",
+   "setup.cfg"
+  ],
+  "repo": "pylint-dev/pylint",
+  "test_patch_files": [
+   "tests/lint/unittest_lint.py"
+  ]
+ },
+ {
+  "instance_id": "pylint-dev__pylint-4970",
+  "patch_files": [
+   "pylint/checkers/similar.py"
+  ],
+  "repo": "pylint-dev/pylint",
+  "test_patch_files": [
+   "tests/checkers/unittest_similar.py"
+  ]
+ },
+ {
+  "instance_id": "pylint-dev__pylint-6386",
+  "patch_files": [
+   "pylint/config/argument.py",
+   "pylint/config/arguments_manager.py",
+   "pylint/config/utils.py",
+   "pylint/lint/base_options.py"
+  ],
+  "repo": "pylint-dev/pylint",
+  "test_patch_files": [
+   "tests/config/test_config.py"
+  ]
+ },
+ {
+  "instance_id": "pylint-dev__pylint-6528",
+  "patch_files": [
+   "pylint/lint/expand_modules.py",
+   "pylint/lint/pylinter.py"
+  ],
+  "repo": "pylint-dev/pylint",
+  "test_patch_files": [
+   "tests/lint/unittest_lint.py",
+   "tests/regrtest_data/directory/ignored_subdirectory/failing.py",
+   "tests/test_self.py"
+  ]
+ },
+ {
+  "instance_id": "pylint-dev__pylint-6903",
+  "patch_files": [
+   "pylint/lint/run.py"
+  ],
+  "repo": "pylint-dev/pylint",
+  "test_patch_files": [
+   "tests/test_pylint_runners.py"
+  ]
+ },
+ {
+  "instance_id": "pylint-dev__pylint-7080",
+  "patch_files": [
+   "pylint/lint/expand_modules.py"
+  ],
+  "repo": "pylint-dev/pylint",
+  "test_patch_files": [
+   "tests/test_self.py"
+  ]
+ },
+ {
+  "instance_id": "pylint-dev__pylint-7277",
+  "patch_files": [
+   "pylint/__init__.py"
+  ],
+  "repo": "pylint-dev/pylint",
+  "test_patch_files": [
+   "tests/test_self.py"
+  ]
+ },
+ {
+  "instance_id": "pylint-dev__pylint-8898",
+  "patch_files": [
+   "pylint/config/argument.py",
+   "pylint/utils/__init__.py",
+   "pylint/utils/utils.py"
+  ],
+  "repo": "pylint-dev/pylint",
+  "test_patch_files": [
+   "tests/config/test_config.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-10051",
+  "patch_files": [
+   "src/_pytest/logging.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/logging/test_fixture.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-10081",
+  "patch_files": [
+   "src/_pytest/unittest.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/test_unittest.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-10356",
+  "patch_files": [
+   "src/_pytest/mark/structures.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/test_mark.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-5262",
+  "patch_files": [
+   "src/_pytest/capture.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/test_capture.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-5631",
+  "patch_files": [
+   "src/_pytest/compat.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/python/integration.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-5787",
+  "patch_files": [
+   "src/_pytest/reports.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/code/test_code.py",
+   "testing/code/test_excinfo.py",
+   "testing/conftest.py",
+   "testing/test_reports.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-5809",
+  "patch_files": [
+   "src/_pytest/pastebin.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/test_pastebin.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-5840",
+  "patch_files": [
+   "src/_pytest/config/__init__.py",
+   "src/_pytest/pathlib.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/test_conftest.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-6197",
+  "patch_files": [
+   "src/_pytest/python.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/test_collection.py",
+   "testing/test_skipping.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-6202",
+  "patch_files": [
+   "src/_pytest/python.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/test_collection.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-7205",
+  "patch_files": [
+   "src/_pytest/setuponly.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/test_setuponly.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-7236",
+  "patch_files": [
+   "src/_pytest/unittest.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/test_unittest.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-7324",
+  "patch_files": [
+   "src/_pytest/mark/expression.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/test_mark_expression.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-7432",
+  "patch_files": [
+   "src/_pytest/skipping.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/test_skipping.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-7490",
+  "patch_files": [
+   "src/_pytest/skipping.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/test_skipping.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-7521",
+  "patch_files": [
+   "src/_pytest/capture.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/test_capture.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-7571",
+  "patch_files": [
+   "src/_pytest/logging.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/logging/test_fixture.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-7982",
+  "patch_files": [
+   "src/_pytest/pathlib.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/test_collection.py"
+  ]
+ },
+ {
+  "instance_id": "pytest-dev__pytest-8399",
+  "patch_files": [
+   "src/_pytest/python.py",
+   "src/_pytest/unittest.py"
+  ],
+  "repo": "pytest-dev/pytest",
+  "test_patch_files": [
+   "testing/test_nose.py",
+   "testing/test_unittest.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-10297",
+  "patch_files": [
+   "sklearn/linear_model/ridge.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/linear_model/tests/test_ridge.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-10844",
+  "patch_files": [
+   "sklearn/metrics/cluster/supervised.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/metrics/cluster/tests/test_supervised.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-10908",
+  "patch_files": [
+   "sklearn/feature_extraction/text.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/feature_extraction/tests/test_text.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-11310",
+  "patch_files": [
+   "sklearn/model_selection/_search.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/model_selection/tests/test_search.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-11578",
+  "patch_files": [
+   "sklearn/linear_model/logistic.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/linear_model/tests/test_logistic.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-12585",
+  "patch_files": [
+   "sklearn/base.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/tests/test_base.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-12682",
+  "patch_files": [
+   "examples/decomposition/plot_sparse_coding.py",
+   "sklearn/decomposition/dict_learning.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/decomposition/tests/test_dict_learning.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-12973",
+  "patch_files": [
+   "sklearn/linear_model/least_angle.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/linear_model/tests/test_least_angle.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-13124",
+  "patch_files": [
+   "sklearn/model_selection/_split.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/model_selection/tests/test_split.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-13135",
+  "patch_files": [
+   "sklearn/preprocessing/_discretization.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/preprocessing/tests/test_discretization.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-13142",
+  "patch_files": [
+   "sklearn/mixture/base.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/mixture/tests/test_bayesian_mixture.py",
+   "sklearn/mixture/tests/test_gaussian_mixture.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-13328",
+  "patch_files": [
+   "sklearn/linear_model/huber.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/linear_model/tests/test_huber.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-13439",
+  "patch_files": [
+   "sklearn/pipeline.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/tests/test_pipeline.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-13496",
+  "patch_files": [
+   "sklearn/ensemble/iforest.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/ensemble/tests/test_iforest.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-13779",
+  "patch_files": [
+   "sklearn/ensemble/voting.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/ensemble/tests/test_voting.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-14053",
+  "patch_files": [
+   "sklearn/tree/export.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/tree/tests/test_export.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-14087",
+  "patch_files": [
+   "sklearn/linear_model/logistic.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/linear_model/tests/test_logistic.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-14141",
+  "patch_files": [
+   "sklearn/utils/_show_versions.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/utils/tests/test_show_versions.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-14496",
+  "patch_files": [
+   "sklearn/cluster/optics_.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/cluster/tests/test_optics.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-14629",
+  "patch_files": [
+   "sklearn/multioutput.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/tests/test_multioutput.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-14710",
+  "patch_files": [
+   "sklearn/ensemble/_hist_gradient_boosting/gradient_boosting.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/ensemble/_hist_gradient_boosting/tests/test_gradient_boosting.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-14894",
+  "patch_files": [
+   "sklearn/svm/base.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/svm/tests/test_svm.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-14983",
+  "patch_files": [
+   "sklearn/model_selection/_split.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/model_selection/tests/test_split.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-15100",
+  "patch_files": [
+   "sklearn/feature_extraction/text.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/feature_extraction/tests/test_text.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-25102",
+  "patch_files": [
+   "sklearn/base.py",
+   "sklearn/feature_selection/_base.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/feature_selection/tests/test_base.py",
+   "sklearn/feature_selection/tests/test_feature_select.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-25232",
+  "patch_files": [
+   "sklearn/impute/_iterative.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/impute/tests/test_impute.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-25747",
+  "patch_files": [
+   "sklearn/utils/_set_output.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/utils/tests/test_set_output.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-25931",
+  "patch_files": [
+   "sklearn/ensemble/_iforest.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/ensemble/tests/test_iforest.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-25973",
+  "patch_files": [
+   "sklearn/feature_selection/_sequential.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/feature_selection/tests/test_sequential.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-26194",
+  "patch_files": [
+   "sklearn/metrics/_ranking.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/metrics/tests/test_ranking.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-26323",
+  "patch_files": [
+   "sklearn/compose/_column_transformer.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/compose/tests/test_column_transformer.py"
+  ]
+ },
+ {
+  "instance_id": "scikit-learn__scikit-learn-9288",
+  "patch_files": [
+   "sklearn/cluster/k_means_.py"
+  ],
+  "repo": "scikit-learn/scikit-learn",
+  "test_patch_files": [
+   "sklearn/cluster/tests/test_k_means.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-10323",
+  "patch_files": [
+   "sphinx/directives/code.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_directive_code.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-10435",
+  "patch_files": [
+   "sphinx/writers/latex.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_build_latex.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-10449",
+  "patch_files": [
+   "sphinx/ext/autodoc/typehints.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_ext_autodoc_configs.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-10466",
+  "patch_files": [
+   "sphinx/builders/gettext.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_build_gettext.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-10614",
+  "patch_files": [
+   "sphinx/ext/inheritance_diagram.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/roots/test-ext-inheritance_diagram/conf.py",
+   "tests/roots/test-ext-inheritance_diagram/index.rst",
+   "tests/roots/test-ext-inheritance_diagram/subdir/index.rst",
+   "tests/roots/test-ext-inheritance_diagram/subdir/other.py",
+   "tests/roots/test-ext-inheritance_diagram/test.py",
+   "tests/test_ext_inheritance_diagram.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-10673",
+  "patch_files": [
+   "sphinx/directives/other.py",
+   "sphinx/environment/adapters/toctree.py",
+   "sphinx/environment/collectors/toctree.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/roots/test-toctree-index/conf.py",
+   "tests/roots/test-toctree-index/foo.rst",
+   "tests/roots/test-toctree-index/index.rst",
+   "tests/test_environment_toctree.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-11445",
+  "patch_files": [
+   "sphinx/util/rst.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_util_rst.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-11510",
+  "patch_files": [
+   "sphinx/directives/other.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/roots/test-directive-include/baz/baz.rst",
+   "tests/roots/test-directive-include/conf.py",
+   "tests/roots/test-directive-include/foo.rst",
+   "tests/roots/test-directive-include/text.txt",
+   "tests/test_directive_other.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-7440",
+  "patch_files": [
+   "sphinx/domains/std.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_domain_std.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-7454",
+  "patch_files": [
+   "sphinx/domains/python.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_domain_py.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-7462",
+  "patch_files": [
+   "sphinx/domains/python.py",
+   "sphinx/pycode/ast.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_domain_py.py",
+   "tests/test_pycode_ast.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-7590",
+  "patch_files": [
+   "sphinx/domains/c.py",
+   "sphinx/domains/cpp.py",
+   "sphinx/util/cfamily.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_domain_cpp.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-7748",
+  "patch_files": [
+   "sphinx/ext/autodoc/__init__.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/roots/test-ext-autodoc/target/docstring_signature.py",
+   "tests/test_ext_autodoc_configs.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-7757",
+  "patch_files": [
+   "sphinx/util/inspect.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_util_inspect.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-7889",
+  "patch_files": [
+   "sphinx/ext/autodoc/mock.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_ext_autodoc_mock.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-7910",
+  "patch_files": [
+   "sphinx/ext/napoleon/__init__.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "sphinx/testing/util.py",
+   "tests/test_ext_napoleon.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-7985",
+  "patch_files": [
+   "sphinx/builders/linkcheck.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/roots/test-linkcheck/links.txt",
+   "tests/test_build_linkcheck.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-8035",
+  "patch_files": [
+   "sphinx/ext/autodoc/__init__.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_ext_autodoc_private_members.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-8056",
+  "patch_files": [
+   "sphinx/ext/napoleon/docstring.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_ext_napoleon_docstring.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-8120",
+  "patch_files": [
+   "sphinx/application.py",
+   "sphinx/locale/__init__.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_intl.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-8265",
+  "patch_files": [
+   "sphinx/pycode/ast.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_pycode_ast.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-8269",
+  "patch_files": [
+   "sphinx/builders/linkcheck.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/roots/test-linkcheck-localserver/conf.py",
+   "tests/roots/test-linkcheck-localserver/index.rst",
+   "tests/test_build_linkcheck.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-8459",
+  "patch_files": [
+   "sphinx/ext/autodoc/typehints.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_ext_autodoc_configs.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-8475",
+  "patch_files": [
+   "sphinx/builders/linkcheck.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_build_linkcheck.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-8548",
+  "patch_files": [
+   "sphinx/ext/autodoc/__init__.py",
+   "sphinx/ext/autodoc/importer.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/roots/test-ext-autodoc/target/instance_variable.py",
+   "tests/test_ext_autodoc_autoclass.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-8551",
+  "patch_files": [
+   "sphinx/domains/python.py",
+   "sphinx/util/docfields.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_domain_py.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-8593",
+  "patch_files": [
+   "sphinx/ext/autodoc/__init__.py",
+   "sphinx/ext/autodoc/importer.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/roots/test-ext-autodoc/target/private.py",
+   "tests/test_ext_autodoc_private_members.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-8595",
+  "patch_files": [
+   "sphinx/ext/autodoc/__init__.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/roots/test-ext-autodoc/target/empty_all.py",
+   "tests/test_ext_autodoc_automodule.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-8621",
+  "patch_files": [
+   "sphinx/builders/html/transforms.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_markup.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-8638",
+  "patch_files": [
+   "sphinx/domains/python.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_domain_py.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-8721",
+  "patch_files": [
+   "sphinx/ext/viewcode.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_ext_viewcode.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-9229",
+  "patch_files": [
+   "sphinx/ext/autodoc/__init__.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/roots/test-ext-autodoc/target/classes.py",
+   "tests/test_ext_autodoc_autoclass.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-9230",
+  "patch_files": [
+   "sphinx/util/docfields.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_domain_py.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-9258",
+  "patch_files": [
+   "sphinx/domains/python.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_domain_py.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-9281",
+  "patch_files": [
+   "sphinx/util/inspect.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_util_inspect.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-9320",
+  "patch_files": [
+   "sphinx/cmd/quickstart.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_quickstart.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-9367",
+  "patch_files": [
+   "sphinx/pycode/ast.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_pycode_ast.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-9461",
+  "patch_files": [
+   "sphinx/domains/python.py",
+   "sphinx/ext/autodoc/__init__.py",
+   "sphinx/util/inspect.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/roots/test-ext-autodoc/target/properties.py",
+   "tests/test_domain_py.py",
+   "tests/test_ext_autodoc_autoclass.py",
+   "tests/test_ext_autodoc_autoproperty.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-9591",
+  "patch_files": [
+   "sphinx/domains/python.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_domain_py.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-9602",
+  "patch_files": [
+   "sphinx/domains/python.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_domain_py.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-9658",
+  "patch_files": [
+   "sphinx/ext/autodoc/mock.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_util_typing.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-9673",
+  "patch_files": [
+   "sphinx/ext/autodoc/typehints.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_ext_autodoc_configs.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-9698",
+  "patch_files": [
+   "sphinx/domains/python.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_domain_py.py"
+  ]
+ },
+ {
+  "instance_id": "sphinx-doc__sphinx-9711",
+  "patch_files": [
+   "sphinx/extension.py"
+  ],
+  "repo": "sphinx-doc/sphinx",
+  "test_patch_files": [
+   "tests/test_extension.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-11618",
+  "patch_files": [
+   "sympy/geometry/point.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/geometry/tests/test_point.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-12096",
+  "patch_files": [
+   "sympy/core/function.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/utilities/tests/test_lambdify.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-12419",
+  "patch_files": [
+   "sympy/matrices/expressions/matexpr.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/matrices/expressions/tests/test_matexpr.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-12481",
+  "patch_files": [
+   "sympy/combinatorics/permutations.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/combinatorics/tests/test_permutations.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-12489",
+  "patch_files": [
+   "sympy/combinatorics/permutations.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/combinatorics/tests/test_permutations.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-13031",
+  "patch_files": [
+   "sympy/matrices/sparse.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/matrices/tests/test_sparse.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-13091",
+  "patch_files": [
+   "sympy/core/basic.py",
+   "sympy/core/exprtools.py",
+   "sympy/core/numbers.py",
+   "sympy/geometry/entity.py",
+   "sympy/physics/optics/medium.py",
+   "sympy/physics/vector/dyadic.py",
+   "sympy/physics/vector/frame.py",
+   "sympy/physics/vector/vector.py",
+   "sympy/polys/agca/modules.py",
+   "sympy/polys/domains/domain.py",
+   "sympy/polys/domains/expressiondomain.py",
+   "sympy/polys/domains/pythonrational.py",
+   "sympy/polys/domains/quotientring.py",
+   "sympy/polys/fields.py",
+   "sympy/polys/monomials.py",
+   "sympy/polys/polyclasses.py",
+   "sympy/polys/polytools.py",
+   "sympy/polys/rings.py",
+   "sympy/polys/rootoftools.py",
+   "sympy/tensor/array/ndim_array.py",
+   "sympy/utilities/enumerative.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/core/tests/test_basic.py",
+   "sympy/core/tests/test_numbers.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-13372",
+  "patch_files": [
+   "sympy/core/evalf.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/core/tests/test_evalf.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-13480",
+  "patch_files": [
+   "sympy/functions/elementary/hyperbolic.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/functions/elementary/tests/test_hyperbolic.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-13551",
+  "patch_files": [
+   "sympy/concrete/products.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/concrete/tests/test_products.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-13615",
+  "patch_files": [
+   "sympy/sets/sets.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/sets/tests/test_sets.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-13647",
+  "patch_files": [
+   "sympy/matrices/common.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/matrices/tests/test_commonmatrix.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-13757",
+  "patch_files": [
+   "sympy/polys/polytools.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/core/tests/test_match.py",
+   "sympy/polys/tests/test_polytools.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-13798",
+  "patch_files": [
+   "sympy/printing/latex.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/printing/tests/test_latex.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-13852",
+  "patch_files": [
+   "sympy/functions/special/zeta_functions.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/functions/special/tests/test_zeta_functions.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-13877",
+  "patch_files": [
+   "sympy/matrices/matrices.py",
+   "sympy/utilities/randtest.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/matrices/tests/test_matrices.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-13878",
+  "patch_files": [
+   "sympy/stats/crv_types.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/stats/tests/test_continuous_rv.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-13974",
+  "patch_files": [
+   "sympy/physics/quantum/tensorproduct.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/physics/quantum/tests/test_tensorproduct.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-14248",
+  "patch_files": [
+   "sympy/printing/latex.py",
+   "sympy/printing/pretty/pretty.py",
+   "sympy/printing/str.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/printing/pretty/tests/test_pretty.py",
+   "sympy/printing/tests/test_ccode.py",
+   "sympy/printing/tests/test_fcode.py",
+   "sympy/printing/tests/test_jscode.py",
+   "sympy/printing/tests/test_julia.py",
+   "sympy/printing/tests/test_latex.py",
+   "sympy/printing/tests/test_octave.py",
+   "sympy/printing/tests/test_rcode.py",
+   "sympy/printing/tests/test_str.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-14531",
+  "patch_files": [
+   "sympy/printing/str.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/printing/tests/test_python.py",
+   "sympy/printing/tests/test_str.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-14711",
+  "patch_files": [
+   "sympy/physics/vector/vector.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/physics/vector/tests/test_vector.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-14976",
+  "patch_files": [
+   "sympy/printing/pycode.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/printing/tests/test_pycode.py",
+   "sympy/solvers/tests/test_numeric.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-15017",
+  "patch_files": [
+   "sympy/tensor/array/dense_ndim_array.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/tensor/array/tests/test_immutable_ndim_array.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-15345",
+  "patch_files": [
+   "sympy/printing/mathematica.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/printing/tests/test_mathematica.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-15349",
+  "patch_files": [
+   "sympy/algebras/quaternion.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/algebras/tests/test_quaternion.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-15599",
+  "patch_files": [
+   "sympy/core/mod.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/core/tests/test_arit.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-15809",
+  "patch_files": [
+   "sympy/functions/elementary/miscellaneous.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/functions/elementary/tests/test_miscellaneous.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-15875",
+  "patch_files": [
+   "sympy/core/add.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/core/tests/test_arit.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-15976",
+  "patch_files": [
+   "sympy/printing/mathml.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/printing/tests/test_mathml.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-16450",
+  "patch_files": [
+   "sympy/simplify/simplify.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/simplify/tests/test_simplify.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-16597",
+  "patch_files": [
+   "sympy/assumptions/ask.py",
+   "sympy/assumptions/ask_generated.py",
+   "sympy/core/assumptions.py",
+   "sympy/core/power.py",
+   "sympy/printing/tree.py",
+   "sympy/tensor/indexed.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/core/tests/test_assumptions.py",
+   "sympy/functions/elementary/tests/test_miscellaneous.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-16766",
+  "patch_files": [
+   "sympy/printing/pycode.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/printing/tests/test_pycode.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-16792",
+  "patch_files": [
+   "sympy/utilities/codegen.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/utilities/tests/test_codegen.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-16886",
+  "patch_files": [
+   "sympy/crypto/crypto.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/crypto/tests/test_crypto.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-17139",
+  "patch_files": [
+   "sympy/simplify/fu.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/simplify/tests/test_fu.py",
+   "sympy/simplify/tests/test_simplify.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-17318",
+  "patch_files": [
+   "sympy/simplify/radsimp.py",
+   "sympy/simplify/sqrtdenest.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/simplify/tests/test_sqrtdenest.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-17630",
+  "patch_files": [
+   "sympy/matrices/expressions/matexpr.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/matrices/expressions/tests/test_blockmatrix.py",
+   "sympy/matrices/expressions/tests/test_matadd.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-17655",
+  "patch_files": [
+   "sympy/geometry/point.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/geometry/tests/test_point.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-18189",
+  "patch_files": [
+   "sympy/solvers/diophantine.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/solvers/tests/test_diophantine.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-18199",
+  "patch_files": [
+   "sympy/ntheory/residue_ntheory.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/ntheory/tests/test_residue.py",
+   "sympy/solvers/tests/test_solveset.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-18211",
+  "patch_files": [
+   "sympy/core/relational.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/core/tests/test_relational.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-18698",
+  "patch_files": [
+   "sympy/polys/polytools.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/polys/tests/test_polytools.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-18763",
+  "patch_files": [
+   "sympy/printing/latex.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/printing/tests/test_latex.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-19040",
+  "patch_files": [
+   "sympy/polys/factortools.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/polys/tests/test_polytools.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-19346",
+  "patch_files": [
+   "sympy/printing/repr.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/printing/tests/test_repr.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-19495",
+  "patch_files": [
+   "sympy/sets/conditionset.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/sets/tests/test_conditionset.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-19637",
+  "patch_files": [
+   "sympy/core/sympify.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/core/tests/test_sympify.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-19783",
+  "patch_files": [
+   "sympy/physics/quantum/dagger.py",
+   "sympy/physics/quantum/operator.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/physics/quantum/tests/test_dagger.py",
+   "sympy/physics/quantum/tests/test_operator.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-19954",
+  "patch_files": [
+   "sympy/combinatorics/perm_groups.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/combinatorics/tests/test_perm_groups.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-20154",
+  "patch_files": [
+   "sympy/utilities/iterables.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/utilities/tests/test_iterables.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-20428",
+  "patch_files": [
+   "sympy/polys/domains/expressiondomain.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/polys/tests/test_polytools.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-20438",
+  "patch_files": [
+   "sympy/core/relational.py",
+   "sympy/sets/handlers/comparison.py",
+   "sympy/sets/handlers/issubset.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/sets/tests/test_sets.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-20590",
+  "patch_files": [
+   "sympy/core/_print_helpers.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/core/tests/test_basic.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-20801",
+  "patch_files": [
+   "sympy/core/numbers.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/core/tests/test_numbers.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-20916",
+  "patch_files": [
+   "sympy/printing/conventions.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/printing/tests/test_conventions.py",
+   "sympy/testing/quality_unicode.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-21379",
+  "patch_files": [
+   "sympy/core/mod.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/core/tests/test_arit.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-21596",
+  "patch_files": [
+   "sympy/sets/handlers/intersection.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/sets/tests/test_fancysets.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-21612",
+  "patch_files": [
+   "sympy/printing/str.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/printing/tests/test_str.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-21847",
+  "patch_files": [
+   "sympy/polys/monomials.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/polys/tests/test_monomials.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-21930",
+  "patch_files": [
+   "sympy/physics/secondquant.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/physics/tests/test_secondquant.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-22080",
+  "patch_files": [
+   "sympy/printing/codeprinter.py",
+   "sympy/printing/precedence.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/codegen/tests/test_rewriting.py",
+   "sympy/printing/tests/test_pycode.py",
+   "sympy/utilities/tests/test_lambdify.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-22456",
+  "patch_files": [
+   "sympy/codegen/ast.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/codegen/tests/test_ast.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-22714",
+  "patch_files": [
+   "sympy/geometry/point.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/geometry/tests/test_point.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-22914",
+  "patch_files": [
+   "sympy/printing/pycode.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/printing/tests/test_pycode.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-23262",
+  "patch_files": [
+   "sympy/utilities/lambdify.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/utilities/tests/test_lambdify.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-23413",
+  "patch_files": [
+   "sympy/polys/matrices/normalforms.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/matrices/tests/test_normalforms.py",
+   "sympy/polys/matrices/tests/test_normalforms.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-23534",
+  "patch_files": [
+   "sympy/core/symbol.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/core/tests/test_symbol.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-23824",
+  "patch_files": [
+   "sympy/physics/hep/gamma_matrices.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/physics/hep/tests/test_gamma_matrices.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-23950",
+  "patch_files": [
+   "sympy/sets/contains.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/sets/tests/test_contains.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-24066",
+  "patch_files": [
+   "sympy/physics/units/unitsystem.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/physics/units/tests/test_quantities.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-24213",
+  "patch_files": [
+   "sympy/physics/units/unitsystem.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/physics/units/tests/test_quantities.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-24443",
+  "patch_files": [
+   "sympy/combinatorics/homomorphisms.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/combinatorics/tests/test_homomorphisms.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-24539",
+  "patch_files": [
+   "sympy/polys/rings.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/polys/tests/test_rings.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-24562",
+  "patch_files": [
+   "sympy/core/numbers.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/core/tests/test_numbers.py"
+  ]
+ },
+ {
+  "instance_id": "sympy__sympy-24661",
+  "patch_files": [
+   "sympy/parsing/sympy_parser.py"
+  ],
+  "repo": "sympy/sympy",
+  "test_patch_files": [
+   "sympy/parsing/tests/test_sympy_parser.py"
+  ]
+ }
+]
