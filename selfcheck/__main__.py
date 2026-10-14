@@ -4,12 +4,19 @@ import json
 import sys
 from pathlib import Path
 
-from . import calibrate, docker_exec, evaluate, images, mutants, patches, pool, run, score, swe, validate
+from . import (
+    calibrate, docker_exec, evaluate, fixture, images, mutants, patches, pool, process, report, run,
+    score, swe, validate,
+)
 
 ROOT = Path(__file__).parent
 FIXTURES = ROOT / "fixtures"
 CONFIG = json.loads((ROOT / "config.json").read_text())
-SUBCOMMANDS = ("pool", "images", "validate", "mutants", "calibrate", "score", "run")
+SUBCOMMANDS = (
+    "pool", "images", "validate", "mutants", "calibrate", "score", "run",
+    "process", "baseline", "check", "report",
+)
+BASELINE_HINT = "run `python3 -m selfcheck baseline create`"
 ARMS = ("harness", "baseline")
 
 
@@ -171,8 +178,17 @@ def cmd_run(args) -> int:
         print(str(exc), file=sys.stderr)
         return 1
     print(run_dir)
-    entries = json.loads((Path(run_dir) / "run.json").read_text())["entries"]
-    return 1 if any(e["status"] == "error" for e in entries) else 0
+    meta = json.loads((Path(run_dir) / "run.json").read_text())
+    if meta["halted"]:
+        h = meta["halted"]
+        print(run_dir, file=sys.stderr)
+        print(
+            f"halted: {h['reason']} at {h['instance_id']}/{h['arm']}; "
+            f"resume with: python3 -m selfcheck run --resume {meta['run_id']}",
+            file=sys.stderr,
+        )
+        return 3
+    return 1 if any(e["status"] == "error" for e in meta["entries"]) else 0
 
 
 def cmd_validate(args) -> int:
@@ -254,6 +270,196 @@ def cmd_score(args) -> int:
     return 0
 
 
+def _repo_path(value: str) -> Path:
+    path = Path(value).expanduser()
+    return path if path.is_absolute() else ROOT.parent / path
+
+
+def _run_dir(run_id: str) -> Path | None:
+    run_dir = Path(CONFIG["agent"]["runs_dir"]).expanduser() / run_id
+    return run_dir if (run_dir / "run.json").is_file() else None
+
+
+def _unknown_run(run_id: str) -> int:
+    print(f"unknown run id: {run_id}", file=sys.stderr)
+    return 2
+
+
+def _read_token() -> str:
+    return run._token_path(CONFIG["agent"]).read_text().strip()
+
+
+def _harness_entries(run_dir: Path) -> list[dict]:
+    meta = json.loads((run_dir / "run.json").read_text())
+    return [e for e in meta["entries"] if e["arm"] == "harness"]
+
+
+def _load_scores(run_dir: Path) -> dict[str, dict]:
+    path = run_dir / "scores.harness.jsonl"
+    return {r["instance_id"]: r for r in _read_jsonl(path)} if path.is_file() else {}
+
+
+def _process_entries(run_dir: Path, *, write: bool) -> dict[str, dict]:
+    scores = _load_scores(run_dir)
+    out = {}
+    for entry in _harness_entries(run_dir):
+        iid = entry["instance_id"]
+        entry_dir = run_dir / iid / "harness"
+        if not entry_dir.is_dir():
+            continue
+        saved = entry_dir / "process.json"
+        if not write and saved.is_file():
+            out[iid] = json.loads(saved.read_text())
+            continue
+        out[iid] = process.evaluate_entry(entry_dir, score=scores.get(iid))
+        if write:
+            saved.write_text(json.dumps(out[iid], indent=1, sort_keys=True))
+    return out
+
+
+def cmd_process(args) -> int:
+    run_dir = _run_dir(args.run_id)
+    if run_dir is None:
+        return _unknown_run(args.run_id)
+    for iid, result in _process_entries(run_dir, write=True).items():
+        counts = [sum(c["verdict"] == v for c in result["checks"].values()) for v in ("pass", "fail", "n/a")]
+        print(f"{iid} pass={counts[0]} fail={counts[1]} n/a={counts[2]}")
+    return 0
+
+
+def _score_fn():
+    rows = {r["instance_id"]: r for r in _load_pool(None)}
+    validation = _load_validation()
+    evaluate_fn = _evaluate_fn()
+
+    def score_one(pred: dict) -> dict:
+        iid = pred["instance_id"]
+        return score.score_prediction(
+            rows[iid], pred, validation=validation[iid], mutants=_load_mutants(iid),
+            evaluate_fn=evaluate_fn, workers=2,
+        )
+
+    return score_one
+
+
+def cmd_baseline(args) -> int:
+    cfg, bcfg = CONFIG["agent"], CONFIG["baseline"]
+    try:
+        token = _read_token()
+        rows = _load_pool(_csv(args.instances))
+        out_root = _repo_path(bcfg["fixtures_dir"])
+        status, ref = fixture.create(
+            rows, repeats=args.repeats or bcfg["repeats"], cfg=cfg,
+            progress_path=_repo_path(bcfg["progress"]),
+            run_fn=lambda insts, arms: run.run(insts, arms, cfg=cfg),
+            resume_fn=lambda run_id: run.resume(run_id, cfg=cfg),
+            assemble_fn=lambda dirs: fixture.assemble(
+                dirs, score_fn=_score_fn(), out_root=out_root, token=token
+            ),
+        )
+    except (fixture.FixtureError, run.TokenFileMissing, docker_exec.DockerError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    if status == "halted":
+        print(
+            f"halted in run {ref}; rerun `python3 -m selfcheck baseline create` to resume",
+            file=sys.stderr,
+        )
+        return 3
+    print(ref)
+    return 0
+
+
+def _emit_report(run_dir: Path, *, no_baseline: bool, token: str) -> int:
+    fixture_dir = None
+    if not no_baseline:
+        manifests = []
+        for entry in _harness_entries(run_dir):
+            path = run_dir / entry["instance_id"] / "harness" / "manifest.json"
+            if path.is_file():
+                manifests.append(json.loads(path.read_text()))
+        fixture_dir, differing = fixture.find(_repo_path(CONFIG["baseline"]["fixtures_dir"]), manifests)
+        if fixture_dir is None:
+            for fid, keys in differing.items():
+                print(f"fixture {fid} differs in: {', '.join(keys)}", file=sys.stderr)
+            if not differing:
+                print("no baseline fixture exists", file=sys.stderr)
+            print(f"{BASELINE_HINT} to create one", file=sys.stderr)
+            return 2
+    built = report.build(
+        run_dir, fixture_dir=fixture_dir, scores=_load_scores(run_dir),
+        processes=_process_entries(run_dir, write=False),
+        min_mutants=CONFIG["report"]["min_mutants"],
+    )
+    try:
+        paths = report.write(built, _repo_path(CONFIG["report"]["results_dir"]), token=token)
+    except report.ReportError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    for path in paths:
+        print(path)
+    return 0
+
+
+def cmd_report(args) -> int:
+    run_dir = _run_dir(args.run_id)
+    if run_dir is None:
+        return _unknown_run(args.run_id)
+    try:
+        token = _read_token()
+    except run.TokenFileMissing as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    return _emit_report(run_dir, no_baseline=args.no_baseline, token=token)
+
+
+def cmd_check(args) -> int:
+    cfg = CONFIG["agent"]
+    if args.resume and _run_dir(args.resume) is None:
+        return _unknown_run(args.resume)
+    try:
+        token = _read_token()
+        if not (args.no_baseline or args.resume or fixture.precheck(
+            _repo_path(CONFIG["baseline"]["fixtures_dir"]), cfg
+        )):
+            print(
+                "no baseline fixture matches the current conditions; "
+                "run `python3 -m selfcheck baseline create`",
+                file=sys.stderr,
+            )
+            return 2
+        if args.resume:
+            run_dir = run.resume(args.resume, cfg=cfg)
+        else:
+            ids = _csv(args.instances)
+            rows = _load_pool(ids)
+            if ids is None:
+                rows = [r for r in rows if r.get("core")]
+            run_dir = run.run(rows, ["harness"], cfg=cfg, harness_ref=args.harness_ref)
+    except run.UnknownRunError:
+        return _unknown_run(args.resume)
+    except (run.TokenFileMissing, docker_exec.DockerError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    run_dir = Path(run_dir)
+    meta = json.loads((run_dir / "run.json").read_text())
+    print(run_dir)
+    if meta["halted"]:
+        h = meta["halted"]
+        print(
+            f"halted: {h['reason']} at {h['instance_id']}/{h['arm']}; "
+            f"resume with: python3 -m selfcheck check --resume {meta['run_id']}",
+            file=sys.stderr,
+        )
+        return 3
+    predictions = run_dir / "predictions.harness.jsonl"
+    score_one = _score_fn()
+    results = [score_one(p) for p in _read_jsonl(predictions)] if predictions.is_file() else []
+    _write_jsonl(run_dir / "scores.harness.jsonl", results)
+    _process_entries(run_dir, write=True)
+    return _emit_report(run_dir, no_baseline=args.no_baseline, token=token)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="selfcheck")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -279,6 +485,12 @@ def build_parser() -> argparse.ArgumentParser:
         no_cache={"action": "store_true"}, workers={"type": int, "default": 2})
     add("run", cmd_run, arms={}, harness_ref={"default": "HEAD"}, model={}, effort={},
         cap_min={"type": int}, resume={})
+    add("process", cmd_process, instances=False).add_argument("run_id")
+    base = add("baseline", cmd_baseline, repeats={"type": int})
+    base.add_argument("action", choices=("create",))
+    add("check", cmd_check, harness_ref={"default": "HEAD"}, resume={},
+        no_baseline={"action": "store_true"})
+    add("report", cmd_report, instances=False, no_baseline={"action": "store_true"}).add_argument("run_id")
     return parser
 
 

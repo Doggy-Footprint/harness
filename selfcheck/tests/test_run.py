@@ -266,7 +266,8 @@ class RunStateTests(F.RunCase):
         self.assertFalse((run_dir / "predictions.harness.jsonl").exists())
 
         listing = self.load(run_dir / "run.json")
-        self.assertEqual(set(listing), {"run_id", "entries", "created_at"})
+        self.assertEqual(set(listing), {"run_id", "entries", "created_at", "halted"})
+        self.assertIsNone(listing["halted"])
         self.assertEqual(listing["run_id"], run_id)
         self.assertEqual(listing["entries"], [{"instance_id": ROW_A, "arm": "baseline", "status": "completed"}])
 
@@ -489,52 +490,57 @@ class RunStateTests(F.RunCase):
         self.assertEqual(self.docker.container_labelled(run_dir.name), [name])
 
     def test_vo9_r3_resume_continues_only_interrupted_or_absent_entries_with_stored_counters(self):
+        # FR1 (spec 94b886658b88a7ef): a batch stops after an interrupted entry, so the interrupted entry is
+        # the last one (4) and the absent entry (3) precedes it; entries 1 and 2 must stay untouched.
         self.docker.configure(diff_text=PLANTED_DIFF)
-        self.docker.configure(n=1, driver=F.returning(F.driver_state_dict(**INTERRUPTED)))
         self.docker.configure(n=2, driver=F.returning(F.driver_state_dict(status="stalled")))
+        self.docker.configure(n=4, driver=F.returning(F.driver_state_dict(**INTERRUPTED)))
         run_dir = self.go(ids=(ROW_A, ROW_B), arms=("baseline", "harness"))
         run_id = run_dir.name
         self.assertEqual([e["status"] for e in self.load(run_dir / "run.json")["entries"]],
-                         ["interrupted", "stalled", "completed", "completed"])
-        shutil.rmtree(self.entry(run_dir, ROW_B, "harness"))
+                         ["completed", "stalled", "completed", "interrupted"])
+        self.assertEqual(self.load(run_dir / "run.json")["halted"],
+                         {"reason": "interrupted", "instance_id": ROW_B, "arm": "harness"})
+        shutil.rmtree(self.entry(run_dir, ROW_B, "baseline"))
         before = {
             str(p): p.read_bytes()
-            for n_arm in ((ROW_A, "harness"), (ROW_B, "baseline"))
+            for n_arm in ((ROW_A, "baseline"), (ROW_A, "harness"))
             for p in self.entry(run_dir, *n_arm).rglob("*") if p.is_file()
         }
-        first = self.docker.history[self.name(run_dir, 1)]
-        first.script.driver = F.returning(F.driver_state_dict(phrases_sent=3, elapsed_s=80.0))
+        interrupted = self.docker.history[self.name(run_dir, 4)]
+        interrupted.script.driver = F.returning(F.driver_state_dict(phrases_sent=3, elapsed_s=80.0))
         mark = len(self.docker.log)
 
         self.assertEqual(self.resume(run_id), run_dir)
 
         after_log = self.docker.log[mark:]
         names_touched = {e[1] for e in after_log if e[0] in ("exec", "start", "start_container", "copy_in", "copy_out", "stop", "remove")}
-        self.assertEqual(names_touched, {self.name(run_dir, 1), self.name(run_dir, 4)})
+        self.assertEqual(names_touched, {self.name(run_dir, 3), self.name(run_dir, 4)})
         after = {
             str(p): p.read_bytes()
-            for n_arm in ((ROW_A, "harness"), (ROW_B, "baseline"))
+            for n_arm in ((ROW_A, "baseline"), (ROW_A, "harness"))
             for p in self.entry(run_dir, *n_arm).rglob("*") if p.is_file()
         }
         self.assertEqual(after, before)
 
-        resumed = first.driver_inputs
+        resumed = interrupted.driver_inputs
         self.assertEqual(len(resumed), 2)
         self.assertEqual(resumed[1]["resume"], {"session_id": "sess-A", "phrases_sent": 2, "elapsed_s": 33.5})
         self.assertEqual(resumed[1]["run_id"], run_id)
-        timeout = [kw["timeout"] for argv, kw in self.docker.execs(self.name(run_dir, 1)) if argv == F.DRIVER_ARGV][-1]
+        timeout = [kw["timeout"] for argv, kw in self.docker.execs(self.name(run_dir, 4)) if argv == F.DRIVER_ARGV][-1]
         self.assertEqual(timeout, 300 - 33.5 + 600)
         self.assertLess(
-            [i for i, e in enumerate(self.docker.log) if e[0] == "stop" and e[1] == self.name(run_dir, 1)][0],
-            [i for i, e in enumerate(self.docker.log) if e[0] == "start" and e[1] == self.name(run_dir, 1)][0],
+            [i for i, e in enumerate(self.docker.log) if e[0] == "stop" and e[1] == self.name(run_dir, 4)][0],
+            [i for i, e in enumerate(self.docker.log) if e[0] == "start" and e[1] == self.name(run_dir, 4)][0],
         )
-        fresh = self.docker.history[self.name(run_dir, 4)]
+        fresh = self.docker.history[self.name(run_dir, 3)]
         self.assertIsNone(fresh.driver_inputs[0]["resume"])
-        self.assertEqual(self.entry_state(run_dir, ROW_A, "baseline")["status"], "completed")
-        self.assertTrue((self.entry(run_dir, ROW_A, "baseline") / "prediction.json").is_file())
+        self.assertEqual(self.entry_state(run_dir, ROW_B, "harness")["status"], "completed")
         self.assertTrue((self.entry(run_dir, ROW_B, "harness") / "prediction.json").is_file())
+        self.assertTrue((self.entry(run_dir, ROW_B, "baseline") / "prediction.json").is_file())
         self.assertEqual([e["status"] for e in self.load(run_dir / "run.json")["entries"]],
                          ["completed", "stalled", "completed", "completed"])
+        self.assertIsNone(self.load(run_dir / "run.json")["halted"])
         self.assertEqual(self.docker.container_labelled(run_id), [])
         lines = (run_dir / "predictions.baseline.jsonl").read_text(encoding="utf-8").splitlines()
         self.assertEqual(sorted(json.loads(l)["instance_id"] for l in lines), sorted([ROW_A, ROW_B]))
@@ -835,6 +841,7 @@ class RunStateTests(F.RunCase):
                 {"instance_id": ROW_B, "arm": "baseline", "status": "interrupted"},
             ],
         )
+        self.assertEqual(listing["halted"], {"reason": "interrupted", "instance_id": ROW_B, "arm": "baseline"})
         self.assertEqual([e[1] for e in self.docker.started()], [self.name(run_dir, n) for n in (1, 2, 3, 4)])
         self.assertIsNotNone(snapshots[0], "run.json must exist while the second entry runs")
         self.assertEqual(snapshots[0]["entries"][0]["status"], "completed")

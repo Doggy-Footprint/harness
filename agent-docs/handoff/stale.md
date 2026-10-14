@@ -55,3 +55,8 @@ File: e3d9cb4226a44cfe-selfcheck-m2-verifier-limit.md
 Summary: selfcheck M2 agent runner implemented and tested; stopped at the verifier limit with EG12 (resume sourcing of start_commit/install/selfcheck_commit untested) open; live smoke not run
 Related Files: agent-docs/spec-logs/3a7ecc520d8871ae-selfcheck-agent-runner.md, selfcheck/run.py, selfcheck/tests/test_run.py, selfcheck/tests/test_live_smoke.py
 Related Symbols: run.resume, run._drive, manifest.build, test_vo9_r3
+---
+File: 1ba36300e7469498-selfcheck-m3-verifier-limit.md
+Summary: selfcheck M3 analysis stopped at verifier limit; EG1-EG3 test gaps open, implementation correct by reading
+Related Files: selfcheck/process.py, selfcheck/fixture.py, selfcheck/report.py, selfcheck/run.py, selfcheck/__main__.py, selfcheck/tests/test_fixture.py, selfcheck/tests/test_process.py, selfcheck/tests/test_report.py, selfcheck/tests/test_cli_m3.py
+Related Symbols: evaluate_entry, PC10, fixture.create, report.build, halt_reason

@@ -27,12 +27,13 @@ class CliCase(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.tmp, True)
         self.calls = []
 
-    def run_dir(self, statuses):
+    def run_dir(self, statuses, halted=None):
         directory = Path(self.tmp) / ("run%d" % len(list(Path(self.tmp).iterdir())))
         directory.mkdir()
         entries = [{"instance_id": "i%d" % n, "arm": "baseline", "status": s} for n, s in enumerate(statuses)]
         (directory / "run.json").write_text(
-            json.dumps({"run_id": directory.name, "entries": entries, "created_at": 0}), encoding="utf-8"
+            json.dumps({"run_id": directory.name, "entries": entries, "created_at": 0, "halted": halted}),
+            encoding="utf-8",
         )
         return directory
 

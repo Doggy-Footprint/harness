@@ -157,6 +157,7 @@ class _Ctx:
         self.token = token
         self.params = params
         self.entries = instances
+        self.halted = None
 
 
 def _effective(cfg: dict, model, effort, cap_min) -> dict:
@@ -173,7 +174,10 @@ def _effective(cfg: dict, model, effort, cap_min) -> dict:
 def _write_run_json(ctx: _Ctx, created_at) -> None:
     _write_json(
         ctx.run_dir / "run.json",
-        {"run_id": ctx.run_id, "entries": ctx.entries, "created_at": created_at},
+        {
+            "run_id": ctx.run_id, "entries": ctx.entries, "created_at": created_at,
+            "halted": ctx.halted,
+        },
         indent=1,
     )
 
@@ -187,6 +191,27 @@ def _write_predictions(ctx: _Ctx) -> None:
             lines.setdefault(e["arm"], []).append(pred.read_text().strip())
     for arm, rows in lines.items():
         (ctx.run_dir / f"predictions.{arm}.jsonl").write_text("".join(r + "\n" for r in rows))
+
+
+def halt_reason(state: dict | None) -> str | None:
+    if not state:
+        return None
+    if state.get("status") == "interrupted":
+        return "interrupted"
+    limit = state.get("rate_limit")
+    if isinstance(limit, dict) and limit.get("status") not in (None, "allowed"):
+        return f"rate_limit:{limit['status']}"
+    return None
+
+
+def _halt_after(ctx: _Ctx, entry: dict, created_at) -> bool:
+    d = ctx.run_dir / entry["instance_id"] / entry["arm"]
+    reason = halt_reason(_read_json(d / "state.json"))
+    if reason is None:
+        return False
+    ctx.halted = {"reason": reason, "instance_id": entry["instance_id"], "arm": entry["arm"]}
+    _write_run_json(ctx, created_at)
+    return True
 
 
 def run(
@@ -220,6 +245,8 @@ def run(
         entries[n - 1]["status"] = _run_entry(ctx, n, inst, arm, resume_state=None)
         _write_run_json(ctx, created_at)
         _write_predictions(ctx)
+        if _halt_after(ctx, entries[n - 1], created_at):
+            break
     return run_dir
 
 
@@ -241,6 +268,8 @@ def resume(run_id: str, *, cfg, docker=docker_exec) -> Path:
             row = json.loads(line)
             pool[row["instance_id"]] = row
     ctx = _Ctx(eff, docker, run_id, run_dir, token_path, token, params, meta["entries"])
+    ctx.halted = None
+    _write_run_json(ctx, meta["created_at"])
     for n, entry in enumerate(ctx.entries, start=1):
         d = run_dir / entry["instance_id"] / entry["arm"]
         state = _read_json(d / "state.json")
@@ -253,6 +282,8 @@ def resume(run_id: str, *, cfg, docker=docker_exec) -> Path:
         )
         _write_run_json(ctx, meta["created_at"])
         _write_predictions(ctx)
+        if _halt_after(ctx, entry, meta["created_at"]):
+            break
     return run_dir
 
 
