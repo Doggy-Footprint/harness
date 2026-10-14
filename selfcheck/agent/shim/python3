@@ -1,0 +1,18 @@
+#!/bin/sh
+py312=${SELFCHECK_PY312:-/opt/selfcheck-py/venv/bin/python}
+testbed=${SELFCHECK_TESTBED_PY:-/opt/miniconda3/envs/testbed/bin/python3}
+skip=0
+for a in "$@"; do
+  if [ "$skip" = 1 ]; then
+    skip=0
+    continue
+  fi
+  case "$a" in
+    -c|-m) break ;;
+    -W|-X) skip=1; continue ;;
+    -*) continue ;;
+    .harness/*.py|*/.harness/*.py) exec "$py312" "$@" ;;
+  esac
+  break
+done
+exec "$testbed" "$@"

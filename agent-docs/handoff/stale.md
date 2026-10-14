@@ -45,3 +45,13 @@ File: fb75c4b9bf034034-selfcheck-m1-verifier-limit.md
 Summary: selfcheck M1 (SWE-bench scorer and fixtures) stopped at the verifier limit with EG9–EG11 and SC4 open; fixtures and review evidence R1–R6 produced
 Related Files: selfcheck/, agent-docs/spec-logs/323a0faf25256262-selfcheck-scorer-fixtures.md, agent-docs/adr/5c4c01bdc91769f7-selfcheck-swe-bench-baseline.md
 Related Symbols: leak_check, score_prediction, evaluate, docker_exec, calibrate_instance
+---
+File: 74d5086b349dd339-selfcheck-m2-brief-pending.md
+Summary: selfcheck M2 (agent runner) paused before approval; spec draft v1 written, brief v1 awaiting the user's answer
+Related Files: agent-docs/specs/3a7ecc520d8871ae-selfcheck-agent-runner.md, selfcheck/, agent-docs/adr/5c4c01bdc91769f7-selfcheck-swe-bench-baseline.md
+Related Symbols: driver.run, user_sim.answer, run.run, extract.build_prediction, manifest.build, build_derived_image
+---
+File: e3d9cb4226a44cfe-selfcheck-m2-verifier-limit.md
+Summary: selfcheck M2 agent runner implemented and tested; stopped at the verifier limit with EG12 (resume sourcing of start_commit/install/selfcheck_commit untested) open; live smoke not run
+Related Files: agent-docs/spec-logs/3a7ecc520d8871ae-selfcheck-agent-runner.md, selfcheck/run.py, selfcheck/tests/test_run.py, selfcheck/tests/test_live_smoke.py
+Related Symbols: run.resume, run._drive, manifest.build, test_vo9_r3

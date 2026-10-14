@@ -1,0 +1,9 @@
+{
+  "sphinx-doc/sphinx": "Sphinx is a documentation generator that turns reStructuredText and Markdown sources into HTML, PDF, ePub and other formats, with cross-references and automatic API documentation for Python projects.",
+  "mwaskom/seaborn": "Seaborn is a Python library for statistical data visualization built on matplotlib, providing a high-level interface for drawing attractive statistical graphics from pandas data structures.",
+  "astropy/astropy": "Astropy is a community-developed core Python package for astronomy, providing units, coordinates, tables, FITS file handling, time and other tools used across astronomy software.",
+  "sympy/sympy": "SymPy is a pure-Python computer algebra system for symbolic mathematics, covering algebra, calculus, equation solving, matrices, printing and code generation.",
+  "django/django": "Django is a high-level Python web framework that encourages rapid development and clean, pragmatic design, with an ORM, an admin interface, templating, forms and URL routing.",
+  "matplotlib/matplotlib": "Matplotlib is a comprehensive Python library for creating static, animated and interactive visualizations, from simple line plots to complex figures with many backends.",
+  "pytest-dev/pytest": "Pytest is a Python testing framework that makes it easy to write small, readable tests and scales to complex functional testing, with fixtures, assertion rewriting and a rich plugin ecosystem."
+}

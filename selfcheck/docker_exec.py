@@ -1,4 +1,5 @@
 import contextlib
+import json
 import os
 import subprocess
 import time
@@ -123,10 +124,23 @@ class Container:
             path.write_bytes(text.encode())
             self.copy_in(path, dest)
 
-    def exec(self, argv: list[str], *, timeout: int | None = None) -> tuple[int | None, str, bool]:
+    def exec(
+        self,
+        argv: list[str],
+        *,
+        timeout: int | None = None,
+        user: str | None = None,
+        workdir: str | None = None,
+    ) -> tuple[int | None, str, bool]:
+        flags = []
+        if user:
+            flags += ["-u", user]
+        if workdir:
+            flags += ["-w", workdir]
+
         def once():
             proc = subprocess.Popen(
-                ["docker", "exec", self.cid, *argv],
+                ["docker", "exec", *flags, self.cid, *argv],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
             )
@@ -150,6 +164,35 @@ class Container:
             if proc.returncode != 0 or not dest.is_file():
                 return None
             return dest.read_bytes()
+
+    def copy_out(self, src: str, local: str | Path) -> None:
+        Path(local).mkdir(parents=True, exist_ok=True)
+        proc = _run(["cp", f"{self.cid}:{src}", str(local)], timeout=300)
+        if proc.returncode != 0:
+            raise DockerError(f"docker cp failed: {proc.stdout.decode(errors='replace')}")
+
+    def processes(self) -> list[dict]:
+        # `docker top` runs ps on the host side of the container, so it needs no ps binary inside
+        # the image and still lists processes of every user.
+        proc = _run(["top", self.cid, "-eo", "pid,uid,args"], timeout=60)
+        if proc.returncode != 0:
+            raise DockerError(f"docker top failed: {proc.stdout.decode(errors='replace')}")
+        rows = []
+        for line in proc.stdout.decode(errors="replace").splitlines()[1:]:
+            parts = line.split(None, 2)
+            if len(parts) >= 2 and parts[0].isdigit() and parts[1].isdigit():
+                rows.append({"pid": int(parts[0]), "uid": int(parts[1]), "cmd": parts[2] if len(parts) > 2 else ""})
+        return rows
+
+    def stop(self) -> None:
+        proc = _run(["stop", "-t", "10", self.cid], timeout=120)
+        if proc.returncode != 0:
+            raise DockerError(f"docker stop failed: {proc.stdout.decode(errors='replace')}")
+
+    def start(self) -> None:
+        proc = _run(["start", self.cid], timeout=120)
+        if proc.returncode != 0:
+            raise DockerError(f"docker start failed: {proc.stdout.decode(errors='replace')}")
 
     def remove(self) -> None:
         _run(["rm", "-f", "-v", self.cid], timeout=120)
@@ -178,3 +221,101 @@ def container(image: str, *, network: bool = False):
     finally:
         c.remove()
 
+
+
+def start_container(
+    image: str,
+    *,
+    name: str,
+    network: str,
+    labels: dict,
+    cpus,
+    memory: str,
+    mounts: list[str],
+) -> Container:
+    args = ["run", "-d", "--pull", "never", "--name", name]
+    for key, value in labels.items():
+        args += ["--label", f"{key}={value}"]
+    args += ["--network", network, "--cpus", str(cpus), "--memory", memory]
+    for mount in mounts:
+        args += ["--mount", mount]
+    args += ["--entrypoint", "sleep", image, "infinity"]
+    try:
+        proc = _run_image(args, image, timeout=300)
+    except DockerUnreachable:
+        _run(["rm", "-f", "-v", name], timeout=120)
+        raise
+    out = proc.stdout.decode(errors="replace").strip()
+    if proc.returncode != 0:
+        _run(["rm", "-f", "-v", name], timeout=120)
+        raise DockerError(f"docker run failed for {image}: {out}")
+    return Container(out.splitlines()[-1])
+
+
+def container_exists(name: str) -> bool:
+    return _run(["container", "inspect", name], timeout=60).returncode == 0
+
+
+def network_exists(name: str) -> bool:
+    return _run(["network", "inspect", name], timeout=60).returncode == 0
+
+
+def ensure_network(name: str, internal: bool = True) -> None:
+    if network_exists(name):
+        return
+    proc = _run(["network", "create", *(["--internal"] if internal else []), name], timeout=60)
+    if proc.returncode != 0:
+        raise DockerError(f"docker network create failed: {proc.stdout.decode(errors='replace')}")
+
+
+def container_status(name: str) -> dict | None:
+    proc = _run(["container", "inspect", "--format", "{{json .}}", name], timeout=60)
+    if proc.returncode != 0:
+        return None
+    info = json.loads(proc.stdout.decode(errors="replace"))
+    return {
+        "running": bool(info["State"]["Running"]),
+        "labels": dict(info["Config"].get("Labels") or {}),
+    }
+
+
+def remove_container(name: str) -> None:
+    _run(["rm", "-f", "-v", name], timeout=120)
+
+
+def start_proxy(
+    image: str, *, name: str, networks: list[str], labels: dict, conf_text: str
+) -> Container:
+    # The squid image reads /etc/squid/squid.conf and must attach to two networks, so it cannot
+    # use start_container (single network, `sleep infinity` entrypoint, verbatim mounts only).
+    args = ["create", "--pull", "never", "--name", name]
+    for key, value in labels.items():
+        args += ["--label", f"{key}={value}"]
+    args += ["--network", networks[0], image]
+    proc = _run_image(args, image, timeout=300)
+    out = proc.stdout.decode(errors="replace").strip()
+    if proc.returncode != 0:
+        _run(["rm", "-f", "-v", name], timeout=120)
+        raise DockerError(f"docker create failed for {image}: {out}")
+    c = Container(name)
+    try:
+        c.write_text("/etc/squid/squid.conf", conf_text)
+        for net in networks[1:]:
+            proc = _run(["network", "connect", net, name], timeout=60)
+            if proc.returncode != 0:
+                raise DockerError(f"docker network connect failed: {proc.stdout.decode(errors='replace')}")
+        c.start()
+        deadline = time.monotonic() + 20
+        while time.monotonic() < deadline:
+            status = container_status(name)
+            if status and status["running"]:
+                time.sleep(1)
+                status = container_status(name)
+                if status and status["running"]:
+                    return c
+            time.sleep(1)
+        logs = _run(["logs", "--tail", "20", name], timeout=60).stdout.decode(errors="replace")
+        raise DockerError(f"proxy {name} did not stay running: {logs}")
+    except DockerError:
+        c.remove()
+        raise

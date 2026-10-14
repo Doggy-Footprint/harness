@@ -1,3 +1,7 @@
+import json
+import os
+from pathlib import Path
+
 from swebench.harness.constants import END_TEST_OUTPUT, START_TEST_OUTPUT, USE_X86
 from swebench.harness.log_parsers import MAP_REPO_TO_PARSER
 from swebench.harness.test_spec.python import get_test_directives
@@ -59,16 +63,27 @@ def parse_status(instance: dict, log_text: str) -> dict[str, str]:
 
 
 def build_images(
-    instances: list[dict], *, max_workers: int = 2
+    instances: list[dict], *, max_workers: int = 2, workdir: str | Path | None = None
 ) -> tuple[list[str], list[str]]:
     import docker
     from swebench.harness.docker_build import build_instance_images
 
+    if workdir is None:
+        cache = json.loads((Path(__file__).parent / "config.json").read_text())["cache_dir"]
+        workdir = Path(cache).expanduser() / "build"
+    workdir = Path(workdir)
+    workdir.mkdir(parents=True, exist_ok=True)
     client = docker.from_env()
     specs = [make_spec(i) for i in instances]
-    ok, _ = build_instance_images(
-        client, specs, max_workers=max_workers, namespace=None
-    )
+    # swebench writes logs/build_images relative to the process working directory.
+    previous = os.getcwd()
+    os.chdir(workdir)
+    try:
+        ok, _ = build_instance_images(
+            client, specs, max_workers=max_workers, namespace=None
+        )
+    finally:
+        os.chdir(previous)
     built = sorted(p[0].instance_id for p in ok)
     failed = sorted(i["instance_id"] for i in instances if i["instance_id"] not in built)
     return built, failed

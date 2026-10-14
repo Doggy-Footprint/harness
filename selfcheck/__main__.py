@@ -4,12 +4,13 @@ import json
 import sys
 from pathlib import Path
 
-from . import calibrate, evaluate, mutants, patches, pool, score, swe, validate
+from . import calibrate, docker_exec, evaluate, images, mutants, patches, pool, run, score, swe, validate
 
 ROOT = Path(__file__).parent
 FIXTURES = ROOT / "fixtures"
 CONFIG = json.loads((ROOT / "config.json").read_text())
-SUBCOMMANDS = ("pool", "images", "validate", "mutants", "calibrate", "score")
+SUBCOMMANDS = ("pool", "images", "validate", "mutants", "calibrate", "score", "run")
+ARMS = ("harness", "baseline")
 
 
 def _cache_dir() -> Path:
@@ -113,13 +114,65 @@ def cmd_pool(args) -> int:
     return 0
 
 
+def _cmd_images_agent(args) -> int:
+    cfg = CONFIG["agent"]
+    rows = _load_pool(_csv(args.instances))
+    failed = False
+    try:
+        images.build_tools_image(cfg=cfg)
+    except images.ImageBuildError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    for row in rows:
+        try:
+            name = images.build_derived_image(row, cfg=cfg)
+        except (images.ImageBuildError, docker_exec.ImageMissing, docker_exec.DockerError) as exc:
+            print(str(exc), file=sys.stderr)
+            failed = True
+            continue
+        print(f"{row['instance_id']} {name}", flush=True)
+    return 1 if failed else 0
+
+
 def cmd_images(args) -> int:
+    if args.agent:
+        return _cmd_images_agent(args)
     rows = _load_pool(_csv(args.instances))
     built, failed = swe.build_images(rows)
     print(f"built or existing: {len(built)}; failed: {len(failed)}")
     for i in failed:
         print(f"failed: {i}", file=sys.stderr)
     return 1 if failed else 0
+
+
+def cmd_run(args) -> int:
+    cfg = CONFIG["agent"]
+    try:
+        if args.resume:
+            run_dir = run.resume(args.resume, cfg=cfg)
+        else:
+            arms = _csv(args.arms) or list(ARMS)
+            bad = [a for a in arms if a not in ARMS]
+            if bad:
+                print(f"unknown arms: {', '.join(bad)}", file=sys.stderr)
+                return 2
+            ids = _csv(args.instances)
+            rows = _load_pool(ids)
+            if ids is None:
+                rows = [r for r in rows if r.get("core")]
+            run_dir = run.run(
+                rows, arms, cfg=cfg, harness_ref=args.harness_ref, model=args.model,
+                effort=args.effort, cap_min=args.cap_min,
+            )
+    except run.UnknownRunError:
+        print(f"unknown run id: {args.resume}", file=sys.stderr)
+        return 2
+    except (run.TokenFileMissing, docker_exec.DockerError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    print(run_dir)
+    entries = json.loads((Path(run_dir) / "run.json").read_text())["entries"]
+    return 1 if any(e["status"] == "error" for e in entries) else 0
 
 
 def cmd_validate(args) -> int:
@@ -216,7 +269,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     add("pool", cmd_pool, instances=False, size={"type": int, "default": CONFIG["pool"]["size"]},
         seed={"type": int, "default": CONFIG["pool"]["seed"]})
-    add("images", cmd_images)
+    add("images", cmd_images, agent={"action": "store_true"})
     add("validate", cmd_validate, repeats={"type": int, "default": CONFIG["validation"]["repeats"]})
     add("mutants", cmd_mutants, sample={"type": int, "default": CONFIG["mutants"]["sample"]},
         seed={"type": int, "default": CONFIG["mutants"]["seed"]},
@@ -224,6 +277,8 @@ def build_parser() -> argparse.ArgumentParser:
     add("calibrate", cmd_calibrate, workers={"type": int, "default": 2})
     add("score", cmd_score, instances=False, predictions={"required": True}, out={"required": True},
         no_cache={"action": "store_true"}, workers={"type": int, "default": 2})
+    add("run", cmd_run, arms={}, harness_ref={"default": "HEAD"}, model={}, effort={},
+        cap_min={"type": int}, resume={})
     return parser
 
 
