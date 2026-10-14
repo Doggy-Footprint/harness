@@ -1,9 +1,14 @@
-# selfcheck: a reviewer who knows the correct answer reads the harness brief
+# selfcheck stage 1 of 3: post-run diagnostic review of harness briefs against gold
 
 ## Goal
 "harness는 의도대로 진행한다. 따라서 하네스가 제공한 구현 사항에 대해 brief를 읽고 정답을 아는 상태에서 검증해주는 절차를 추가한다."
 
 On the bias trade-off presented afterwards (in-loop help reaches only the harness arm; a gold-informed reviewer knows more than a real issue reporter), the user answered: "그렇게 하자. 그렇게 handoff 써줘." — accepting the recommendation: post-run diagnosis first, in-loop reviewer only as a separate, constrained condition, unassisted check stays primary.
+
+Order then agreed: "그럼 지금 나눠서 써줘." — the work is split into three handoffs, done in this order:
+1. this handoff (post-run diagnostic reviewer);
+2. `3192c062a0fd880f-selfcheck-checker-gaps-and-repeats.md` (PC8, retroactive-spec check, `check --repeats`);
+3. `44ab3e5b5b54f81d-selfcheck-informed-reviewer-condition.md` (in-loop informed reviewer as a separate condition).
 
 ## State
 - Branch: `master`, commit `7bebbc7`. `selfcheck-m1` was merged and deleted.
@@ -19,19 +24,16 @@ On the bias trade-off presented afterwards (in-loop help reaches only the harnes
 | Same simulator, astropy-14365 | main took the first approval phrase as permission for a "short version" of the workflow, wrote the spec afterwards | verified from transcript order (edits t=21.7, spec t=57.1); the phrase has no content a reviewer could use to object |
 
 ## Next Step
-Open a workflow-approach spec for selfcheck with these user-approved decisions:
-1. **Post-run diagnostic reviewer (first).** After a harness run, a reviewer that has the issue, the gold patch and the gold tests reads the run's briefs (understanding round, approval brief, Ask items with options and cited evidence) and the archived spec, and reports where they diverged from the correct behavior: understanding, Ask option set, recommendation evidence, spec requirements. It never changes the run or its scores.
-2. **In-loop informed reviewer (second, separate condition).** It replaces the fixed phrase only in a condition with its own name, reported apart from the unassisted check. The unassisted check with the fixed phrase remains the primary score. Constraints on what the reviewer may say:
-   - answer only what the harness asked or presented for approval;
-   - speak only of observable behavior, as derived from the `FAIL_TO_PASS` tests;
-   - never name code, files, or node/API choices the question did not raise.
-3. Record every reviewer message and the gold facts it used in the run artifacts. The report shows the unassisted and informed conditions side by side. Their difference is the reported effect of a user who reads the brief.
+Open a workflow-approach spec for selfcheck covering only the post-run diagnostic reviewer:
+1. After a harness run, a reviewer that has the issue, the gold patch and the gold tests reads the run's briefs (understanding round, approval brief, Ask items with options and cited evidence) and the archived spec.
+2. It reports where they diverged from the correct behavior, per category: understanding, Ask option set, recommendation evidence, spec requirements. Each finding cites the transcript or spec location.
+3. It never changes the run, its scores, or its process checks. Its output is stored with the run and summarized in the report.
+4. Develop and check it offline on the existing run `a41e64cb9bbbef03`; no new live run is needed. The manual analysis of that run is the reference: seaborn (Ask options omitted the gold approach, false "upstream v0.12.2" evidence, User Intent drifted from the understanding round's success criterion), sphinx (R1 left the node type open as "A or B" and named a node class absent in that Sphinx version), astropy (no divergence in understanding; workflow shortened, spec written afterwards).
 
 ## Open Questions
-- Who is the reviewer: a model call inside the driver (cost, model choice, leakage of gold text into the container), or a host-side step between turns?
-- Does an informed answer that names behavior from the gold tests (for example "labels must show full numbers") leak the hidden test? Where is the line within the constraints above?
-- Should a brief with a false factual claim (the seaborn "upstream v0.12.2" citation) be scored as a process failure on its own?
-- Relation to `3192c062a0fd880f-selfcheck-checker-gaps-and-repeats.md`: whether to run both in one spec, and whether `check --repeats` should come first so the informed condition can be compared with variance.
+- Where the reviewer runs: host-side model call after the run (natural for post-run review) or elsewhere; model and effort; cost per run.
+- Should a brief with a false factual claim (the seaborn "upstream v0.12.2" citation) be scored as a process failure on its own, or only reported?
+- Output format: free text, or fixed categories with verdicts that the report can tabulate?
 
 ## Spec
 none — no spec opened yet. Prior selfcheck spec: `agent-docs/spec-logs/94b886658b88a7ef-selfcheck-analysis.md` (v6, complete).

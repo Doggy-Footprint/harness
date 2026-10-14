@@ -1,4 +1,4 @@
-# selfcheck: process-check gaps and harness-arm repeats found in the first live check
+# selfcheck stage 2 of 3: process-check gaps and harness-arm repeats found in the first live check
 
 ## Goal
 "커밋하고 4, 5, 7번 handoff로 넘기고 3은 완료 확인하고 닫아. 그 다음 마스터 머지해"
@@ -23,6 +23,8 @@ Items 4, 5 and 7 as listed to the user after the first live harness check:
 | Judge harness vs baseline with 1 harness run | sphinx kill 0.89 vs baseline 0; seaborn resolved 0 vs baseline 1 | hypothesis: one run per instance cannot separate a harness effect from run-to-run variance; the 2 baseline repeats were nearly identical, so each baseline range is close to a point |
 
 ## Next Step
+Order agreed with the user ("그럼 지금 나눠서 써줘."): start after `bf0d1dd85535bb18-selfcheck-informed-brief-review.md` (stage 1) is complete, and before any new live run; `44ab3e5b5b54f81d-selfcheck-informed-reviewer-condition.md` (stage 3) depends on this one.
+
 Open a workflow-approach spec for selfcheck covering:
 1. PC8: recognize a spec write made through Bash (heredoc, redirection, `python - <<EOF` writing under `agent-docs/specs/`) as well as Edit/Write.
 2. A check that the spec write precedes the first main or implementer edit of an Implementation path; a retroactive spec fails.
