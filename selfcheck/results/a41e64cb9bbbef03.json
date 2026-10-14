@@ -1,5 +1,13 @@
 {
  "baseline": "compared",
+ "false_claims": [
+  {
+   "category": "recommendation_evidence",
+   "citation": "[raw/claude/projects/-testbed/50e0a268-346e-4e67-9297-b8c64d5a5dae.jsonl:27]",
+   "instance_id": "mwaskom__seaborn-3187",
+   "summary": "\ube0c\ub9ac\ud504\ub294 \uc5c5\uc2a4\ud2b8\ub9bc seaborn v0.12.2\uac00 offset\uc744 \ubc94\ub840 \uc81c\ubaa9\uc5d0 \ub123\ub294 \ubc29\uc2dd\uc73c\ub85c \uc774 \uc774\uc288\ub97c \uace0\ucce4\ub2e4\uace0 \uc8fc\uc7a5\ud588\ub2e4. \uc2e4\uc81c gold \uc218\uc815\uc740 set_useOffset(False)\uc640 set_scientific(False)\ub85c offset \uc790\uccb4\ub97c \ub044\ub294 \ubc29\uc2dd\uc774\ub2e4."
+  }
+ ],
  "fixture_id": "246588b0e19680ee",
  "harness_commit": "bf8048ed39310b6280be7a9c2b52d29726fa7517",
  "harness_ref": "HEAD",
@@ -95,6 +103,42 @@
     "PC8": "n/a",
     "PC9": "fail"
    },
+   "review": {
+    "ask_options": "consistent",
+    "recommendation_evidence": "consistent",
+    "spec_requirements": "consistent",
+    "understanding": "consistent"
+   },
+   "review_findings": {
+    "ask_options": [
+     {
+      "citation": "[raw/claude/projects/-testbed/cf8ee939-1f84-415c-8381-cd21f309049c.jsonl:27]",
+      "false_claim": false,
+      "summary": "\ubb38\uc790\uc5f4 Literal \uac12\uc5d0 \ub530\uc634\ud45c\ub97c \ubd99\uc5ec repr \ud615\uc2dd\uc73c\ub85c \ud45c\uc2dc\ud560\uc9c0 \uc0ac\uc6a9\uc790\uc5d0\uac8c \ubb3c\uc5c8\uc2b5\ub2c8\ub2e4. \uc774\ub294 gold\uc758 repr(node.value) \ubcc0\uacbd\uacfc \uc77c\uce58\ud569\ub2c8\ub2e4."
+     }
+    ],
+    "recommendation_evidence": [
+     {
+      "citation": "[raw/claude/projects/-testbed/cf8ee939-1f84-415c-8381-cd21f309049c.jsonl:114]",
+      "false_claim": false,
+      "summary": "Literal, typing.Literal, typing_extensions.Literal\uc758 \uc815\ud655\ud55c \uc774\ub984\ub9cc \uc778\uc2dd\ud558\ub3c4\ub85d \uad8c\uc7a5\ud588\uace0, \uadfc\uac70\ub85c upstream\uc744 \ub4e4\uc5c8\uc2b5\ub2c8\ub2e4. gold\ub294 Literal\uacfc typing.Literal\ub9cc \uac80\uc0ac\ud558\ubbc0\ub85c \uac70\uc758 \uc77c\uce58\ud569\ub2c8\ub2e4."
+     }
+    ],
+    "spec_requirements": [
+     {
+      "citation": "[spec]",
+      "false_claim": false,
+      "summary": "R1/C1/C2\ub294 gold \ud14c\uc2a4\ud2b8\uc640 \uc77c\uce58\ud569\ub2c8\ub2e4. Literal \uac12\uc740 xref\uac00 \uc544\ub2cc \ud14d\uc2a4\ud2b8\ub85c \ucd9c\ub825\ub418\uace0, \ub530\uc634\ud45c\uac00 \uc720\uc9c0\ub418\uba70, Literal \uc774\ub984 \uc790\uccb4\ub294 xref\ub85c \ub0a8\uc2b5\ub2c8\ub2e4."
+     }
+    ],
+    "understanding": [
+     {
+      "citation": "[raw/claude/projects/-testbed/cf8ee939-1f84-415c-8381-cd21f309049c.jsonl:27]",
+      "false_claim": false,
+      "summary": "\uc774 brief\ub294 \ubb38\uc81c\ub97c \uc62c\ubc14\ub974\uac8c \ud30c\uc545\ud588\uc2b5\ub2c8\ub2e4. `_parse_annotation`\uc774 Literal \uc548\uc758 \uac12\ub4e4\uc744 py:class xref\ub85c \ub9cc\ub4e4\uace0, \uadf8 \uacb0\uacfc nitpicky \uacbd\uace0\uac00 \ubc1c\uc0dd\ud55c\ub2e4\ub294 \uc810\uc785\ub2c8\ub2e4."
+     }
+    ]
+   },
    "small_sample": false,
    "status": "completed"
   },
@@ -189,6 +233,52 @@
     "PC8": "n/a",
     "PC9": "fail"
    },
+   "review": {
+    "ask_options": "diverged",
+    "recommendation_evidence": "diverged",
+    "spec_requirements": "diverged",
+    "understanding": "consistent"
+   },
+   "review_findings": {
+    "ask_options": [
+     {
+      "citation": "[raw/claude/projects/-testbed/50e0a268-346e-4e67-9297-b8c64d5a5dae.jsonl:27]",
+      "false_claim": false,
+      "summary": "\uc81c\uc2dc\ub41c \uc120\ud0dd\uc9c0\ub294 (a) offset\uc744 \uc81c\ubaa9\uc5d0 \ud45c\uc2dc, (b) \uac01 \ub77c\ubca8\uc5d0 offset \ud3ec\ud568 \ub450 \uac00\uc9c0\ubfd0\uc774\uc5c8\ub2e4. gold\uc758 \ubc29\uc2dd\uc778 offset/\uacfc\ud559\uc801 \ud45c\uae30\ub97c \ub044\uace0 \uc804\uccb4 \uac12\uc744 \ud45c\uc2dc\ud558\ub294 \uc120\ud0dd\uc9c0\ub294 \uc5c6\uc5c8\ub2e4."
+     }
+    ],
+    "recommendation_evidence": [
+     {
+      "citation": "[raw/claude/projects/-testbed/50e0a268-346e-4e67-9297-b8c64d5a5dae.jsonl:27]",
+      "false_claim": true,
+      "summary": "\ube0c\ub9ac\ud504\ub294 \uc5c5\uc2a4\ud2b8\ub9bc seaborn v0.12.2\uac00 offset\uc744 \ubc94\ub840 \uc81c\ubaa9\uc5d0 \ub123\ub294 \ubc29\uc2dd\uc73c\ub85c \uc774 \uc774\uc288\ub97c \uace0\ucce4\ub2e4\uace0 \uc8fc\uc7a5\ud588\ub2e4. \uc2e4\uc81c gold \uc218\uc815\uc740 set_useOffset(False)\uc640 set_scientific(False)\ub85c offset \uc790\uccb4\ub97c \ub044\ub294 \ubc29\uc2dd\uc774\ub2e4."
+     },
+     {
+      "citation": "[raw/claude/projects/-testbed/50e0a268-346e-4e67-9297-b8c64d5a5dae.jsonl:142]",
+      "false_claim": false,
+      "summary": "useoffset rcParam\uc744 \ub530\ub974\uba74 offset\uc774 \uaebc\uc9c8 \ub54c \uc804\uccb4 \ub77c\ubca8\uc774 \ucd9c\ub825\ub41c\ub2e4\uace0 \uc8fc\uc7a5\ud588\uc73c\ub098, \ub098\uc911\uc5d0 \uc774 \uc8fc\uc7a5\uc774 \ud2c0\ub838\ub2e4\uace0 \uc2a4\uc2a4\ub85c \uc815\uc815\ud588\ub2e4(\uacfc\ud559\uc801 \ud45c\uae30 \ubc30\uc218\ub294 \uadf8\ub300\ub85c \ub0a8\uc74c)."
+     }
+    ],
+    "spec_requirements": [
+     {
+      "citation": "[spec]",
+      "false_claim": false,
+      "summary": "R1\uacfc R2\ub294 offset\uc744 \uc81c\ubaa9\uc5d0 \ubd99\uc774\uace0 \ub77c\ubca8\uc740 \uc9e7\uc740 \uac12\uc744 \uc720\uc9c0\ud558\ub3c4\ub85d \uc694\uad6c\ud55c\ub2e4. gold \ud14c\uc2a4\ud2b8\ub294 \uac01 \ub77c\ubca8 \ud14d\uc2a4\ud2b8\uac00 float\ub85c \ubcc0\ud658\ud588\uc744 \ub54c 1e7\ubcf4\ub2e4 \ucee4\uc57c \ud558\ubbc0\ub85c(\uc804\uccb4 \ud06c\uae30 \ud45c\uc2dc), \uc774 \uc694\uad6c\uc0ac\ud56d\uacfc \ub9de\uc9c0 \uc54a\ub294\ub2e4."
+     },
+     {
+      "citation": "[spec]",
+      "false_claim": false,
+      "summary": "Signatures \uc808\uc740 \ud615\uc2dd\ud654\ub41c \ub77c\ubca8\uc5d0\uc11c offset\uc744 \uc81c\uc678\ud558\uace0 \uc81c\ubaa9\uc73c\ub85c \uc804\ub2ec\ud55c\ub2e4\uace0 \uba85\uc2dc\ud55c\ub2e4. \uc774\ub294 gold\uc758 utils.py \ub3d9\uc791(\uc804\uccb4 \uac12 \ub77c\ubca8)\uacfc \ubc18\ub300\ub2e4."
+     }
+    ],
+    "understanding": [
+     {
+      "citation": "[raw/claude/projects/-testbed/50e0a268-346e-4e67-9297-b8c64d5a5dae.jsonl:27]",
+      "false_claim": false,
+      "summary": "\ube0c\ub9ac\ud504\ub294 \ub450 \ucf54\ub4dc \uacbd\ub85c(scales.py Continuous._setup, utils.locator_to_legend_entries)\uc5d0\uc11c offset\uc774 \ub204\ub77d\ub418\ub294 \uc6d0\uc778\uc744 \uc815\ud655\ud788 \uc9da\uc5c8\uace0, \uc774\ub294 gold patch\uac00 \uc218\uc815\ud55c \uc704\uce58\uc640 \uac19\ub2e4."
+     }
+    ]
+   },
    "small_sample": false,
    "status": "completed"
   },
@@ -282,6 +372,42 @@
     "PC7": "pass",
     "PC8": "n/a",
     "PC9": "pass"
+   },
+   "review": {
+    "ask_options": "consistent",
+    "recommendation_evidence": "consistent",
+    "spec_requirements": "consistent",
+    "understanding": "consistent"
+   },
+   "review_findings": {
+    "ask_options": [
+     {
+      "citation": "[raw/claude/projects/-testbed/4763d223-142f-4768-9242-ab218d284a83.jsonl:27]",
+      "false_claim": false,
+      "summary": "NO\ub3c4 \ub300\uc18c\ubb38\uc790\ub97c \uad6c\ubd84\ud558\uc9c0 \uc54a\uac8c \ud558\ub294 default\ub97c veto\ud560 \uc218 \uc788\ub294 \ud615\ud0dc\ub85c \uc81c\uc2dc\ud588\uc2b5\ub2c8\ub2e4. gold patch\uc758 v.upper() == \"NO\"\uc640 \uc77c\uce58\ud569\ub2c8\ub2e4."
+     }
+    ],
+    "recommendation_evidence": [
+     {
+      "citation": "[raw/claude/projects/-testbed/4763d223-142f-4768-9242-ab218d284a83.jsonl:47]",
+      "false_claim": false,
+      "summary": "\ubcf4\uace0\ub41c fix\ub294 re.IGNORECASE\uc640 v.upper() == \"NO\"\ub85c gold patch\uc640 \uac19\uc2b5\ub2c8\ub2e4. \uac01 fix\ub97c \ub418\ub3cc\ub9ac\ub294 hand mutation\ub3c4 \ud588\uace0, \uadf8 \uacb0\uacfc \ud14c\uc2a4\ud2b8\uac00 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4."
+     }
+    ],
+    "spec_requirements": [
+     {
+      "citation": "[spec]",
+      "false_claim": false,
+      "summary": "R1\uacfc R2(\uba85\ub839\uc5b4\uc640 NO \ud1a0\ud070\uc758 \ub300\uc18c\ubb38\uc790 \ubb34\uc2dc)\ub294 gold\uc758 \ub450 \ubcc0\uacbd\uacfc \uc77c\uce58\ud569\ub2c8\ub2e4. R3(\ud638\ud658\uc131 \uc720\uc9c0)\uc740 gold\uc758 test_roundtrip[False]\uc640 \uc77c\uce58\ud569\ub2c8\ub2e4."
+     }
+    ],
+    "understanding": [
+     {
+      "citation": "[raw/claude/projects/-testbed/4763d223-142f-4768-9242-ab218d284a83.jsonl:27]",
+      "false_claim": false,
+      "summary": "\uc774 brief\ub294 \ubb38\uc81c\ub97c \uc815\ud655\ud788 \uc9da\uc5c8\uc2b5\ub2c8\ub2e4. line classifier regex\uac00 \ub300\ubb38\uc790 READ SERR/TERR\uc640 NO\ub9cc \uc778\uc2dd\ud55c\ub2e4\ub294 \uc810\uc774\uace0, gold patch\uac00 re.IGNORECASE\ub85c \uace0\uce58\ub294 \ubd80\ubd84\uacfc \uc77c\uce58\ud569\ub2c8\ub2e4."
+     }
+    ]
    },
    "small_sample": true,
    "status": "completed"

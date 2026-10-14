@@ -499,9 +499,9 @@ class LeakTests(BuildCase):
         run_dir = self.make_run([self.harness_entry(I1)])
         rep = call_build(run_dir, None, {I1: sc(I1)}, {I1: proc(I1)})
         self.assertEqual(set(rep), {"run_id", "harness_ref", "harness_commit", "fixture_id", "baseline", "instances",
-                                    "notes"})
+                                    "notes", "false_claims"})
         self.assertEqual(set(rep["instances"][0]), {"instance_id", "status", "small_sample", "metrics", "process",
-                                                    "cost_usd", "elapsed_s"})
+                                                    "cost_usd", "elapsed_s", "review", "review_findings"})
 
 
 if __name__ == "__main__":

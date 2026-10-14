@@ -66,3 +66,8 @@ File: 3435f4b651e6d0e3-test-quality-audit-findings.md
 Summary: Audit of 11 verifier+mutation-passed runs: mutant selection bias, non-discriminating inputs, subset oracles, verifier scope acceptance, mislabeled mutants
 Related Files: harness/skills/workflow-approach/SKILL.md, harness/agents/test-implementer.md, harness/agents/test-verifier.md, harness/agents/mutant-triager.md, harness/bin/test_scan.py, tests/test_test_scan.py, tests/test_test_scan_rules.py, tests/test_installer.py
 Related Symbols: Verification Obligations, Execution Ledger, hand mutations, mutation-tool triage, LANGUAGES, runner_candidates
+---
+File: bf0d1dd85535bb18-selfcheck-informed-brief-review.md
+Summary: Stage 1/3 — post-run reviewer that compares harness briefs and spec with gold and reports divergences, without changing the run
+Related Files: selfcheck/agent/user_sim.py, selfcheck/agent/driver.py, selfcheck/run.py, selfcheck/process.py, selfcheck/report.py, selfcheck/fixtures/instances.jsonl
+Related Symbols: PHRASE, on_idle, compose_prompt, evaluate_entry, report.build

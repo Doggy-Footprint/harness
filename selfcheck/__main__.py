@@ -5,8 +5,8 @@ import sys
 from pathlib import Path
 
 from . import (
-    calibrate, docker_exec, evaluate, fixture, images, mutants, patches, pool, process, report, run,
-    score, swe, validate,
+    calibrate, docker_exec, evaluate, fixture, images, mutants, patches, pool, process, report, review,
+    run, score, swe, validate,
 )
 
 ROOT = Path(__file__).parent
@@ -14,7 +14,7 @@ FIXTURES = ROOT / "fixtures"
 CONFIG = json.loads((ROOT / "config.json").read_text())
 SUBCOMMANDS = (
     "pool", "images", "validate", "mutants", "calibrate", "score", "run",
-    "process", "baseline", "check", "report",
+    "process", "baseline", "check", "report", "review",
 )
 BASELINE_HINT = "run `python3 -m selfcheck baseline create`"
 ARMS = ("harness", "baseline")
@@ -389,7 +389,7 @@ def _emit_report(run_dir: Path, *, no_baseline: bool, token: str) -> int:
     built = report.build(
         run_dir, fixture_dir=fixture_dir, scores=_load_scores(run_dir),
         processes=_process_entries(run_dir, write=False),
-        min_mutants=CONFIG["report"]["min_mutants"],
+        min_mutants=CONFIG["report"]["min_mutants"], reviews=None,
     )
     try:
         paths = report.write(built, _repo_path(CONFIG["report"]["results_dir"]), token=token)
@@ -411,6 +411,33 @@ def cmd_report(args) -> int:
         print(str(exc), file=sys.stderr)
         return 1
     return _emit_report(run_dir, no_baseline=args.no_baseline, token=token)
+
+
+def cmd_review(args) -> int:
+    run_dir = _run_dir(args.run_id)
+    if run_dir is None:
+        return _unknown_run(args.run_id)
+    try:
+        token = _read_token()
+    except run.TokenFileMissing as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    rows = {r["instance_id"]: r for r in _load_pool(None)}
+    ids = _csv(args.instances)
+    call_fn = functools.partial(review.claude_call, **CONFIG["review"])
+    failed = False
+    for entry in _harness_entries(run_dir):
+        iid = entry["instance_id"]
+        entry_dir = run_dir / iid / "harness"
+        if (ids is not None and iid not in ids) or not entry_dir.is_dir() or iid not in rows:
+            continue
+        result = review.review_entry(
+            entry_dir, rows[iid], call_fn=call_fn, token=token,
+            model=CONFIG["review"]["model"], effort=CONFIG["review"]["effort"],
+        )
+        print(f"{iid} {result['status']}", flush=True)
+        failed = failed or result["status"] == "error"
+    return 1 if failed else 0
 
 
 def cmd_check(args) -> int:
@@ -491,6 +518,7 @@ def build_parser() -> argparse.ArgumentParser:
     add("check", cmd_check, harness_ref={"default": "HEAD"}, resume={},
         no_baseline={"action": "store_true"})
     add("report", cmd_report, instances=False, no_baseline={"action": "store_true"}).add_argument("run_id")
+    add("review", cmd_review).add_argument("run_id")
     return parser
 
 

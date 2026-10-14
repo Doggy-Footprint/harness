@@ -17,6 +17,8 @@ On the bias trade-off (in-loop help reaches only the harness arm; a gold-informe
 | --- | --- | --- |
 | A user simulator that sends one fixed approval phrase (`user_sim.PHRASE`) | seaborn-3187 in run `a41e64cb9bbbef03`: the brief recommended "offset in the legend title" on false "upstream v0.12.2" evidence; the phrase approved it; the run ended `complete` but unresolved | verified: the phrase accepts every recommendation, so the harness's question step cannot affect the outcome; carried over from `bf0d1dd85535bb18` |
 
+- Stage 1 complete: `selfcheck/review.py`, `python3 -m selfcheck review <run_id>`, spec `agent-docs/spec-logs/e4d852bdd61ccf5b-selfcheck-informed-brief-review.md`. Live review of `a41e64cb9bbbef03` caught seaborn's Ask-option omission, false "upstream v0.12.2" claim and spec divergence, but missed sphinx's open "A or B" node type and nonexistent node class (reviewer gets gold only, no base repository) and seaborn's User Intent drift. Expect the same blind spots when its categories are used to judge in-loop answers.
+
 ## Next Step
 After stages 1 and 2 are complete, open a workflow-approach spec for selfcheck:
 1. A new condition (own name in the manifest, the report and `fixture_id` comparability) in which a gold-informed reviewer answers the harness instead of the fixed phrase.

@@ -67,8 +67,37 @@ def _cost(state: dict | None) -> float | None:
     return sum(costs) if costs else None
 
 
+def _load_reviews(run_dir: Path, iids: list[str]) -> dict[str, dict]:
+    reviews = {}
+    for iid in iids:
+        path = run_dir / iid / "harness" / "review.json"
+        if not path.is_file():
+            continue
+        try:
+            obj = json.loads(path.read_text())
+        except (OSError, ValueError):
+            obj = None
+        reviews[iid] = obj if isinstance(obj, dict) else {
+            "status": "error", "error": "unreadable review.json",
+        }
+    return reviews
+
+
+def _review_view(review: dict | None) -> tuple:
+    if review is None:
+        return "not run", {}
+    if review.get("status") == "error":
+        return f"error: {review.get('error')}", {}
+    cats = review.get("categories") or {}
+    return (
+        {cat: c.get("verdict") for cat, c in cats.items()},
+        {cat: c.get("findings") or [] for cat, c in cats.items()},
+    )
+
+
 def build(
-    run_dir: Path, *, fixture_dir: Path | None, scores: dict, processes: dict, min_mutants: int
+    run_dir: Path, *, fixture_dir: Path | None, scores: dict, processes: dict, min_mutants: int,
+    reviews: dict | None = None,
 ) -> dict:
     run_dir = Path(run_dir)
     meta = _read_json(run_dir / "run.json")
@@ -80,7 +109,12 @@ def build(
         fixture_manifest = _read_json(fixture_dir / "manifest.json")
         fixture_scores = _read_json(fixture_dir / "scores.json") or {}
 
+    if reviews is None:
+        reviews = _load_reviews(
+            run_dir, [e["instance_id"] for e in meta["entries"] if e["arm"] == "harness"]
+        )
     instances = []
+    false_claims = []
     for entry in meta["entries"]:
         if entry["arm"] != "harness":
             continue
@@ -105,6 +139,14 @@ def build(
                 "verdict": verdict(harness[m], values),
             }
         state = _read_json(run_dir / iid / "harness" / "state.json")
+        review = reviews.get(iid)
+        verdicts, findings = _review_view(review)
+        if review is not None and review.get("status") == "ok":
+            false_claims += [
+                {"instance_id": iid, "category": fc.get("category"), "summary": fc.get("summary"),
+                 "citation": fc.get("citation")}
+                for fc in review.get("false_claims") or []
+            ]
         instances.append({
             "instance_id": iid,
             "status": entry["status"],
@@ -113,6 +155,8 @@ def build(
             "process": _check_verdicts(processes.get(iid)),
             "cost_usd": _cost(state),
             "elapsed_s": (state or {}).get("elapsed_s"),
+            "review": verdicts,
+            "review_findings": findings,
         })
     notes = [NOTE_NO_SIGNIFICANCE]
     if any(i["small_sample"] for i in instances):
@@ -124,12 +168,21 @@ def build(
         "fixture_id": (fixture_manifest or {}).get("fixture_id", fixture_dir.name) if fixture_dir else None,
         "baseline": "compared" if fixture_dir else "skipped",
         "instances": instances,
+        "false_claims": false_claims,
         "notes": notes,
     }
 
 
 def _cell(value) -> str:
     return "n/a" if value is None else f"{value:.3f}" if isinstance(value, float) else str(value)
+
+
+def _md(value) -> str:
+    return str(value).replace("|", "\\|").replace("\n", " ")
+
+
+def _cite(citation: str) -> str:
+    return citation if citation.startswith("[") and citation.endswith("]") else f"[{citation}]"
 
 
 def render_markdown(report: dict) -> str:
@@ -153,6 +206,25 @@ def render_markdown(report: dict) -> str:
         lines += ["", f"cost_usd: {_cell(inst['cost_usd'])}, elapsed_s: {_cell(inst['elapsed_s'])}", ""]
         lines += ["| check | verdict |", "| --- | --- |"]
         lines += [f"| {cid} | {v} |" for cid, v in inst["process"].items()]
+        lines.append("")
+        if isinstance(inst["review"], str):
+            lines.append(f"review: {inst['review']}")
+        else:
+            lines += ["| category | verdict | findings |", "| --- | --- | --- |"]
+            for cat, v in inst["review"].items():
+                found = "; ".join(
+                    f"{f['summary']} {_cite(f['citation'])}" for f in inst["review_findings"].get(cat, [])
+                )
+                lines.append(f"| {cat} | {v} | {_md(found) or 'none'} |")
+    lines += ["", "## false claims", ""]
+    if report["false_claims"]:
+        lines += ["| instance | category | summary | citation |", "| --- | --- | --- | --- |"]
+        lines += [
+            f"| {fc['instance_id']} | {fc['category']} | {_md(fc['summary'])} | {_md(fc['citation'])} |"
+            for fc in report["false_claims"]
+        ]
+    else:
+        lines.append("none")
     lines += ["", "## notes", ""]
     lines += [f"- {n}" for n in report["notes"]]
     return "\n".join(lines) + "\n"
