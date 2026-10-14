@@ -41,9 +41,19 @@ class ReviewReportCase(tr.BuildCase):
         return self.make_run([self.harness_entry(I1), self.harness_entry(I2), self.harness_entry(I3)])
 
     def build(self, run_dir, reviews, **kw):
+        if reviews:
+            reviews = {(i, 1): r for i, r in reviews.items()}
         iids = [I1, I2, I3]
-        return report.build(run_dir, fixture_dir=kw.get("fixture_dir"), scores={i: tr.sc(i) for i in iids},
-                            processes={i: tr.proc(i) for i in iids}, min_mutants=10, reviews=reviews)
+        return report.build(run_dir, fixture_dir=kw.get("fixture_dir"), scores={(i, 1): tr.sc(i) for i in iids},
+                            processes={(i, 1): tr.proc(i) for i in iids}, min_mutants=10, reviews=reviews)
+
+    @staticmethod
+    def rev(inst, k=0):
+        return inst["repeats"][k]["review"]
+
+    @staticmethod
+    def findings(inst, k=0):
+        return inst["repeats"][k]["review_findings"]
 
     def put(self, run_dir, iid, text):
         m.write_text(run_dir / iid / "harness" / "review.json", text)
@@ -71,30 +81,33 @@ class BuildReviewTests(ReviewReportCase):
         reviews = {I1: ok_review(I1, CATS_1), I3: error_review(I3, "no transcript")}
         rep = self.build(run_dir, reviews)
         first, second, third = rep["instances"]
-        self.assertEqual(first["review"], {"understanding": "diverged", "ask_options": "consistent",
+        self.assertEqual(self.rev(first), {"understanding": "diverged", "ask_options": "consistent",
                                            "recommendation_evidence": "diverged", "spec_requirements": "n/a"})
-        self.assertEqual(first["review_findings"], {c: CATS_1[c]["findings"] for c in R.CATEGORIES})
-        self.assertEqual(second["review"], "not run")
-        self.assertEqual(second["review_findings"], {})
-        self.assertEqual(third["review"], "error: no transcript")
-        self.assertEqual(third["review_findings"], {})
+        self.assertEqual(self.findings(first), {c: CATS_1[c]["findings"] for c in R.CATEGORIES})
+        self.assertEqual(self.rev(second), "not run")
+        self.assertEqual(self.findings(second), {})
+        self.assertEqual(self.rev(third), "error: no transcript")
+        self.assertEqual(self.findings(third), {})
         self.assertEqual(rep["false_claims"], [
-            {"instance_id": I1, "category": "understanding", "summary": "UNDERSTOOD-WRONG", "citation": "[t.jsonl:4]"}])
+            {"instance_id": I1, "repeat": 1, "category": "understanding", "summary": "UNDERSTOOD-WRONG",
+             "citation": "[t.jsonl:4]"}])
 
-    def test_vo9_false_claims_across_instances_keep_all_four_keys(self):
+    def test_vo9_false_claims_across_instances_keep_all_five_keys(self):
         run_dir = self.run_three()
         cats_2 = R.payload(spec_requirements=R.category("diverged", R.finding("REQ-WRONG", "[spec]", True)))
         rep = self.build(run_dir, {I1: ok_review(I1, CATS_1), I2: ok_review(I2, cats_2)})
         got = sorted(rep["false_claims"], key=lambda c: c["instance_id"])
         self.assertEqual(got, [
-            {"instance_id": I1, "category": "understanding", "summary": "UNDERSTOOD-WRONG", "citation": "[t.jsonl:4]"},
-            {"instance_id": I2, "category": "spec_requirements", "summary": "REQ-WRONG", "citation": "[spec]"}])
+            {"instance_id": I1, "repeat": 1, "category": "understanding", "summary": "UNDERSTOOD-WRONG",
+             "citation": "[t.jsonl:4]"},
+            {"instance_id": I2, "repeat": 1, "category": "spec_requirements", "summary": "REQ-WRONG",
+             "citation": "[spec]"}])
 
     def test_vo9_c10_no_false_claims_gives_an_empty_list(self):
         run_dir = self.run_three()
         rep = self.build(run_dir, {I1: ok_review(I1, R.payload()), I2: ok_review(I2, R.payload())})
         self.assertEqual(rep["false_claims"], [])
-        self.assertEqual(rep["instances"][0]["review"], {c: "consistent" for c in R.CATEGORIES})
+        self.assertEqual(self.rev(rep["instances"][0]), {c: "consistent" for c in R.CATEGORIES})
 
     def test_vo9_reviews_none_loads_review_json_from_each_harness_entry(self):
         run_dir = self.run_three()
@@ -102,17 +115,17 @@ class BuildReviewTests(ReviewReportCase):
         self.put(run_dir, I3, json.dumps(error_review(I3, "token found in review output")))
         rep = self.build(run_dir, None)
         first, second, third = rep["instances"]
-        self.assertEqual(first["review"]["understanding"], "diverged")
-        self.assertEqual(first["review_findings"]["understanding"], CATS_1["understanding"]["findings"])
-        self.assertEqual(second["review"], "not run")
-        self.assertEqual(third["review"], "error: token found in review output")
+        self.assertEqual(self.rev(first)["understanding"], "diverged")
+        self.assertEqual(self.findings(first)["understanding"], CATS_1["understanding"]["findings"])
+        self.assertEqual(self.rev(second), "not run")
+        self.assertEqual(self.rev(third), "error: token found in review output")
         self.assertEqual([c["summary"] for c in rep["false_claims"]], ["UNDERSTOOD-WRONG"])
 
     def test_vo9_empty_reviews_dict_does_not_load_from_disk(self):
         run_dir = self.run_three()
         self.put(run_dir, I1, json.dumps(ok_review(I1, CATS_1)))
         rep = self.build(run_dir, {})
-        self.assertEqual([i["review"] for i in rep["instances"]], ["not run"] * 3)
+        self.assertEqual([self.rev(i) for i in rep["instances"]], ["not run"] * 3)
         self.assertEqual(rep["false_claims"], [])
 
     def test_vo9_unreadable_review_json(self):
@@ -120,21 +133,21 @@ class BuildReviewTests(ReviewReportCase):
         self.put(run_dir, I1, '{"status": "ok", "categories": ')
         self.put(run_dir, I2, "")
         rep = self.build(run_dir, None)
-        self.assertEqual(rep["instances"][0]["review"], "error: unreadable review.json")
-        self.assertEqual(rep["instances"][1]["review"], "error: unreadable review.json")
-        self.assertEqual(rep["instances"][0]["review_findings"], {})
+        self.assertEqual(self.rev(rep["instances"][0]), "error: unreadable review.json")
+        self.assertEqual(self.rev(rep["instances"][1]), "error: unreadable review.json")
+        self.assertEqual(self.findings(rep["instances"][0]), {})
         self.assertEqual(rep["false_claims"], [])
 
     def test_vo9_explicit_reviews_take_precedence_over_the_file(self):
         run_dir = self.run_three()
         self.put(run_dir, I1, json.dumps(ok_review(I1, CATS_1)))
         rep = self.build(run_dir, {I1: error_review(I1, "explicit")})
-        self.assertEqual(rep["instances"][0]["review"], "error: explicit")
+        self.assertEqual(self.rev(rep["instances"][0]), "error: explicit")
 
     def test_vo9_existing_fields_are_unchanged_by_reviews(self):
         run_dir, fixture_dir, scores, processes = tr.BuildTests.two_instances(self)
         plain = tr.call_build(run_dir, fixture_dir, scores, processes)
-        reviews = {I1: ok_review(I1, CATS_1), I2: error_review(I2, "boom")}
+        reviews = {(I1, 1): ok_review(I1, CATS_1), (I2, 1): error_review(I2, "boom")}
         with_reviews = report.build(run_dir, fixture_dir=fixture_dir, scores=scores, processes=processes,
                                     min_mutants=10, reviews=reviews)
         self.assertEqual(set(plain) - {"false_claims"}, {"run_id", "harness_ref", "harness_commit", "fixture_id",
@@ -142,19 +155,21 @@ class BuildReviewTests(ReviewReportCase):
         for rep in (plain, with_reviews):
             self.assertIn("false_claims", rep)
             for inst in rep["instances"]:
-                self.assertIn("review", inst)
-                self.assertIn("review_findings", inst)
+                for repeat in inst["repeats"]:
+                    self.assertIn("review", repeat)
+                    self.assertIn("review_findings", repeat)
 
         def stripped(rep):
             rep = copy.deepcopy(rep)
             rep.pop("false_claims")
             for inst in rep["instances"]:
-                inst.pop("review")
-                inst.pop("review_findings")
+                for repeat in inst["repeats"]:
+                    repeat.pop("review")
+                    repeat.pop("review_findings")
             return rep
 
         self.assertEqual(stripped(with_reviews), stripped(plain))
-        self.assertEqual({i["review"] for i in plain["instances"]}, {"not run"})
+        self.assertEqual({self.rev(i) for i in plain["instances"]}, {"not run"})
         self.assertEqual(plain["false_claims"], [])
 
 
@@ -198,6 +213,11 @@ class RenderReviewTests(ReviewReportCase):
         for note in rep["notes"]:
             self.assertGreater(text.index(note), text.index("## false claims"))
 
+    def test_o9_review_table_separator_line_is_exact(self):
+        _, text = self.render({I1: ok_review(I1, CATS_1)})
+        lines = text.splitlines()
+        self.assertEqual(lines[lines.index(HEADER) + 1], "| --- | --- | --- |")
+
     def test_vo9_bare_citation_is_bracketed_and_bracketed_one_is_not_doubled(self):
         cats = R.payload(ask_options=R.category("diverged", R.finding("BARE", "t.jsonl:9"),
                                                 R.finding("WRAPPED", "[t.jsonl:8]")))
@@ -225,10 +245,77 @@ class RenderReviewTests(ReviewReportCase):
     def test_vo9_markdown_with_a_fixture_keeps_the_metric_tables(self):
         run_dir, fixture_dir, scores, processes = tr.BuildTests.two_instances(self)
         rep = report.build(run_dir, fixture_dir=fixture_dir, scores=scores, processes=processes, min_mutants=10,
-                           reviews={I1: ok_review(I1, CATS_1)})
+                           reviews={(I1, 1): ok_review(I1, CATS_1)})
         text = report.render_markdown(rep)
-        self.assertIn("| metric | harness | baseline (per repeat) | range | verdict |", text)
+        self.assertIn("| metric | r1 | summary | baseline (per repeat) | range | verdict | repeats above/within/below |",
+                      text)
         self.assertEqual(text.splitlines().count(HEADER), 1)
+
+
+class RepeatReviewTests(tr.BuildCase):
+    """O8/O9: reviews are per (instance, repeat); review.json is read from each repeat's entry directory."""
+
+    def run_two_repeats(self):
+        return self.make_run([self.harness_entry(I1, repeat=1), self.harness_entry(I1, repeat=2)])
+
+    def build(self, run_dir, reviews=None):
+        return report.build(run_dir, fixture_dir=None, scores={(I1, k): tr.sc(I1) for k in (1, 2)},
+                            processes={(I1, k): tr.proc(I1) for k in (1, 2)}, min_mutants=10, reviews=reviews)
+
+    def test_o8_reviews_none_loads_review_json_from_each_repeat_directory(self):
+        run_dir = self.run_two_repeats()
+        m.write_text(run_dir / I1 / "harness-r1" / "review.json", json.dumps(ok_review(I1, CATS_1)))
+        m.write_text(run_dir / I1 / "harness-r2" / "review.json", json.dumps(error_review(I1, "second broke")))
+        rep = self.build(run_dir)
+        first, second = rep["instances"][0]["repeats"]
+        self.assertEqual(first["review"]["understanding"], "diverged")
+        self.assertEqual(first["review_findings"]["understanding"], CATS_1["understanding"]["findings"])
+        self.assertEqual(second["review"], "error: second broke")
+        self.assertEqual(second["review_findings"], {})
+        self.assertEqual(rep["false_claims"], [
+            {"instance_id": I1, "repeat": 1, "category": "understanding", "summary": "UNDERSTOOD-WRONG",
+             "citation": "[t.jsonl:4]"}])
+
+    def test_o8_explicit_reviews_are_keyed_by_instance_and_repeat(self):
+        run_dir = self.run_two_repeats()
+        rep = self.build(run_dir, {(I1, 2): ok_review(I1, CATS_1)})
+        first, second = rep["instances"][0]["repeats"]
+        self.assertEqual(first["review"], "not run")
+        self.assertEqual(second["review"]["understanding"], "diverged")
+        self.assertEqual([(c["instance_id"], c["repeat"]) for c in rep["false_claims"]], [(I1, 2)])
+
+    def test_o9_markdown_has_one_review_subsection_per_repeat_with_its_own_content(self):
+        run_dir = self.run_two_repeats()
+        rep = self.build(run_dir, {(I1, 1): ok_review(I1, CATS_1), (I1, 2): error_review(I1, "second broke")})
+        text = report.render_markdown(rep)
+        lines = text.splitlines()
+        self.assertEqual(lines.count("### r1 review"), 1)
+        self.assertEqual(lines.count("### r2 review"), 1)
+        head = text.split("## false claims", 1)[0]
+        r1 = head[head.index("### r1 review"):head.index("### r2 review")]
+        r2 = head[head.index("### r2 review"):]
+        self.assertEqual(r1.splitlines().count(HEADER), 1)
+        self.assertIn("UNDERSTOOD-WRONG", r1)
+        self.assertNotIn("UNDERSTOOD-WRONG", r2)
+        self.assertIn("error: second broke", r2)
+        self.assertNotIn(HEADER, r2)
+
+    def test_o9_false_claims_section_row_names_the_instance_and_the_claim(self):
+        run_dir = self.run_two_repeats()
+        rep = self.build(run_dir, {(I1, 2): ok_review(I1, CATS_1)})
+        tail = report.render_markdown(rep).split("## false claims", 1)[1]
+        rows = [l for l in tail.splitlines() if l.lstrip().startswith("|") and "UNDERSTOOD-WRONG" in l]
+        self.assertEqual(len(rows), 1)
+        for needle in (I1, "understanding", "[t.jsonl:4]"):
+            self.assertIn(needle, rows[0])
+
+    def test_o10_legacy_run_markdown_has_a_single_r1_review_subsection(self):
+        run_dir = self.make_run([self.harness_entry(I1)])
+        rep = report.build(run_dir, fixture_dir=None, scores={(I1, 1): tr.sc(I1)}, processes={(I1, 1): tr.proc(I1)},
+                           min_mutants=10, reviews={(I1, 1): ok_review(I1, CATS_1)})
+        text = report.render_markdown(rep)
+        self.assertEqual(text.splitlines().count("### r1 review"), 1)
+        self.assertNotIn("### r2 review", text)
 
 
 class ReportTokenTests(ReviewReportCase):

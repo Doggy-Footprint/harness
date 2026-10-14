@@ -120,7 +120,7 @@ class CompliantEntryTests(ProcessCase):
         self.assertEqual(res["metrics"], {
             "verifier_results": 1, "verifier_dispatches": 1, "seed_pairs": 1,
             "subagent_dispatches": {"test-implementer": 1, "implementer": 1, "test-verifier": 1},
-            "main_implementation_edits": 0,
+            "main_implementation_edits": 0, "implementer_test_runs": 0, "unknown_bash_accesses": 0,
             "self_reported_kill": {"mutants": 10, "killed": 9, "rate": 0.9},
             "measured_kill": 0.5,
         })
@@ -171,7 +171,7 @@ class SingleViolationTests(ProcessCase):
     def test_vo2_c7_01_no_workflow_start(self):
         res = self.evaluate(events=m.reseq([E("verification_result", mutants=10, killed=9)]))
         self.expect(res, {"PC1": "fail", "PC2": "fail", "PC3": "n/a", "PC4": "n/a", "PC5": "n/a", "PC7": "n/a",
-                          "PC8": "n/a", "PC9": "n/a", "PC10": "n/a", "PC11": "n/a"})
+                          "PC8": "n/a", "PC9": "n/a", "PC10": "n/a", "PC11": "n/a", "PC12": "n/a"})
         self.assertEqual(res["checks"]["PC1"]["evidence"], [])
         self.assertIsNone(res["workflow_run_id"])
 
@@ -262,7 +262,7 @@ class EdgeTests(ProcessCase):
     def test_vo2_c8_main_test_edit_before_the_first_spec_write_passes_pc8(self):
         early = L(None, "Edit", file_path=tb(m.TEST_FILE), old_string="a", new_string="b")
         res = self.evaluate(ledger=ledger_with(0, [early]))
-        self.expect(res)
+        self.expect(res, {"PC12": "fail"})
 
     def test_vo2_c8_bash_naming_a_directory_entry_does_not_match_pc9(self):
         diff = m.archived_diff(tests=[m.TEST_FILE, "tests/unit"], impl=[m.IMPL_FILE, "src/pkg"])
@@ -290,7 +290,7 @@ class MissingInputTests(ProcessCase):
     def test_vo2_c9_missing_telemetry_dir(self):
         res = self.evaluate(events=None)
         self.expect(res, {"PC1": "fail", "PC2": "fail", "PC3": "n/a", "PC4": "n/a", "PC5": "n/a", "PC7": "n/a",
-                          "PC8": "n/a", "PC9": "n/a", "PC10": "n/a", "PC11": "n/a"})
+                          "PC8": "n/a", "PC9": "n/a", "PC10": "n/a", "PC11": "n/a", "PC12": "n/a"})
         self.assertEqual(res["checks"]["PC1"]["evidence"], [])
         self.assertEqual(res["skipped_lines"], 0)
         self.assertIsNone(res["workflow_run_id"])
@@ -298,13 +298,13 @@ class MissingInputTests(ProcessCase):
 
     def test_vo2_c9_missing_ledger(self):
         res = self.evaluate(ledger=None)
-        self.expect(res, {"PC8": "n/a", "PC10": "n/a"})
+        self.expect(res, {"PC8": "n/a", "PC10": "n/a", "PC12": "n/a"})
         self.assertEqual(res["metrics"]["verifier_dispatches"], 0)
         self.assertEqual(res["metrics"]["subagent_dispatches"], {})
 
     def test_vo2_c9_missing_full_diff(self):
         res = self.evaluate(diff=None)
-        self.expect(res, {"PC7": "fail", "PC8": "n/a", "PC9": "n/a", "PC10": "n/a"})
+        self.expect(res, {"PC7": "fail", "PC8": "n/a", "PC9": "n/a", "PC10": "n/a", "PC12": "n/a"})
         self.assertEqual(res["checks"]["PC7"]["evidence"], [])
 
     def test_vo2_c9_missing_prediction(self):
@@ -447,7 +447,7 @@ class SpecTextTests(ProcessCase):
 
     def test_vo2_c7_no_spec_in_the_diff_fails_pc7_and_makes_spec_dependent_checks_na(self):
         res = self.evaluate(diff=m.decoy_section())
-        self.expect(res, {"PC7": "fail", "PC8": "n/a", "PC9": "n/a", "PC10": "n/a"})
+        self.expect(res, {"PC7": "fail", "PC8": "n/a", "PC9": "n/a", "PC10": "n/a", "PC12": "n/a"})
 
 
 class Pc7Tests(ProcessCase):
@@ -533,8 +533,8 @@ PC9_CASES = [
     ("test-implementer-bash-file-entry", "test-implementer", "Bash", {"command": "cat src/a.py"}, ["tests/test_x.py"], ["src/a.py"], "fail"),
     ("test-verifier-reads-under-implementation-directory", "test-verifier", "Read", {"file_path": tb("src/pkg/sub/a.py")}, ["tests/test_x.py"], ["src/pkg"], "fail"),
     ("test-verifier-bash-implementation-file", "test-verifier", "Bash", {"command": "cat src/a.py"}, ["tests/test_x.py"], ["src/a.py"], "fail"),
-    ("test-verifier-bash-dotted-directory-entry-with-slash", "test-verifier", "Bash", {"command": "cat src.v2/pkg/a.py"}, ["tests/test_x.py"], ["src.v2/pkg/"], "pass"),
-    ("test-verifier-bash-dotted-directory-entry", "test-verifier", "Bash", {"command": "cat src.v2/pkg/a.py"}, ["tests/test_x.py"], ["src.v2/pkg"], "pass"),
+    ("test-verifier-bash-dotted-directory-entry-with-slash", "test-verifier", "Bash", {"command": "cat src.v2/pkg/a.py"}, ["tests/test_x.py"], ["src.v2/pkg/"], "fail"),
+    ("test-verifier-bash-dotted-directory-entry", "test-verifier", "Bash", {"command": "cat src.v2/pkg/a.py"}, ["tests/test_x.py"], ["src.v2/pkg"], "fail"),
     ("main-reads-tests", None, "Read", {"file_path": tb("tests/test_x.py")}, ["tests/test_x.py"], ["src/a.py"], "pass"),
 ]
 
@@ -761,6 +761,444 @@ class BoundaryTests(ProcessCase):
     def test_vo3_pc5_is_na_without_a_workflow_start(self):
         res = self.evaluate(events=m.reseq([E("seed", action="backup")]))
         self.assertEqual(res["checks"]["PC5"]["verdict"], "n/a")
+
+
+# ----------------------------------------------------------------------------------------------
+# O3: F8 decision table, spec spec 2974883932c47b32 v1 (Bash rows write paths)
+# ----------------------------------------------------------------------------------------------
+
+SPEC_HEREDOC = "cat > %s <<'EOF'\n---\nstatus: active\nEOF" % m.SPEC_REL
+TEST_SED = "sed -i 's/a/b/' %s" % m.TEST_FILE
+TEST_HEREDOC = "cat >> %s <<'EOF'\ndef test_n(): pass\nEOF" % m.TEST_FILE
+IMPL_SED = "sed -i 's/a/b/' %s" % m.IMPL_FILE
+
+
+def spec_row(kind):
+    if kind == "Edit":
+        return L(None, "Edit", file_path=tb(m.SPEC_REL), old_string="a", new_string="b")
+    return L(None, "Bash", command=SPEC_HEREDOC)
+
+
+def test_write_row(kind):
+    if kind == "Edit":
+        return L(None, "Edit", file_path=tb(m.TEST_FILE), old_string="a", new_string="b")
+    return L(None, "Bash", command=TEST_SED)
+
+
+def with_spec_row(kind, rows=(), at=1):
+    base = m.compliant_ledger_items()
+    base[0] = spec_row(kind)
+    return base[:at] + list(rows) + base[at:]
+
+
+class Pc8BashDecisionTableTests(ProcessCase):
+    def test_o3_r1_spec_by_edit_and_main_test_write_by_edit_fails(self):
+        res = self.evaluate(ledger=with_spec_row("Edit", [test_write_row("Edit")], at=5))
+        self.assertEqual(res["checks"]["PC8"]["verdict"], "fail")
+        self.assertEqual(self.evidence(res, "PC8"), {(LEDGER, 6)})
+
+    def test_o3_r2_spec_by_edit_and_main_test_write_by_bash_sed_fails_with_that_row(self):
+        res = self.evaluate(ledger=with_spec_row("Edit", [test_write_row("Bash")], at=5))
+        self.assertEqual(res["checks"]["PC8"]["verdict"], "fail")
+        self.assertEqual(self.evidence(res, "PC8"), {(LEDGER, 6)})
+
+    def test_o3_r3_spec_by_edit_and_no_later_main_test_write_passes(self):
+        res = self.evaluate(ledger=with_spec_row("Edit"))
+        self.assertEqual(res["checks"]["PC8"]["verdict"], "pass")
+
+    def test_o3_r4_spec_by_bash_and_main_test_write_by_edit_fails(self):
+        res = self.evaluate(ledger=with_spec_row("Bash", [test_write_row("Edit")], at=5))
+        self.assertEqual(res["checks"]["PC8"]["verdict"], "fail")
+        self.assertEqual(self.evidence(res, "PC8"), {(LEDGER, 6)})
+
+    def test_o3_c12_spec_by_bash_and_main_test_write_by_bash_fails_with_the_sed_row(self):
+        res = self.evaluate(ledger=with_spec_row("Bash", [test_write_row("Bash")], at=5))
+        self.assertEqual(res["checks"]["PC8"]["verdict"], "fail")
+        self.assertEqual(self.evidence(res, "PC8"), {(LEDGER, 6)})
+
+    def test_o3_r6_spec_by_bash_and_no_later_main_test_write_is_pass_not_na(self):
+        res = self.evaluate(ledger=with_spec_row("Bash"))
+        self.assertEqual(res["checks"]["PC8"]["verdict"], "pass")
+
+    def test_o3_bash_heredoc_test_write_by_main_fails(self):
+        res = self.evaluate(ledger=with_spec_row("Bash", [L(None, "Bash", command=TEST_HEREDOC)], at=5))
+        self.assertEqual(res["checks"]["PC8"]["verdict"], "fail")
+        self.assertEqual(self.evidence(res, "PC8"), {(LEDGER, 6)})
+
+    def test_o3_bash_rows_that_do_not_write_tests_pass(self):
+        cases = (
+            ("subagent bash write", L("test-implementer", "Bash", command=TEST_SED)),
+            ("main bash read", L(None, "Bash", command="cat " + m.TEST_FILE)),
+            ("main bash test run", L(None, "Bash", command="python -m pytest %s -q" % m.TEST_FILE)),
+            ("main bash write elsewhere", L(None, "Bash", command="echo x > README.md")),
+            ("main bash non-string command", L(None, "Bash", command=5)),
+            ("main bash missing command", L(None, "Bash")),
+        )
+        for label, row in cases:
+            with self.subTest(label):
+                res = self.evaluate(ledger=with_spec_row("Bash", [row], at=5))
+                self.assertEqual(res["checks"]["PC8"]["verdict"], "pass")
+
+    def test_o3_bash_test_write_before_the_first_spec_write_passes(self):
+        res = self.evaluate(ledger=[test_write_row("Bash")] + with_spec_row("Edit"))
+        self.assertEqual(res["checks"]["PC8"]["verdict"], "pass")
+
+    def test_o3_spec_write_with_unresolved_variable_matches_by_directory_prefix(self):
+        cmd = "F=agent-docs/specs/$RID-x.md; cat > $F <<'EOF'\nx\nEOF"
+        items = m.compliant_ledger_items()
+        items[0] = L(None, "Bash", command=cmd)
+        res = self.evaluate(ledger=items[:5] + [test_write_row("Edit")] + items[5:])
+        self.assertEqual(res["checks"]["PC8"]["verdict"], "fail")
+        self.assertEqual(self.evidence(res, "PC8"), {(LEDGER, 6)})
+
+    def test_o3_unresolved_variable_in_a_test_path_matches_only_by_directory_prefix(self):
+        diff = m.archived_diff(tests=["tests/unit"])
+        for label, cmd, expected in (
+            ("inside tests directory entry", "cat > tests/unit/$N.py <<'EOF'\nx\nEOF", "fail"),
+            ("other directory", "cat > other/$N.py <<'EOF'\nx\nEOF", "pass"),
+        ):
+            with self.subTest(label):
+                row = L(None, "Bash", command=cmd)
+                res = self.evaluate(diff=diff, ledger=with_spec_row("Edit", [row], at=5))
+                self.assertEqual(res["checks"]["PC8"]["verdict"], expected)
+
+
+class Pc10AndMetricBashTests(ProcessCase):
+    def test_o3_pc10_bash_edit_after_the_final_pass_fails_for_each_role(self):
+        cases = (
+            ("implementer sed impl", L("implementer", "Bash", command=IMPL_SED)),
+            ("test-implementer heredoc tests", L("test-implementer", "Bash", command=TEST_HEREDOC)),
+            ("main sed tests", L(None, "Bash", command=TEST_SED)),
+        )
+        for label, row in cases:
+            with self.subTest(label):
+                res = self.evaluate(ledger=ledger_with(None, [row]))
+                self.assertEqual(res["checks"]["PC10"]["verdict"], "fail")
+                self.assertEqual(self.evidence(res, "PC10"), {(LEDGER, 9)})
+
+    def test_o3_pc10_bash_rows_that_do_not_edit_listed_paths_pass(self):
+        cases = (
+            ("read impl", L("implementer", "Bash", command="cat " + m.IMPL_FILE)),
+            ("test run", L("implementer", "Bash", command="python -m pytest -q")),
+            ("write unlisted", L(None, "Bash", command="echo x > README.md")),
+        )
+        for label, row in cases:
+            with self.subTest(label):
+                res = self.evaluate(ledger=ledger_with(None, [row]))
+                self.assertEqual(res["checks"]["PC10"]["verdict"], "pass")
+
+    def test_o3_pc10_bash_edit_before_the_final_verifier_row_passes(self):
+        items = m.compliant_ledger_items()
+        items = items[:7] + [L("implementer", "Bash", command=IMPL_SED)] + items[7:]
+        res = self.evaluate(ledger=items)
+        self.assertEqual(res["checks"]["PC10"]["verdict"], "pass")
+
+    def test_o3_main_implementation_edits_counts_main_bash_writes_after_the_spec_write(self):
+        bash_impl = L(None, "Bash", command=IMPL_SED)
+        edit_impl = L(None, "Edit", file_path=tb(m.IMPL_FILE), old_string="a", new_string="b")
+        cases = (
+            ("one bash", [bash_impl], 1),
+            ("two bash and one edit", [bash_impl, bash_impl, edit_impl], 3),
+            ("bash write of a tests path", [L(None, "Bash", command=TEST_SED)], 0),
+            ("subagent bash write", [L("implementer", "Bash", command=IMPL_SED)], 0),
+            ("bash read", [L(None, "Bash", command="cat " + m.IMPL_FILE)], 0),
+        )
+        for label, rows, expected in cases:
+            with self.subTest(label):
+                res = self.evaluate(ledger=ledger_with(1, rows))
+                self.assertEqual(res["metrics"]["main_implementation_edits"], expected)
+
+    def test_o3_main_implementation_edits_ignores_bash_writes_before_the_spec_write(self):
+        items = [L(None, "Bash", command=IMPL_SED)] + m.compliant_ledger_items()
+        res = self.evaluate(ledger=items)
+        self.assertEqual(res["metrics"]["main_implementation_edits"], 0)
+
+    def test_o3_main_implementation_edits_counts_after_a_bash_spec_write(self):
+        res = self.evaluate(ledger=with_spec_row("Bash", [L(None, "Bash", command=IMPL_SED)], at=1))
+        self.assertEqual(res["metrics"]["main_implementation_edits"], 1)
+
+
+# ----------------------------------------------------------------------------------------------
+# O4: PC12 decision table R1-R7 (F9, C13-C16)
+# ----------------------------------------------------------------------------------------------
+
+class Pc12Tests(ProcessCase):
+    IMPL_WRITE_BASH = L(None, "Bash", command="cat >> %s <<'EOF'\nx = 1\nEOF" % m.IMPL_FILE)
+
+    def pc12(self, res):
+        return res["checks"]["PC12"]
+
+    def test_o4_r1_no_spec_text_is_na(self):
+        for label, diff in (("no diff", None), ("decoy only", m.decoy_section())):
+            with self.subTest(label):
+                res = self.evaluate(diff=diff)
+                self.assertEqual(self.pc12(res)["verdict"], "n/a")
+
+    def test_o4_r2_spec_text_and_no_writes_passes(self):
+        ledger = [L(None, "Write", file_path=tb(m.SPEC_REL), content="spec"),
+                  L(None, "Agent", subagent_type="implementer", prompt="i"),
+                  L("implementer", "Read", file_path=tb(m.IMPL_FILE)),
+                  L(None, "Bash", command="echo x > README.md")]
+        self.assertEqual(self.pc12(self.evaluate(ledger=ledger))["verdict"], "pass")
+        self.assertEqual(self.pc12(self.evaluate(ledger=[L(None, "Agent", subagent_type="implementer", prompt="i")]))["verdict"],
+                         "pass")
+
+    def test_o4_r3_c15_writes_without_any_spec_write_fails_with_the_first_write_row(self):
+        ledger = [L(None, "Agent", subagent_type="implementer", prompt="i"),
+                  L("implementer", "Edit", file_path=tb(m.IMPL_FILE), old_string="a", new_string="b"),
+                  L("implementer", "Edit", file_path=tb(m.IMPL_FILE), old_string="b", new_string="c")]
+        res = self.evaluate(ledger=ledger)
+        self.assertEqual(self.pc12(res)["verdict"], "fail")
+        self.assertEqual(self.evidence(res, "PC12"), {(LEDGER, 2)})
+
+    def test_o4_r4_c13_main_bash_writes_impl_and_tests_before_the_spec_fails_with_that_row(self):
+        both = L(None, "Bash", command="sed -i 's/a/b/' %s\ncat >> %s <<'EOF'\nx\nEOF" % (m.IMPL_FILE, m.TEST_FILE))
+        ledger = [L(None, "Agent", subagent_type="implementer", prompt="i"),
+                  L(None, "Read", file_path=tb(m.IMPL_FILE)),
+                  both,
+                  L(None, "Agent", subagent_type="test-verifier", prompt="v"),
+                  L("implementer", "Edit", file_path=tb(m.IMPL_FILE), old_string="b", new_string="c"),
+                  L(None, "Bash", command=SPEC_HEREDOC)]
+        res = self.evaluate(ledger=ledger)
+        self.assertEqual(self.pc12(res)["verdict"], "fail")
+        self.assertEqual(self.evidence(res, "PC12"), {(LEDGER, 3)})
+
+    def test_o4_r4_each_writer_tool_and_role_before_the_spec_fails(self):
+        cases = (
+            ("main Edit impl", L(None, "Edit", file_path=tb(m.IMPL_FILE), old_string="a", new_string="b")),
+            ("main Write tests", L(None, "Write", file_path=tb(m.TEST_FILE), content="x")),
+            ("main Bash impl", self.IMPL_WRITE_BASH),
+            ("implementer Edit impl", L("implementer", "Edit", file_path=tb(m.IMPL_FILE), old_string="a", new_string="b")),
+            ("implementer Bash tests", L("implementer", "Bash", command=TEST_SED)),
+        )
+        for label, row in cases:
+            with self.subTest(label):
+                ledger = [L(None, "Agent", subagent_type="implementer", prompt="i"), row,
+                          L(None, "Write", file_path=tb(m.SPEC_REL), content="spec")]
+                res = self.evaluate(ledger=ledger)
+                self.assertEqual(self.pc12(res)["verdict"], "fail")
+                self.assertEqual(self.evidence(res, "PC12"), {(LEDGER, 2)})
+
+    def test_o4_r4_evidence_is_only_the_first_offending_row(self):
+        edit = L(None, "Edit", file_path=tb(m.IMPL_FILE), old_string="a", new_string="b")
+        ledger = [edit, edit, L(None, "Write", file_path=tb(m.SPEC_REL), content="spec"), edit]
+        res = self.evaluate(ledger=ledger)
+        self.assertEqual(self.evidence(res, "PC12"), {(LEDGER, 1)})
+
+    def test_o4_r5_c14_spec_first_then_implementer_write_passes(self):
+        ledger = [L(None, "Write", file_path=tb(m.SPEC_REL), content="spec"),
+                  L(None, "Agent", subagent_type="implementer", prompt="i"),
+                  L("implementer", "Edit", file_path=tb(m.IMPL_FILE), old_string="a", new_string="b")]
+        self.assertEqual(self.pc12(self.evaluate(ledger=ledger))["verdict"], "pass")
+
+    def test_o4_r5_bash_spec_write_first_then_main_writes_passes(self):
+        ledger = [L(None, "Bash", command=SPEC_HEREDOC), self.IMPL_WRITE_BASH, L(None, "Bash", command=TEST_SED)]
+        self.assertEqual(self.pc12(self.evaluate(ledger=ledger))["verdict"], "pass")
+
+    def test_o4_r5_writes_to_unlisted_paths_before_the_spec_do_not_count(self):
+        ledger = [L(None, "Edit", file_path=tb("README.md"), old_string="a", new_string="b"),
+                  L(None, "Bash", command="echo x > notes.txt"),
+                  L(None, "Write", file_path=tb(m.SPEC_REL), content="spec")]
+        self.assertEqual(self.pc12(self.evaluate(ledger=ledger))["verdict"], "pass")
+
+    def test_o4_r5_reads_and_test_runs_before_the_spec_do_not_count(self):
+        ledger = [L(None, "Read", file_path=tb(m.IMPL_FILE)),
+                  L(None, "Bash", command="cat %s; python -m pytest %s -q" % (m.IMPL_FILE, m.TEST_FILE)),
+                  L(None, "Write", file_path=tb(m.SPEC_REL), content="spec")]
+        self.assertEqual(self.pc12(self.evaluate(ledger=ledger))["verdict"], "pass")
+
+    def test_o4_r6_only_test_implementer_writes_before_the_spec_passes(self):
+        ledger = [L("test-implementer", "Write", file_path=tb(m.TEST_FILE), content="x"),
+                  L("test-implementer", "Bash", command=TEST_HEREDOC),
+                  L(None, "Write", file_path=tb(m.SPEC_REL), content="spec"),
+                  L("implementer", "Edit", file_path=tb(m.IMPL_FILE), old_string="a", new_string="b")]
+        self.assertEqual(self.pc12(self.evaluate(ledger=ledger))["verdict"], "pass")
+
+    def test_o4_r7_baseline_arm_is_na(self):
+        res = self.evaluate(arm="baseline", manifest={"instance_id": "b1", "arm": "baseline"})
+        self.assertEqual(self.pc12(res)["verdict"], "n/a")
+
+    def test_o4_compliant_entry_passes_pc12_and_check_ids_end_at_pc12(self):
+        res = self.evaluate()
+        self.assertEqual(self.pc12(res)["verdict"], "pass")
+        self.assertEqual(tuple(process.CHECK_IDS), tuple("PC%d" % n for n in range(1, 13)))
+        self.assertEqual(set(res["checks"]), set(process.CHECK_IDS))
+
+
+# ----------------------------------------------------------------------------------------------
+# O5: PC9 over Bash classification and the two new metrics (F10, C17-C19)
+# ----------------------------------------------------------------------------------------------
+
+class Pc9BashTests(ProcessCase):
+    TESTS = ["tests/t.py"]
+    IMPL = ["src/impl.py"]
+
+    def run_rows(self, *rows):
+        ledger = [L(None, "Write", file_path=tb(m.SPEC_REL), content="spec")] + list(rows)
+        return self.evaluate(diff=m.archived_diff(tests=self.TESTS, impl=self.IMPL), ledger=ledger)
+
+    def test_o5_c17_implementer_test_run_is_not_cross_role_access_and_is_counted(self):
+        res = self.run_rows(L("implementer", "Bash", command="python -m pytest tests/t.py"))
+        self.assertEqual(res["checks"]["PC9"]["verdict"], "pass")
+        self.assertEqual(res["metrics"]["implementer_test_runs"], 1)
+        self.assertEqual(res["metrics"]["unknown_bash_accesses"], 0)
+
+    def test_o5_implementer_test_runs_are_summed_over_rows_and_commands(self):
+        res = self.run_rows(L("implementer", "Bash", command="pytest tests/t.py -q"),
+                            L("implementer", "Bash", command="python -m unittest; pytest tests/t.py"),
+                            L("implementer", "Bash", command="cat src/impl.py"))
+        self.assertEqual(res["checks"]["PC9"]["verdict"], "pass")
+        self.assertEqual(res["metrics"]["implementer_test_runs"], 3)
+
+    def test_o5_test_runs_by_other_roles_are_not_counted(self):
+        res = self.run_rows(L("test-implementer", "Bash", command="pytest tests/t.py"),
+                            L("test-verifier", "Bash", command="python -m pytest tests/t.py"),
+                            L(None, "Bash", command="pytest tests/t.py"))
+        self.assertEqual(res["checks"]["PC9"]["verdict"], "pass")
+        self.assertEqual(res["metrics"]["implementer_test_runs"], 0)
+
+    def test_o5_non_bash_implementer_rows_add_no_test_runs(self):
+        res = self.run_rows(L("implementer", "Read", file_path=tb("src/impl.py")))
+        self.assertEqual(res["metrics"]["implementer_test_runs"], 0)
+
+    def test_o5_c18_implementer_bash_access_to_tests_fails_with_the_row(self):
+        cases = (
+            ("cat", "cat tests/t.py"),
+            ("grep", "grep -n foo tests/t.py"),
+            ("sed -i", "sed -i 's/a/b/' tests/t.py"),
+            ("redirect", "echo x > tests/t.py"),
+            ("tee", "echo x | tee tests/t.py"),
+            ("abs testbed path", "cat /testbed/tests/t.py"),
+            ("after cd", "cd tests; cat t.py"),
+            ("python write", "python3 - <<'EOF'\nopen('tests/t.py','w').write('x')\nEOF"),
+            ("python read", "python3 - <<'EOF'\nprint(open('tests/t.py').read())\nEOF"),
+        )
+        for label, cmd in cases:
+            with self.subTest(label):
+                res = self.run_rows(L("implementer", "Bash", command=cmd))
+                self.assertEqual(res["checks"]["PC9"]["verdict"], "fail")
+                self.assertEqual(self.evidence(res, "PC9"), {(LEDGER, 2)})
+
+    def test_o5_c18_test_roles_bash_access_to_implementation_fails_with_the_row(self):
+        cases = (
+            ("test-implementer sed -n", "test-implementer", "sed -n 1,5p src/impl.py"),
+            ("test-implementer write", "test-implementer", "cp x.py src/impl.py"),
+            ("test-verifier cat", "test-verifier", "cat src/impl.py"),
+            ("test-verifier redirect", "test-verifier", "echo x >> src/impl.py"),
+        )
+        for label, role, cmd in cases:
+            with self.subTest(label):
+                res = self.run_rows(L(role, "Bash", command=cmd))
+                self.assertEqual(res["checks"]["PC9"]["verdict"], "fail")
+                self.assertEqual(self.evidence(res, "PC9"), {(LEDGER, 2)})
+
+    def test_o5_test_roles_running_tests_and_touching_their_own_side_pass(self):
+        res = self.run_rows(L("test-implementer", "Bash", command="python -m pytest tests/t.py"),
+                            L("test-implementer", "Bash", command="cat tests/t.py"),
+                            L("test-verifier", "Bash", command="pytest tests/t.py"),
+                            L("implementer", "Bash", command="cat src/impl.py"),
+                            L("implementer", "Bash", command="sed -i 's/a/b/' src/impl.py"))
+        self.assertEqual(res["checks"]["PC9"]["verdict"], "pass")
+
+    def test_o5_main_agent_bash_access_to_either_side_is_not_pc9(self):
+        res = self.run_rows(L(None, "Bash", command="cat tests/t.py src/impl.py"))
+        self.assertEqual(res["checks"]["PC9"]["verdict"], "pass")
+
+    def test_o5_c19_mention_only_entry_passes_and_counts_one_unknown(self):
+        res = self.run_rows(L("implementer", "Bash", command="./custom_tool tests/t.py"))
+        self.assertEqual(res["checks"]["PC9"]["verdict"], "pass")
+        self.assertEqual(res["metrics"]["unknown_bash_accesses"], 1)
+        self.assertEqual(res["metrics"]["implementer_test_runs"], 0)
+
+    def test_o5_unknown_bash_accesses_counts_rows_of_all_three_roles(self):
+        res = self.run_rows(L("implementer", "Bash", command="./tool tests/t.py"),
+                            L("test-implementer", "Bash", command="ls src/impl.py"),
+                            L("test-verifier", "Bash", command="./tool src/impl.py"),
+                            L("implementer", "Bash", command="./tool tests/t.py"))
+        self.assertEqual(res["checks"]["PC9"]["verdict"], "pass")
+        self.assertEqual(res["metrics"]["unknown_bash_accesses"], 4)
+
+    def test_o5_mentions_of_own_side_or_unlisted_paths_are_not_unknown_accesses(self):
+        res = self.run_rows(L("implementer", "Bash", command="ls src/impl.py"),
+                            L("implementer", "Bash", command="./tool README.md"),
+                            L("test-implementer", "Bash", command="ls tests/t.py"),
+                            L(None, "Bash", command="./tool tests/t.py"))
+        self.assertEqual(res["metrics"]["unknown_bash_accesses"], 0)
+
+    def test_o5_non_bash_rows_keep_the_path_rule(self):
+        res = self.run_rows(L("implementer", "Read", file_path=tb("tests/t.py")))
+        self.assertEqual(res["checks"]["PC9"]["verdict"], "fail")
+        self.assertEqual(self.evidence(res, "PC9"), {(LEDGER, 2)})
+        res = self.run_rows(L("test-verifier", "Grep", path=tb("src/impl.py"), pattern="x"))
+        self.assertEqual(res["checks"]["PC9"]["verdict"], "fail")
+        self.assertEqual(res["metrics"]["unknown_bash_accesses"], 0)
+
+    def test_o5_malformed_bash_command_does_not_fail_or_raise(self):
+        res = self.run_rows(L("implementer", "Bash", command="cat 'tests/t.py"),
+                            L("implementer", "Bash", command=5), L("implementer", "Bash"))
+        self.assertEqual(res["checks"]["PC9"]["verdict"], "pass")
+        self.assertEqual(res["metrics"]["implementer_test_runs"], 0)
+
+    def test_o5_evidence_lists_every_offending_row(self):
+        res = self.run_rows(L("implementer", "Bash", command="cat tests/t.py"),
+                            L("implementer", "Bash", command="pytest tests/t.py"),
+                            L("test-verifier", "Bash", command="cat src/impl.py"))
+        self.assertEqual(self.evidence(res, "PC9"), {(LEDGER, 2), (LEDGER, 4)})
+
+
+class Pc12MissingInputTests(ProcessCase):
+    def test_sc1_pc12_is_na_for_missing_telemetry_missing_ledger_and_empty_ledger(self):
+        for label, over in (("missing telemetry dir", dict(events=None)), ("missing ledger file", dict(ledger=None)),
+                            ("empty ledger", dict(ledger=[]))):
+            with self.subTest(label):
+                res = self.evaluate(**over)
+                self.assertEqual(res["checks"]["PC12"]["verdict"], "n/a")
+
+    def test_sc1_pc12_is_na_without_a_full_diff(self):
+        self.assertEqual(self.evaluate(diff=None)["checks"]["PC12"]["verdict"], "n/a")
+
+    def test_a4_only_a_test_verifier_write_before_the_spec_passes(self):
+        ledger = [L("test-verifier", "Write", file_path=tb(m.TEST_FILE), content="x"),
+                  L("test-verifier", "Bash", command=TEST_HEREDOC),
+                  L(None, "Write", file_path=tb(m.SPEC_REL), content="spec")]
+        self.assertEqual(self.evaluate(ledger=ledger)["checks"]["PC12"]["verdict"], "pass")
+
+
+class DollarPathMatchingTests(ProcessCase):
+    def verdict(self, cid, tests, command, *, before_spec=False):
+        diff = m.archived_diff(tests=tests)
+        row = L(None, "Bash", command=command)
+        spec = L(None, "Write", file_path=tb(m.SPEC_REL), content="spec")
+        ledger = [row, spec] if before_spec else [spec, row]
+        return self.evaluate(diff=diff, ledger=ledger)["checks"][cid]["verdict"]
+
+    def test_sc2_dollar_path_does_not_match_a_file_entry(self):
+        cmd = "cat > tests/$N.py <<'EOF'\nx\nEOF"
+        self.assertEqual(self.verdict("PC8", ["tests/test_a.py"], cmd), "pass")
+        self.assertEqual(self.verdict("PC12", ["tests/test_a.py"], cmd, before_spec=True), "pass")
+
+    def test_sc2_dollar_path_matches_a_directory_entry_by_its_prefix(self):
+        cmd = "cat > tests/$N.py <<'EOF'\nx\nEOF"
+        self.assertEqual(self.verdict("PC8", ["tests/"], cmd), "fail")
+        self.assertEqual(self.verdict("PC12", ["tests/"], cmd, before_spec=True), "fail")
+
+    def test_sc2_empty_prefix_matches_no_entry(self):
+        cmd = "cat > $F <<'EOF'\nx\nEOF"
+        for tests in (["tests/"], ["tests/test_a.py"], ["tests/unit"]):
+            with self.subTest(tests=tests):
+                self.assertEqual(self.verdict("PC8", tests, cmd), "pass")
+                self.assertEqual(self.verdict("PC12", tests, cmd, before_spec=True), "pass")
+
+
+class NonBashRowTests(ProcessCase):
+    def test_f8_a_non_bash_non_edit_row_with_a_command_is_not_a_write(self):
+        fake = L(None, "Foo", command="cat > %s" % m.SPEC_REL)
+        ledger = [fake, L(None, "Agent", subagent_type="implementer", prompt="i"),
+                  L("implementer", "Edit", file_path=tb(m.IMPL_FILE), old_string="a", new_string="b")]
+        res = self.evaluate(ledger=ledger)
+        self.assertEqual(res["checks"]["PC8"]["verdict"], "n/a")
+        self.assertEqual(res["checks"]["PC12"]["verdict"], "fail")
+        self.assertEqual(self.evidence(res, "PC12"), {(LEDGER, 3)})
 
 
 if __name__ == "__main__":

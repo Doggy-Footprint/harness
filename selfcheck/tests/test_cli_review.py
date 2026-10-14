@@ -99,28 +99,34 @@ class ReviewCliCase(m3.CliCase):
         with mock.patch.object(review, "claude_call", fake):
             return self.invoke(argv, no_run=True)
 
-    def review_run(self, ids=IDS, with_baseline=True):
+    def review_run(self, ids=IDS, with_baseline=True, repeats=None):
         entries = []
         for iid in ids:
-            entries.append({
-                "instance_id": iid, "arm": "harness", "status": "completed",
-                "manifest": m.manifest(iid, "harness", self.RUN), "state": m.state(),
-                "prediction": m.prediction(iid, "harness", self.RUN),
-                "extra": {"events": m.compliant_events(), "diff": m.archived_diff(),
-                          "raw_files": {R.TRANSCRIPT_DIR + "/" + R.UUID_A + ".jsonl": m.jsonl_text(R.default_rows())}},
-            })
+            for k in ([None] if repeats is None else range(1, repeats + 1)):
+                tag = {} if k is None else {"repeat": k}
+                entries.append(dict({
+                    "instance_id": iid, "arm": "harness", "status": "completed",
+                    "manifest": m.manifest(iid, "harness", self.RUN), "state": m.state(),
+                    "prediction": m.prediction(iid, "harness", self.RUN, **tag),
+                    "extra": {"events": m.compliant_events(), "diff": m.archived_diff(),
+                              "raw_files": {R.TRANSCRIPT_DIR + "/" + R.UUID_A + ".jsonl":
+                                            m.jsonl_text(R.default_rows())}},
+                }, **tag))
         if with_baseline:
             entries.append({"instance_id": ids[0], "arm": "baseline", "status": "completed",
                             "manifest": m.manifest(ids[0], "baseline", self.RUN), "state": m.state(),
                             "prediction": m.prediction(ids[0], "baseline", self.RUN)})
         run_dir = m.write_run(self.runs, self.RUN, entries, params={"harness_ref": "HEAD", "harness_commit": "d" * 40})
-        m.write_text(run_dir / "scores.harness.jsonl", "\n".join(json.dumps(m.score(i)) for i in ids) + "\n")
-        m.write_text(run_dir / ids[0] / "harness" / "process.json", json.dumps({"marker": "process-before"}))
+        rows = [json.dumps(m.score(i) if repeats is None else dict(m.score(i), repeat=k))
+                for i in ids for k in ([None] if repeats is None else range(1, repeats + 1))]
+        m.write_text(run_dir / "scores.harness.jsonl", "\n".join(rows) + "\n")
+        first_dir = m.dirname("harness", None if repeats is None else 1)
+        m.write_text(run_dir / ids[0] / first_dir / "process.json", json.dumps({"marker": "process-before"}))
         return run_dir
 
     @staticmethod
-    def review_of(run_dir, iid):
-        path = run_dir / iid / "harness" / "review.json"
+    def review_of(run_dir, iid, repeat=None):
+        path = run_dir / iid / m.dirname("harness", repeat) / "review.json"
         return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
 
@@ -256,9 +262,9 @@ class ReportReadsReviewsTests(ReviewCliCase):
         self.assertEqual(code, 0, err)
         rep = self.load(self.results / (run_dir.name + ".json"))
         first, second = rep["instances"]
-        self.assertEqual(first["review"]["understanding"], "diverged")
-        self.assertEqual(second["review"], "error: unreadable review.json")
-        self.assertEqual(rep["false_claims"], [{"instance_id": "proj__a-1", "category": "understanding",
+        self.assertEqual(first["repeats"][0]["review"]["understanding"], "diverged")
+        self.assertEqual(second["repeats"][0]["review"], "error: unreadable review.json")
+        self.assertEqual(rep["false_claims"], [{"instance_id": "proj__a-1", "repeat": 1, "category": "understanding",
                                                 "summary": "WRONG-FACT", "citation": "[t:1]"}])
         text = (self.results / (run_dir.name + ".md")).read_text(encoding="utf-8")
         self.assertIn("## false claims", text)
@@ -269,7 +275,7 @@ class ReportReadsReviewsTests(ReviewCliCase):
         code, _, err = self.invoke(["report", run_dir.name, "--no-baseline"], no_run=True)
         self.assertEqual(code, 0, err)
         rep = self.load(self.results / (run_dir.name + ".json"))
-        self.assertEqual([i["review"] for i in rep["instances"]], ["not run", "not run"])
+        self.assertEqual([i["repeats"][0]["review"] for i in rep["instances"]], ["not run", "not run"])
         self.assertEqual(rep["false_claims"], [])
 
     def test_vo7_report_with_the_token_in_a_review_file_exits_1_and_writes_nothing(self):
@@ -284,6 +290,65 @@ class ReportReadsReviewsTests(ReviewCliCase):
         self.assertFalse(self.results.exists() and self.files_under(self.results))
         for text in (out, err):
             self.assertNotIn(self.token, text)
+
+
+class RepeatReviewCommandTests(ReviewCliCase):
+    def test_o7_review_reviews_every_repeat_entry_and_writes_into_its_directory(self):
+        run_dir = self.review_run(repeats=2)
+        before = m.tree(run_dir)
+        code, out, err = self.invoke_review(["review", self.RUN])
+        self.assertEqual(code, 0, err)
+        self.assertEqual(len(self.fake.calls), 6)
+        self.assertEqual(sorted(self.fake.reviewed()), sorted(IDS * 2))
+        lines = out.splitlines()
+        self.assertEqual(len(lines), 6)
+        for line in lines:
+            self.assertTrue(line.endswith("ok"), line)
+        for iid in IDS:
+            self.assertFalse((run_dir / iid / "harness").exists(), iid)
+            for k in (1, 2):
+                got = self.review_of(run_dir, iid, k)
+                self.assertEqual(got["status"], "ok", (iid, k))
+                self.assertEqual(got["instance_id"], iid)
+        after = m.tree(run_dir)
+        self.assertEqual(set(after) - set(before), {"%s/harness-r%d/review.json" % (i, k) for i in IDS for k in (1, 2)})
+        for path, data in before.items():
+            self.assertEqual(after[path], data, path)
+
+    def test_o7_review_failure_of_one_repeat_does_not_stop_the_others(self):
+        run_dir = self.review_run(IDS[:1], repeats=2)
+        calls = []
+
+        def plan(iid):
+            calls.append(iid)
+            return RuntimeError("down") if len(calls) == 1 else R.model_text(R.payload())
+
+        code, out, err = self.invoke_review(["review", self.RUN], FakeClaude(plan))
+        self.assertEqual(code, 1)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual([self.review_of(run_dir, IDS[0], k)["status"] for k in (1, 2)], ["error", "ok"])
+
+    def test_o7_instances_filter_covers_all_repeats_of_the_listed_instances(self):
+        run_dir = self.review_run(repeats=2)
+        code, out, err = self.invoke_review(["review", self.RUN, "--instances", IDS[1]])
+        self.assertEqual(code, 0, err)
+        self.assertEqual(sorted(self.fake.reviewed()), [IDS[1]] * 2)
+        self.assertIsNone(self.review_of(run_dir, IDS[0], 1))
+        self.assertEqual(self.review_of(run_dir, IDS[1], 2)["status"], "ok")
+
+    def test_o7_report_loads_review_json_from_each_repeat_directory(self):
+        run_dir = self.harness_run(repeats=2)
+        cats = R.payload(understanding=R.category("diverged", R.finding("WRONG-FACT", "[t:1]", True)))
+        m.write_text(run_dir / "proj__a-1" / "harness-r2" / "review.json",
+                     ReportReadsReviewsTests.okfile(self, "proj__a-1", cats))
+        code, out, err = self.invoke(["report", run_dir.name, "--no-baseline"], no_run=True)
+        self.assertEqual(code, 0, err)
+        rep = self.load(self.results / (run_dir.name + ".json"))
+        first = rep["instances"][0]["repeats"]
+        self.assertEqual(first[0]["review"], "not run")
+        self.assertEqual(first[1]["review"]["understanding"], "diverged")
+        self.assertEqual(rep["false_claims"], [{"instance_id": "proj__a-1", "repeat": 2, "category": "understanding",
+                                                "summary": "WRONG-FACT", "citation": "[t:1]"}])
 
 
 class ReviewSurfaceTests(unittest.TestCase):

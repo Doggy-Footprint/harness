@@ -294,36 +294,43 @@ def _harness_entries(run_dir: Path) -> list[dict]:
     return [e for e in meta["entries"] if e["arm"] == "harness"]
 
 
-def _load_scores(run_dir: Path) -> dict[str, dict]:
+def _load_scores(run_dir: Path) -> dict[tuple[str, int], dict]:
     path = run_dir / "scores.harness.jsonl"
-    return {r["instance_id"]: r for r in _read_jsonl(path)} if path.is_file() else {}
+    rows = _read_jsonl(path) if path.is_file() else []
+    return {(r["instance_id"], r.get("repeat", 1)): r for r in rows}
 
 
-def _process_entries(run_dir: Path, *, write: bool) -> dict[str, dict]:
+def _process_entries(run_dir: Path, *, write: bool) -> dict[tuple[str, int], dict]:
     scores = _load_scores(run_dir)
     out = {}
     for entry in _harness_entries(run_dir):
-        iid = entry["instance_id"]
-        entry_dir = run_dir / iid / "harness"
-        if not entry_dir.is_dir():
+        key = (entry["instance_id"], run.entry_repeat(entry))
+        edir = run.entry_dir(run_dir, entry)
+        if not edir.is_dir():
             continue
-        saved = entry_dir / "process.json"
+        saved = edir / "process.json"
         if not write and saved.is_file():
-            out[iid] = json.loads(saved.read_text())
+            out[key] = json.loads(saved.read_text())
             continue
-        out[iid] = process.evaluate_entry(entry_dir, score=scores.get(iid))
+        out[key] = process.evaluate_entry(edir, score=scores.get(key))
         if write:
-            saved.write_text(json.dumps(out[iid], indent=1, sort_keys=True))
+            saved.write_text(json.dumps(out[key], indent=1, sort_keys=True))
     return out
+
+
+def _label(iid: str, repeat: int, multi: bool) -> str:
+    return f"{iid} r{repeat}" if multi else iid
 
 
 def cmd_process(args) -> int:
     run_dir = _run_dir(args.run_id)
     if run_dir is None:
         return _unknown_run(args.run_id)
-    for iid, result in _process_entries(run_dir, write=True).items():
+    results = _process_entries(run_dir, write=True)
+    multi = any(repeat != 1 for _, repeat in results)
+    for (iid, repeat), result in results.items():
         counts = [sum(c["verdict"] == v for c in result["checks"].values()) for v in ("pass", "fail", "n/a")]
-        print(f"{iid} pass={counts[0]} fail={counts[1]} n/a={counts[2]}")
+        print(f"{_label(iid, repeat, multi)} pass={counts[0]} fail={counts[1]} n/a={counts[2]}")
     return 0
 
 
@@ -375,7 +382,7 @@ def _emit_report(run_dir: Path, *, no_baseline: bool, token: str) -> int:
     if not no_baseline:
         manifests = []
         for entry in _harness_entries(run_dir):
-            path = run_dir / entry["instance_id"] / "harness" / "manifest.json"
+            path = run.entry_dir(run_dir, entry) / "manifest.json"
             if path.is_file():
                 manifests.append(json.loads(path.read_text()))
         fixture_dir, differing = fixture.find(_repo_path(CONFIG["baseline"]["fixtures_dir"]), manifests)
@@ -426,16 +433,18 @@ def cmd_review(args) -> int:
     ids = _csv(args.instances)
     call_fn = functools.partial(review.claude_call, **CONFIG["review"])
     failed = False
-    for entry in _harness_entries(run_dir):
+    entries = _harness_entries(run_dir)
+    multi = any(run.entry_repeat(e) != 1 for e in entries)
+    for entry in entries:
         iid = entry["instance_id"]
-        entry_dir = run_dir / iid / "harness"
-        if (ids is not None and iid not in ids) or not entry_dir.is_dir() or iid not in rows:
+        edir = run.entry_dir(run_dir, entry)
+        if (ids is not None and iid not in ids) or not edir.is_dir() or iid not in rows:
             continue
         result = review.review_entry(
-            entry_dir, rows[iid], call_fn=call_fn, token=token,
+            edir, rows[iid], call_fn=call_fn, token=token,
             model=CONFIG["review"]["model"], effort=CONFIG["review"]["effort"],
         )
-        print(f"{iid} {result['status']}", flush=True)
+        print(f"{_label(iid, run.entry_repeat(entry), multi)} {result['status']}", flush=True)
         failed = failed or result["status"] == "error"
     return 1 if failed else 0
 
@@ -462,7 +471,9 @@ def cmd_check(args) -> int:
             rows = _load_pool(ids)
             if ids is None:
                 rows = [r for r in rows if r.get("core")]
-            run_dir = run.run(rows, ["harness"], cfg=cfg, harness_ref=args.harness_ref)
+            run_dir = run.run(
+                rows, ["harness"], cfg=cfg, harness_ref=args.harness_ref, repeats=args.repeats
+            )
     except run.UnknownRunError:
         return _unknown_run(args.resume)
     except (run.TokenFileMissing, docker_exec.DockerError) as exc:
@@ -481,10 +492,22 @@ def cmd_check(args) -> int:
         return 3
     predictions = run_dir / "predictions.harness.jsonl"
     score_one = _score_fn()
-    results = [score_one(p) for p in _read_jsonl(predictions)] if predictions.is_file() else []
+    results = [
+        {**score_one(p), "repeat": p.get("repeat", 1)} for p in _read_jsonl(predictions)
+    ] if predictions.is_file() else []
     _write_jsonl(run_dir / "scores.harness.jsonl", results)
     _process_entries(run_dir, write=True)
     return _emit_report(run_dir, no_baseline=args.no_baseline, token=token)
+
+
+def _positive_int(value: str) -> int:
+    try:
+        number = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"invalid int value: {value!r}") from None
+    if number < 1:
+        raise argparse.ArgumentTypeError(f"must be at least 1: {value}")
+    return number
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -516,6 +539,7 @@ def build_parser() -> argparse.ArgumentParser:
     base = add("baseline", cmd_baseline, repeats={"type": int})
     base.add_argument("action", choices=("create",))
     add("check", cmd_check, harness_ref={"default": "HEAD"}, resume={},
+        repeats={"type": _positive_int, "default": CONFIG["check"]["repeats"]},
         no_baseline={"action": "store_true"})
     add("report", cmd_report, instances=False, no_baseline={"action": "store_true"}).add_argument("run_id")
     add("review", cmd_review).add_argument("run_id")

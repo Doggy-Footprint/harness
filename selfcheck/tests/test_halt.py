@@ -181,6 +181,91 @@ class HaltRunTests(F.RunCase):
         self.assert_halted(run_dir, "interrupted", 3)
 
 
+class RepeatHaltTests(F.RunCase):
+    def setUp(self):
+        super().setUp()
+        self.docker.configure(diff_text=PLANTED_DIFF)
+
+    def repeated(self, **kw):
+        return self.go(ids=tuple(IDS[:2]), arms=("baseline",), repeats=2, **kw)
+
+    def listing(self, run_dir):
+        return self.load(run_dir / "run.json")
+
+    def entries(self, run_dir):
+        return [(e["instance_id"], e["repeat"], e["status"]) for e in self.listing(run_dir)["entries"]]
+
+    def files(self, run_dir, iid, k):
+        return {str(p): p.read_bytes() for p in (run_dir / iid / ("baseline-r%d" % k)).rglob("*") if p.is_file()}
+
+    def test_o6_c22_interrupted_repeat_entry_records_the_repeat_in_halted(self):
+        self.docker.configure(n=2, driver=returning(**INTERRUPTED))
+        run_dir = self.repeated()
+        self.assertEqual(self.entries(run_dir), [(IDS[0], 1, "completed"), (IDS[0], 2, "interrupted"),
+                                                 (IDS[1], 1, "pending"), (IDS[1], 2, "pending")])
+        self.assertEqual(self.listing(run_dir)["halted"],
+                         {"reason": "interrupted", "instance_id": IDS[0], "arm": "baseline", "repeat": 2})
+        self.assertEqual(len(self.docker.started()), 2)
+
+    def test_o6_c22_rate_limit_halt_records_the_repeat(self):
+        self.docker.configure(n=1, driver=returning(rate_limit=limit("allowed_warning")))
+        run_dir = self.repeated()
+        self.assertEqual(self.listing(run_dir)["halted"], {
+            "reason": "rate_limit:allowed_warning", "instance_id": IDS[0], "arm": "baseline", "repeat": 1})
+        self.assertEqual([s for _, _, s in self.entries(run_dir)], ["completed", "pending", "pending", "pending"])
+
+    def test_o6_c22_halt_without_repeats_has_no_repeat_key(self):
+        self.docker.configure(n=1, driver=returning(rate_limit=limit("allowed_warning")))
+        run_dir = self.go(ids=tuple(IDS[:2]), arms=("baseline",))
+        self.assertEqual(set(self.listing(run_dir)["halted"]), {"reason", "instance_id", "arm"})
+
+    def test_o6_c22_resume_of_the_last_interrupted_repeat_touches_only_that_entry(self):
+        self.docker.configure(n=4, driver=returning(**INTERRUPTED))
+        run_dir = self.repeated()
+        self.assertEqual(self.listing(run_dir)["halted"]["repeat"], 2)
+        before = {(i, k): self.files(run_dir, i, k) for i, k in ((IDS[0], 1), (IDS[0], 2), (IDS[1], 1))}
+        self.docker.history[self.name(run_dir, 4)].script.driver = returning()
+        mark = len(self.docker.log)
+        self.assertEqual(self.resume(run_dir.name), run_dir)
+        touched = {e[1] for e in self.docker.log[mark:] if e[0] in ("start_container", "exec", "start", "stop")}
+        self.assertEqual(touched, {self.name(run_dir, 4)})
+        self.assertEqual({(i, k): self.files(run_dir, i, k) for i, k in before}, before)
+        self.assertEqual(self.entries(run_dir), [(IDS[0], 1, "completed"), (IDS[0], 2, "completed"),
+                                                 (IDS[1], 1, "completed"), (IDS[1], 2, "completed")])
+        self.assertIsNone(self.listing(run_dir)["halted"])
+        self.assertTrue((run_dir / IDS[1] / "baseline-r2" / "prediction.json").is_file())
+        self.assertFalse((run_dir / IDS[1] / "baseline").exists())
+        self.assertEqual(self.docker.history[self.name(run_dir, 4)].driver_inputs[1]["resume"],
+                         {"session_id": "sess-A", "phrases_sent": 2, "elapsed_s": 33.5})
+
+    def test_o6_c22_resume_continues_the_interrupted_repeat_then_pending_repeats_in_their_dirs(self):
+        self.docker.configure(n=2, driver=returning(**INTERRUPTED))
+        run_dir = self.repeated()
+        first = self.files(run_dir, IDS[0], 1)
+        self.docker.history[self.name(run_dir, 2)].script.driver = returning()
+        self.resume(run_dir.name)
+        self.assertEqual(self.entries(run_dir), [(IDS[0], 1, "completed"), (IDS[0], 2, "completed"),
+                                                 (IDS[1], 1, "completed"), (IDS[1], 2, "completed")])
+        self.assertEqual(self.files(run_dir, IDS[0], 1), first)
+        for iid in IDS[:2]:
+            for k in (1, 2):
+                self.assertTrue((run_dir / iid / ("baseline-r%d" % k) / "prediction.json").is_file(), (iid, k))
+        self.assertEqual(len(self.docker.history[self.name(run_dir, 3)].driver_inputs), 1)
+        self.assertIsNone(self.listing(run_dir)["halted"])
+        lines = (run_dir / "predictions.baseline.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(sorted((json.loads(l)["instance_id"], json.loads(l)["repeat"]) for l in lines),
+                         sorted([(IDS[0], 1), (IDS[0], 2), (IDS[1], 1), (IDS[1], 2)]))
+
+    def test_o6_c22_resume_halting_again_records_the_new_repeat(self):
+        self.docker.configure(n=1, driver=returning(rate_limit=limit("allowed_warning")))
+        self.docker.configure(n=2, driver=returning(**INTERRUPTED))
+        run_dir = self.repeated()
+        self.assertEqual(self.listing(run_dir)["halted"]["repeat"], 1)
+        self.resume(run_dir.name)
+        self.assertEqual(self.listing(run_dir)["halted"],
+                         {"reason": "interrupted", "instance_id": IDS[0], "arm": "baseline", "repeat": 2})
+
+
 class HaltExitTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="halt-cli-")

@@ -182,13 +182,25 @@ def _write_run_json(ctx: _Ctx, created_at) -> None:
     )
 
 
+def entry_dir(run_dir, entry: dict) -> Path:
+    name = entry["arm"] if "repeat" not in entry else f"{entry['arm']}-r{entry['repeat']}"
+    return Path(run_dir) / entry["instance_id"] / name
+
+
+def entry_repeat(entry: dict) -> int:
+    return entry.get("repeat", 1)
+
+
 def _write_predictions(ctx: _Ctx) -> None:
     lines: dict[str, list[str]] = {}
     for e in ctx.entries:
-        d = ctx.run_dir / e["instance_id"] / e["arm"]
+        d = entry_dir(ctx.run_dir, e)
         pred, state = d / "prediction.json", _read_json(d / "state.json")
         if pred.is_file() and not (state and state.get("reason") == TOKEN_REMAINED):
-            lines.setdefault(e["arm"], []).append(pred.read_text().strip())
+            text = pred.read_text().strip()
+            if "repeat" in e:
+                text = json.dumps({**json.loads(text), "repeat": e["repeat"]}, sort_keys=True)
+            lines.setdefault(e["arm"], []).append(text)
     for arm, rows in lines.items():
         (ctx.run_dir / f"predictions.{arm}.jsonl").write_text("".join(r + "\n" for r in rows))
 
@@ -205,18 +217,19 @@ def halt_reason(state: dict | None) -> str | None:
 
 
 def _halt_after(ctx: _Ctx, entry: dict, created_at) -> bool:
-    d = ctx.run_dir / entry["instance_id"] / entry["arm"]
-    reason = halt_reason(_read_json(d / "state.json"))
+    reason = halt_reason(_read_json(entry_dir(ctx.run_dir, entry) / "state.json"))
     if reason is None:
         return False
     ctx.halted = {"reason": reason, "instance_id": entry["instance_id"], "arm": entry["arm"]}
+    if "repeat" in entry:
+        ctx.halted["repeat"] = entry["repeat"]
     _write_run_json(ctx, created_at)
     return True
 
 
 def run(
     instances, arms, *, cfg, harness_ref="HEAD", model=None, effort=None, cap_min=None,
-    docker=docker_exec, now=time.time,
+    repeats=1, docker=docker_exec, now=time.time,
 ) -> Path:
     token_path = _token_path(cfg)
     token = token_path.read_text().strip()
@@ -233,16 +246,21 @@ def run(
     run_id = secrets.token_hex(8)
     run_dir = Path(cfg["runs_dir"]).expanduser() / run_id
     _mkdir_private(run_dir)
-    pairs = [(inst, arm) for inst in instances for arm in arms]
-    entries = [
-        {"instance_id": inst["instance_id"], "arm": arm, "status": "pending"} for inst, arm in pairs
-    ]
+    pairs, entries = [], []
+    for inst in instances:
+        for k in range(1, repeats + 1):
+            for arm in arms:
+                pairs.append((inst, arm))
+                entry = {"instance_id": inst["instance_id"], "arm": arm}
+                if repeats > 1:
+                    entry["repeat"] = k
+                entries.append({**entry, "status": "pending"})
     ctx = _Ctx(eff, docker, run_id, run_dir, token_path, token, params, entries)
     created_at = now()
     _write_json(run_dir / "params.json", params, indent=1)
     _write_run_json(ctx, created_at)
     for n, (inst, arm) in enumerate(pairs, start=1):
-        entries[n - 1]["status"] = _run_entry(ctx, n, inst, arm, resume_state=None)
+        entries[n - 1]["status"] = _run_entry(ctx, n, inst, arm, resume_state=None, entry=entries[n - 1])
         _write_run_json(ctx, created_at)
         _write_predictions(ctx)
         if _halt_after(ctx, entries[n - 1], created_at):
@@ -271,14 +289,13 @@ def resume(run_id: str, *, cfg, docker=docker_exec) -> Path:
     ctx.halted = None
     _write_run_json(ctx, meta["created_at"])
     for n, entry in enumerate(ctx.entries, start=1):
-        d = run_dir / entry["instance_id"] / entry["arm"]
-        state = _read_json(d / "state.json")
+        state = _read_json(entry_dir(run_dir, entry) / "state.json")
         if state is not None and state.get("status") != "interrupted":
             continue
         if entry["instance_id"] not in pool:
             raise LookupError(f"instance not in pool: {entry['instance_id']}")
         entry["status"] = _run_entry(
-            ctx, n, pool[entry["instance_id"]], entry["arm"], resume_state=state
+            ctx, n, pool[entry["instance_id"]], entry["arm"], resume_state=state, entry=entry
         )
         _write_run_json(ctx, meta["created_at"])
         _write_predictions(ctx)
@@ -410,10 +427,9 @@ def _finalize(ctx: _Ctx, d: Path, state: dict, host: dict) -> str:
     return state["status"]
 
 
-def _run_entry(ctx: _Ctx, n: int, instance: dict, arm: str, *, resume_state) -> str:
+def _run_entry(ctx: _Ctx, n: int, instance: dict, arm: str, *, resume_state, entry=None) -> str:
     docker, cfg = ctx.docker, ctx.cfg
-    iid = instance["instance_id"]
-    d = ctx.run_dir / iid / arm
+    d = entry_dir(ctx.run_dir, entry or {"instance_id": instance["instance_id"], "arm": arm})
     d.mkdir(parents=True, exist_ok=True)
     name = f"selfcheck-agent-{ctx.run_id}-{n}"
     host = {"container": name, "host_timeout": False, "scrubbed_occurrences": 0, "error": None}

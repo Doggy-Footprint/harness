@@ -1171,6 +1171,98 @@ class RunStateTests(F.RunCase):
         self.assertEqual(self.load(self.entry(run_dir, ROW_A, "baseline") / "manifest.json")["start_commit"], F.BASE_HEAD)
 
 
+class EntryHelperTests(unittest.TestCase):
+    ROOT = Path("/runs/r1")
+
+    def test_o6_entry_dir_without_a_repeat_key_is_the_legacy_layout(self):
+        entry = {"instance_id": "i1", "arm": "harness", "status": "completed"}
+        self.assertEqual(run.entry_dir(self.ROOT, entry), self.ROOT / "i1" / "harness")
+
+    def test_o6_entry_dir_with_a_repeat_key_appends_r_and_the_number(self):
+        for k in (1, 2, 10):
+            with self.subTest(k):
+                entry = {"instance_id": "i1", "arm": "harness", "repeat": k, "status": "pending"}
+                self.assertEqual(run.entry_dir(self.ROOT, entry), self.ROOT / "i1" / ("harness-r%d" % k))
+        self.assertEqual(run.entry_dir(self.ROOT, {"instance_id": "i2", "arm": "baseline", "repeat": 3}),
+                         self.ROOT / "i2" / "baseline-r3")
+
+    def test_o6_entry_repeat_defaults_to_one(self):
+        self.assertEqual(run.entry_repeat({"instance_id": "i1", "arm": "harness"}), 1)
+        self.assertEqual(run.entry_repeat({"instance_id": "i1", "arm": "harness", "repeat": 3}), 3)
+        self.assertEqual(run.entry_repeat({"repeat": 1}), 1)
+
+
+class RepeatsRunTests(F.RunCase):
+    def setUp(self):
+        super().setUp()
+        self.docker.configure(diff_text=PLANTED_DIFF)
+
+    def predictions(self, run_dir, arm="harness"):
+        lines = (run_dir / ("predictions.%s.jsonl" % arm)).read_text(encoding="utf-8").splitlines()
+        return [json.loads(l) for l in lines]
+
+    def test_o6_c20_two_instances_two_repeats_order_dirs_and_predictions(self):
+        run_dir = self.go(ids=(ROW_A, ROW_B), arms=("harness",), repeats=2)
+        listing = self.load(run_dir / "run.json")
+        self.assertEqual(listing["entries"], [
+            {"instance_id": ROW_A, "arm": "harness", "repeat": 1, "status": "completed"},
+            {"instance_id": ROW_A, "arm": "harness", "repeat": 2, "status": "completed"},
+            {"instance_id": ROW_B, "arm": "harness", "repeat": 1, "status": "completed"},
+            {"instance_id": ROW_B, "arm": "harness", "repeat": 2, "status": "completed"},
+        ])
+        self.assertIsNone(listing["halted"])
+        for iid in (ROW_A, ROW_B):
+            self.assertFalse((run_dir / iid / "harness").exists(), iid)
+            for k in (1, 2):
+                entry = run_dir / iid / ("harness-r%d" % k)
+                for name in ("manifest.json", "state.json", "prediction.json"):
+                    self.assertTrue((entry / name).is_file(), "%s r%d %s" % (iid, k, name))
+        preds = self.predictions(run_dir)
+        self.assertEqual([(p["instance_id"], p["repeat"]) for p in preds],
+                         [(ROW_A, 1), (ROW_A, 2), (ROW_B, 1), (ROW_B, 2)])
+
+    def test_o6_c20_each_repeat_gets_its_own_container(self):
+        run_dir = self.go(ids=(ROW_A, ROW_B), arms=("harness",), repeats=2)
+        names = [e[1] for e in self.docker.started()]
+        self.assertEqual(len(names), 4)
+        self.assertEqual(len(set(names)), 4)
+        self.assertEqual(names, [self.name(run_dir, n) for n in (1, 2, 3, 4)])
+
+    def test_o6_c20_repeat_order_is_instance_then_repeat_then_arm(self):
+        run_dir = self.go(ids=(ROW_A, ROW_B), arms=("baseline", "harness"), repeats=2)
+        entries = self.load(run_dir / "run.json")["entries"]
+        self.assertEqual([(e["instance_id"], e["repeat"], e["arm"]) for e in entries], [
+            (ROW_A, 1, "baseline"), (ROW_A, 1, "harness"), (ROW_A, 2, "baseline"), (ROW_A, 2, "harness"),
+            (ROW_B, 1, "baseline"), (ROW_B, 1, "harness"), (ROW_B, 2, "baseline"), (ROW_B, 2, "harness"),
+        ])
+        for e in entries:
+            self.assertTrue((run.entry_dir(run_dir, e) / "prediction.json").is_file())
+
+    def test_o6_c20_prediction_lines_match_the_entry_prediction_files_apart_from_repeat(self):
+        run_dir = self.go(ids=(ROW_A,), arms=("harness",), repeats=2)
+        for line in self.predictions(run_dir):
+            stored = self.load(run_dir / ROW_A / ("harness-r%d" % line["repeat"]) / "prediction.json")
+            stored_without = {k: v for k, v in stored.items() if k != "repeat"}
+            self.assertEqual({k: v for k, v in line.items() if k != "repeat"}, stored_without)
+
+    def test_o6_c21_repeats_one_keeps_the_legacy_layout(self):
+        run_dir = self.go(ids=(ROW_A,), arms=("harness",), repeats=1)
+        self.assertEqual(self.load(run_dir / "run.json")["entries"],
+                         [{"instance_id": ROW_A, "arm": "harness", "status": "completed"}])
+        self.assertTrue((run_dir / ROW_A / "harness" / "prediction.json").is_file())
+        self.assertFalse((run_dir / ROW_A / "harness-r1").exists())
+        (line,) = self.predictions(run_dir)
+        self.assertNotIn("repeat", line)
+
+    def test_o6_c21_default_repeats_is_the_legacy_layout(self):
+        run_dir = self.go(ids=(ROW_A,), arms=("baseline",))
+        self.assertEqual(self.load(run_dir / "run.json")["entries"],
+                         [{"instance_id": ROW_A, "arm": "baseline", "status": "completed"}])
+        self.assertTrue((run_dir / ROW_A / "baseline" / "prediction.json").is_file())
+        (line,) = self.predictions(run_dir, "baseline")
+        self.assertNotIn("repeat", line)
+
+
 class EgressTests(unittest.TestCase):
     PROXY = "selfcheck-proxy-t"
 

@@ -1,10 +1,14 @@
 import json
+import statistics
 from pathlib import Path
+
+from .run import entry_dir, entry_repeat
 
 METRICS = (
     "resolved", "f2p_frac", "swt_success", "kill_primary", "kill_secondary", "incompatible_frac",
 )
 KILL_METRICS = ("kill_primary", "kill_secondary")
+FLAG_METRICS = ("resolved", "swt_success")
 SMALL_SAMPLE_SUFFIX = " (참고용: 표본 작음)"
 NOTE_NO_SIGNIFICANCE = (
     "통계적 유의성은 검정하지 않았다. 범위는 기준선 반복 실행의 최솟값과 최댓값이며 above/within/below는 "
@@ -12,6 +16,12 @@ NOTE_NO_SIGNIFICANCE = (
 )
 NOTE_SMALL_SAMPLE = (
     "표본이 작은 인스턴스(컴파일 가능한 변이 수가 기준 미만)의 kill 지표는 참고용이다."
+)
+NOTE_USER_SIM = (
+    "시뮬레이션된 사용자는 모든 추천을 그대로 수락하므로 Ask 품질은 측정되지 않는다."
+)
+NOTE_PC5 = (
+    "PC5는 오탐일 수 있다. 하네스 텔레메트리가 한 Bash 명령 안의 첫 번째 `seed.py` 호출만 기록하기 때문이다."
 )
 
 
@@ -67,17 +77,17 @@ def _cost(state: dict | None) -> float | None:
     return sum(costs) if costs else None
 
 
-def _load_reviews(run_dir: Path, iids: list[str]) -> dict[str, dict]:
+def _load_reviews(run_dir: Path, entries: list[dict]) -> dict[tuple[str, int], dict]:
     reviews = {}
-    for iid in iids:
-        path = run_dir / iid / "harness" / "review.json"
+    for entry in entries:
+        path = entry_dir(run_dir, entry) / "review.json"
         if not path.is_file():
             continue
         try:
             obj = json.loads(path.read_text())
         except (OSError, ValueError):
             obj = None
-        reviews[iid] = obj if isinstance(obj, dict) else {
+        reviews[(entry["instance_id"], entry_repeat(entry))] = obj if isinstance(obj, dict) else {
             "status": "error", "error": "unreadable review.json",
         }
     return reviews
@@ -95,6 +105,23 @@ def _review_view(review: dict | None) -> tuple:
     )
 
 
+def _summary(metric: str, values: list) -> dict | None:
+    present = [v for v in values if v is not None]
+    if not present:
+        return None
+    if metric in FLAG_METRICS:
+        return {"k": sum(v == 1.0 for v in present), "n": len(present)}
+    return {"median": statistics.median(present), "min": min(present), "max": max(present)}
+
+
+def _summary_cell(summary: dict | None) -> str:
+    if summary is None:
+        return "n/a"
+    if "k" in summary:
+        return f"{summary['k']}/{summary['n']}"
+    return f"{_cell(summary['median'])} [{_cell(summary['min'])}, {_cell(summary['max'])}]"
+
+
 def build(
     run_dir: Path, *, fixture_dir: Path | None, scores: dict, processes: dict, min_mutants: int,
     reviews: dict | None = None,
@@ -109,56 +136,80 @@ def build(
         fixture_manifest = _read_json(fixture_dir / "manifest.json")
         fixture_scores = _read_json(fixture_dir / "scores.json") or {}
 
+    harness_entries = [e for e in meta["entries"] if e["arm"] == "harness"]
     if reviews is None:
-        reviews = _load_reviews(
-            run_dir, [e["instance_id"] for e in meta["entries"] if e["arm"] == "harness"]
-        )
+        reviews = _load_reviews(run_dir, harness_entries)
+    grouped: dict[str, list[dict]] = {}
+    for entry in harness_entries:
+        grouped.setdefault(entry["instance_id"], []).append(entry)
     instances = []
     false_claims = []
-    for entry in meta["entries"]:
-        if entry["arm"] != "harness":
-            continue
-        iid = entry["instance_id"]
-        score = scores.get(iid)
-        repeats = [r.get("score") for r in fixture_scores.get(iid, [])] if fixture_dir else []
-        sampled = ((score or {}).get("kill") or {}).get("sampled")
-        if score is None:
+    for iid, entries in grouped.items():
+        entries = sorted(entries, key=entry_repeat)
+        base_scores = [r.get("score") for r in fixture_scores.get(iid, [])] if fixture_dir else []
+        rows = []
+        for entry in entries:
+            key = (iid, entry_repeat(entry))
+            score = scores.get(key)
+            state = _read_json(entry_dir(run_dir, entry) / "state.json")
+            review = reviews.get(key)
+            verdicts, findings = _review_view(review)
+            if review is not None and review.get("status") == "ok":
+                false_claims += [
+                    {"instance_id": iid, "repeat": key[1], "category": fc.get("category"),
+                     "summary": fc.get("summary"), "citation": fc.get("citation")}
+                    for fc in review.get("false_claims") or []
+                ]
+            rows.append({
+                "repeat": key[1],
+                "status": entry["status"],
+                "metrics": metric_values(score),
+                "process": _check_verdicts(processes.get(key)),
+                "cost_usd": _cost(state),
+                "elapsed_s": (state or {}).get("elapsed_s"),
+                "review": verdicts,
+                "review_findings": findings,
+                "score": score,
+            })
+        sampled = next(
+            (((r["score"] or {}).get("kill") or {}).get("sampled") for r in rows
+             if ((r["score"] or {}).get("kill") or {}).get("sampled") is not None),
+            None,
+        )
+        if sampled is None:
             sampled = next(
-                ((s.get("kill") or {}).get("sampled") for s in repeats if s), None
+                (((s or {}).get("kill") or {}).get("sampled") for s in base_scores if s), None
             )
-        harness = metric_values(score)
-        baseline = [metric_values(s) for s in repeats]
+        baseline = [metric_values(s) for s in base_scores]
         metrics = {}
         for m in METRICS:
+            harness = [r["metrics"][m] for r in rows]
             values = [b[m] for b in baseline]
             present = [v for v in values if v is not None]
+            summary = _summary(m, harness)
+            median = statistics.median([v for v in harness if v is not None]) if summary else None
+            verdicts = [verdict(v, values) for v in harness]
             metrics[m] = {
-                "harness": harness[m],
+                "harness": harness,
+                "harness_summary": summary,
                 "baseline": values,
                 "range": [min(present), max(present)] if present else None,
-                "verdict": verdict(harness[m], values),
+                "verdict": verdict(median, values),
+                "repeat_verdicts": {
+                    name: verdicts.count(name) for name in ("above", "within", "below", "n/a")
+                },
             }
-        state = _read_json(run_dir / iid / "harness" / "state.json")
-        review = reviews.get(iid)
-        verdicts, findings = _review_view(review)
-        if review is not None and review.get("status") == "ok":
-            false_claims += [
-                {"instance_id": iid, "category": fc.get("category"), "summary": fc.get("summary"),
-                 "citation": fc.get("citation")}
-                for fc in review.get("false_claims") or []
-            ]
+        cids = sorted({c for r in rows for c in r["process"]}, key=lambda c: (len(c), c))
         instances.append({
             "instance_id": iid,
-            "status": entry["status"],
             "small_sample": sampled is not None and sampled < min_mutants,
+            "repeats": [{k: v for k, v in r.items() if k != "score"} for r in rows],
             "metrics": metrics,
-            "process": _check_verdicts(processes.get(iid)),
-            "cost_usd": _cost(state),
-            "elapsed_s": (state or {}).get("elapsed_s"),
-            "review": verdicts,
-            "review_findings": findings,
+            "process_fails": {
+                c: sum(r["process"].get(c) == "fail" for r in rows) for c in cids
+            },
         })
-    notes = [NOTE_NO_SIGNIFICANCE]
+    notes = [NOTE_NO_SIGNIFICANCE, NOTE_USER_SIM, NOTE_PC5]
     if any(i["small_sample"] for i in instances):
         notes.append(NOTE_SMALL_SAMPLE)
     return {
@@ -185,6 +236,16 @@ def _cite(citation: str) -> str:
     return citation if citation.startswith("[") and citation.endswith("]") else f"[{citation}]"
 
 
+def _review_lines(inst_review, findings) -> list[str]:
+    if isinstance(inst_review, str):
+        return [f"review: {inst_review}"]
+    lines = ["| category | verdict | findings |", "| --- | --- | --- |"]
+    for cat, v in inst_review.items():
+        found = "; ".join(f"{f['summary']} {_cite(f['citation'])}" for f in findings.get(cat, []))
+        lines.append(f"| {cat} | {v} | {_md(found) or 'none'} |")
+    return lines
+
+
 def render_markdown(report: dict) -> str:
     fixture = report["fixture_id"] if report["fixture_id"] else "baseline skipped"
     lines = [
@@ -195,32 +256,46 @@ def render_markdown(report: dict) -> str:
         f"- fixture: {fixture}",
     ]
     for inst in report["instances"]:
-        lines += ["", f"## {inst['instance_id']} ({inst['status']})", ""]
-        lines += ["| metric | harness | baseline (per repeat) | range | verdict |", "| --- | --- | --- | --- | --- |"]
+        reps = inst["repeats"]
+        cols = [f"r{r['repeat']}" for r in reps]
+        lines += ["", f"## {inst['instance_id']}", ""]
+        lines += [
+            "| " + " | ".join(
+                ["metric", *cols, "summary", "baseline (per repeat)", "range", "verdict",
+                 "repeats above/within/below"]
+            ) + " |",
+            "| " + " | ".join(["---"] * (len(cols) + 6)) + " |",
+        ]
         for m in METRICS:
             row = inst["metrics"][m]
             name = m + SMALL_SAMPLE_SUFFIX if inst["small_sample"] and m in KILL_METRICS else m
             rng = "n/a" if row["range"] is None else f"[{_cell(row['range'][0])}, {_cell(row['range'][1])}]"
             base = ", ".join(_cell(v) for v in row["baseline"]) or "n/a"
-            lines.append(f"| {name} | {_cell(row['harness'])} | {base} | {rng} | {row['verdict']} |")
-        lines += ["", f"cost_usd: {_cell(inst['cost_usd'])}, elapsed_s: {_cell(inst['elapsed_s'])}", ""]
-        lines += ["| check | verdict |", "| --- | --- |"]
-        lines += [f"| {cid} | {v} |" for cid, v in inst["process"].items()]
+            rv = row["repeat_verdicts"]
+            lines.append("| " + " | ".join([
+                name, *(_cell(v) for v in row["harness"]), _summary_cell(row["harness_summary"]),
+                base, rng, row["verdict"], f"{rv['above']}/{rv['within']}/{rv['below']}",
+            ]) + " |")
         lines.append("")
-        if isinstance(inst["review"], str):
-            lines.append(f"review: {inst['review']}")
-        else:
-            lines += ["| category | verdict | findings |", "| --- | --- | --- |"]
-            for cat, v in inst["review"].items():
-                found = "; ".join(
-                    f"{f['summary']} {_cite(f['citation'])}" for f in inst["review_findings"].get(cat, [])
-                )
-                lines.append(f"| {cat} | {v} | {_md(found) or 'none'} |")
+        lines += [
+            f"r{r['repeat']} ({r['status']}) cost_usd: {_cell(r['cost_usd'])}, "
+            f"elapsed_s: {_cell(r['elapsed_s'])}"
+            for r in reps
+        ]
+        lines += ["", "| " + " | ".join(["check", *cols, "fails"]) + " |"]
+        lines.append("| " + " | ".join(["---"] * (len(cols) + 2)) + " |")
+        for cid, fails in inst["process_fails"].items():
+            cells = [r["process"].get(cid, "n/a") for r in reps]
+            lines.append("| " + " | ".join([cid, *cells, str(fails)]) + " |")
+        for r in reps:
+            lines += ["", f"### r{r['repeat']} review", ""]
+            lines += _review_lines(r["review"], r["review_findings"])
     lines += ["", "## false claims", ""]
     if report["false_claims"]:
-        lines += ["| instance | category | summary | citation |", "| --- | --- | --- | --- |"]
+        lines += ["| instance | repeat | category | summary | citation |", "| --- | --- | --- | --- | --- |"]
         lines += [
-            f"| {fc['instance_id']} | {fc['category']} | {_md(fc['summary'])} | {_md(fc['citation'])} |"
+            f"| {fc['instance_id']} | r{fc['repeat']} | {fc['category']} | {_md(fc['summary'])} "
+            f"| {_md(fc['citation'])} |"
             for fc in report["false_claims"]
         ]
     else:

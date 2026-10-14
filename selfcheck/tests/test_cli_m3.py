@@ -15,6 +15,7 @@ from unittest import mock
 from selfcheck import __main__ as cli
 from selfcheck import docker_exec
 from selfcheck import evaluate as evaluate_mod
+from selfcheck import report as report_mod
 from selfcheck import run as run_mod
 from selfcheck import score as score_mod
 from selfcheck.tests import agent_fakes as F
@@ -41,32 +42,36 @@ class FakeRuns:
         self.calls = []
         self.resumes = []
 
-    def build(self, run_id, instances, arms, harness_ref, halted):
+    def build(self, run_id, instances, arms, harness_ref, halted, repeats=1):
         entries = []
         n_call = len(self.calls)
         over = dict(self.manifest_over, **self.per_call_over.get(n_call, {}))
         for position, iid in enumerate([r["instance_id"] for r in instances]):
-            for arm in arms:
-                first = halted and not entries
-                if halted and entries:
-                    entries.append({"instance_id": iid, "arm": arm, "status": "pending"})
-                    continue
-                pred = m.prediction(iid, arm, run_id)
-                if self.leak:
-                    pred["src_diff"] = "leak " + self.leak
-                item = {
-                    "instance_id": iid, "arm": arm, "status": "interrupted" if first else "completed",
-                    "manifest": m.manifest(iid, arm, run_id, harness_ref=harness_ref, **over),
-                    "state": m.state("interrupted" if first else "completed"),
-                    "prediction": None if first else pred,
-                }
-                if arm == "harness":
-                    item["extra"] = {"events": m.compliant_events(), "ledger": m.compliant_ledger_items(),
-                                     "diff": m.archived_diff()}
-                entries.append(item)
+            for k in range(1, repeats + 1):
+                for arm in arms:
+                    first = halted and not entries
+                    tag = {"repeat": k} if repeats > 1 else {}
+                    if halted and entries:
+                        entries.append(dict({"instance_id": iid, "arm": arm, "status": "pending"}, **tag))
+                        continue
+                    pred = m.prediction(iid, arm, run_id, **tag)
+                    if self.leak:
+                        pred["src_diff"] = "leak " + self.leak
+                    item = dict({
+                        "instance_id": iid, "arm": arm, "status": "interrupted" if first else "completed",
+                        "manifest": m.manifest(iid, arm, run_id, harness_ref=harness_ref, **over),
+                        "state": m.state("interrupted" if first else "completed"),
+                        "prediction": None if first else pred,
+                    }, **tag)
+                    if arm == "harness":
+                        item["extra"] = {"events": m.compliant_events(), "ledger": m.compliant_ledger_items(),
+                                         "diff": m.archived_diff()}
+                    entries.append(item)
         record = None
         if halted:
             record = {"reason": "interrupted", "instance_id": entries[0]["instance_id"], "arm": entries[0]["arm"]}
+            if "repeat" in entries[0]:
+                record["repeat"] = entries[0]["repeat"]
         params = {"harness_ref": harness_ref, "harness_commit": "d" * 40, "selfcheck_commit": "c" * 40}
         run_dir = m.write_run(self.runs_dir, run_id, entries, halted=record, params=params)
         for arm in set(arms):
@@ -74,14 +79,15 @@ class FakeRuns:
             m.write_text(run_dir / ("predictions.%s.jsonl" % arm), "\n".join(lines) + ("\n" if lines else ""))
         return run_dir
 
-    def run(self, instances, arms, *, cfg, harness_ref="HEAD", model=None, effort=None, cap_min=None, **extra):
+    def run(self, instances, arms, *, cfg, harness_ref="HEAD", model=None, effort=None, cap_min=None, repeats=1,
+            **extra):
         token = Path(cfg["token_file"]).expanduser()
         if not token.exists():
             raise run_mod.TokenFileMissing("token file missing: %s" % token)
         n = len(self.calls) + 1
         self.calls.append({"instances": [r["instance_id"] for r in instances], "arms": list(arms),
-                           "harness_ref": harness_ref, "cfg": cfg})
-        return self.build("fakerun%02d" % n, instances, list(arms), harness_ref, (n - 1) in self.halt_calls)
+                           "harness_ref": harness_ref, "cfg": cfg, "repeats": repeats})
+        return self.build("fakerun%02d" % n, instances, list(arms), harness_ref, (n - 1) in self.halt_calls, repeats)
 
     def resume(self, run_id, *, cfg, **extra):
         self.resumes.append(run_id)
@@ -92,8 +98,9 @@ class FakeRuns:
         instances = [{"instance_id": e["instance_id"]} for e in listing["entries"]]
         arms = sorted({e["arm"] for e in listing["entries"]})
         iids = list(dict.fromkeys(i["instance_id"] for i in instances))
+        repeats = max(e.get("repeat", 1) for e in listing["entries"])
         shutil.rmtree(run_dir)
-        return self.build(run_id, [{"instance_id": i} for i in iids], arms, "HEAD", False)
+        return self.build(run_id, [{"instance_id": i} for i in iids], arms, "HEAD", False, repeats)
 
 
 class Boom(AssertionError):
@@ -171,27 +178,37 @@ class CliCase(unittest.TestCase):
         return m.write_fixture(self.fixtures, manifests, scores=scores)
 
     def harness_run(self, run_id="runharness000001", ids=("proj__a-1", "proj__b-2"), *, scores=True,
-                    process_json_first=False, harness_ref="HEAD", skip_ledger_for=(), extra_manifest=None):
+                    process_json_first=False, harness_ref="HEAD", skip_ledger_for=(), extra_manifest=None,
+                    repeats=None, score_of=None):
+        """repeats=None: legacy layout (no repeat key). Otherwise N repeats per instance in `<iid>/harness-r<k>`."""
         entries = []
+        ks = [None] if repeats is None else list(range(1, repeats + 1))
         for iid in ids:
-            extra = {"events": m.compliant_events(), "ledger": m.compliant_ledger_items(), "diff": m.archived_diff()}
-            entries.append({
-                "instance_id": iid, "arm": "harness", "status": "completed",
-                "manifest": m.manifest(iid, "harness", run_id, harness_ref=harness_ref, **(extra_manifest or {})),
-                "state": m.state(), "prediction": m.prediction(iid, "harness", run_id), "extra": extra,
-            })
+            for k in ks:
+                extra = {"events": m.compliant_events(), "ledger": m.compliant_ledger_items(),
+                         "diff": m.archived_diff()}
+                tag = {} if k is None else {"repeat": k}
+                entries.append(dict({
+                    "instance_id": iid, "arm": "harness", "status": "completed",
+                    "manifest": m.manifest(iid, "harness", run_id, harness_ref=harness_ref, **(extra_manifest or {})),
+                    "state": m.state(), "prediction": m.prediction(iid, "harness", run_id, **tag), "extra": extra,
+                }, **tag))
         entries.append({"instance_id": ids[0], "arm": "baseline", "status": "completed",
                         "manifest": m.manifest(ids[0], "baseline", run_id), "state": m.state(),
                         "prediction": m.prediction(ids[0], "baseline", run_id)})
         run_dir = m.write_run(self.runs, run_id, entries,
                               params={"harness_ref": harness_ref, "harness_commit": "d" * 40})
         if scores:
-            rows = [json.dumps(m.score(i)) for i in ids]
+            rows = []
+            for iid in ids:
+                for k in ks:
+                    row = score_of(iid, k) if score_of else m.score(iid)
+                    rows.append(json.dumps(row if k is None else dict(row, repeat=k)))
             m.write_text(run_dir / "scores.harness.jsonl", "\n".join(rows) + "\n")
         if process_json_first:
             checks = {cid: {"verdict": "pass", "detail": "", "evidence": []} for cid in m.CHECK_IDS}
             checks["PC8"]["verdict"] = "fail"
-            m.write_text(run_dir / ids[0] / "harness" / "process.json", json.dumps({
+            m.write_text(run_dir / ids[0] / m.dirname("harness", ks[0]) / "process.json", json.dumps({
                 "instance_id": ids[0], "arm": "harness", "workflow_run_id": m.WF, "end_status": "complete",
                 "checks": checks, "metrics": {}, "skipped_lines": 0,
             }))
@@ -222,7 +239,7 @@ class ProcessCommandTests(CliCase):
         run_dir = self.two_entry_run()
         code, out, err = self.invoke(["process", run_dir.name], no_run=True)
         self.assertEqual(code, 0, err)
-        self.assertEqual(out.splitlines(), ["proj__a-1 pass=11 fail=0 n/a=0", "proj__b-2 pass=10 fail=1 n/a=0"])
+        self.assertEqual(out.splitlines(), ["proj__a-1 pass=12 fail=0 n/a=0", "proj__b-2 pass=11 fail=1 n/a=0"])
         first = self.load(run_dir / "proj__a-1" / "harness" / "process.json")
         second = self.load(run_dir / "proj__b-2" / "harness" / "process.json")
         self.assertEqual({c["verdict"] for c in first["checks"].values()}, {"pass"})
@@ -235,14 +252,14 @@ class ProcessCommandTests(CliCase):
         run_dir = self.two_entry_run(scores=False)
         code, out, _ = self.invoke(["process", run_dir.name], no_run=True)
         self.assertEqual(code, 0)
-        self.assertEqual(out.splitlines(), ["proj__a-1 pass=10 fail=0 n/a=1", "proj__b-2 pass=9 fail=1 n/a=1"])
+        self.assertEqual(out.splitlines(), ["proj__a-1 pass=11 fail=0 n/a=1", "proj__b-2 pass=10 fail=1 n/a=1"])
 
     def test_vo8_process_matches_scores_to_entries_by_instance_id(self):
         run_dir = self.two_entry_run()
         only_first = json.dumps(m.score("proj__a-1")) + "\n"
         (run_dir / "scores.harness.jsonl").write_text(only_first, encoding="utf-8")
         code, out, _ = self.invoke(["process", run_dir.name], no_run=True)
-        self.assertEqual(out.splitlines(), ["proj__a-1 pass=11 fail=0 n/a=0", "proj__b-2 pass=9 fail=1 n/a=1"])
+        self.assertEqual(out.splitlines(), ["proj__a-1 pass=12 fail=0 n/a=0", "proj__b-2 pass=10 fail=1 n/a=1"])
 
     def test_vo8_process_takes_no_options(self):
         run_dir = self.two_entry_run()
@@ -385,11 +402,12 @@ class CheckCommandTests(CliCase):
     def test_vo8_check_ok_runs_the_harness_arm_on_core_instances_and_writes_the_report(self):
         fixture_dir = self.write_matching_fixture()
         fake = FakeRuns(self.runs)
-        code, out, err = self.invoke(["check"], fake)
+        code, out, err = self.invoke(["check", "--repeats", "1"], fake)
         self.assertEqual(code, 0, err)
         self.assertEqual(len(fake.calls), 1)
         self.assertEqual(fake.calls[0]["instances"], CORE_IDS)
         self.assertEqual(fake.calls[0]["arms"], ["harness"])
+        self.assertEqual(fake.calls[0]["repeats"], 1)
         self.assertEqual(fake.calls[0]["harness_ref"], "HEAD")
         self.assertEqual(fake.resumes, [])
         run_dir = self.runs / "fakerun01"
@@ -408,10 +426,14 @@ class CheckCommandTests(CliCase):
         self.assertEqual(rep["fixture_id"], fixture_dir.name)
         self.assertEqual([i["instance_id"] for i in rep["instances"]], CORE_IDS)
         for inst in rep["instances"]:
-            self.assertEqual(inst["metrics"]["resolved"], {"harness": 1.0, "baseline": [0.0, 1.0], "range": [0.0, 1.0],
-                                                           "verdict": "within"})
+            self.assertEqual(inst["metrics"]["resolved"], {
+                "harness": [1.0], "harness_summary": {"k": 1, "n": 1}, "baseline": [0.0, 1.0], "range": [0.0, 1.0],
+                "verdict": "within", "repeat_verdicts": {"above": 0, "within": 1, "below": 0, "n/a": 0}})
             self.assertEqual(inst["metrics"]["f2p_frac"]["verdict"], "above")
-            self.assertEqual(inst["process"], {cid: "pass" for cid in m.CHECK_IDS})
+            (repeat,) = inst["repeats"]
+            self.assertEqual(repeat["repeat"], 1)
+            self.assertEqual(repeat["process"], {cid: "pass" for cid in m.CHECK_IDS})
+            self.assertEqual(inst["process_fails"], {cid: 0 for cid in m.CHECK_IDS})
         self.assertTrue(md_path.read_text(encoding="utf-8").strip())
 
     def test_vo8_check_forwards_instances_and_harness_ref(self):
@@ -479,7 +501,7 @@ class CheckCommandTests(CliCase):
     def test_vo8_check_no_fixture_after_the_run_keeps_artifacts_and_writes_no_results(self):
         fixture_dir = self.write_matching_fixture()
         fake = FakeRuns(self.runs, manifest_over={"cli_version": "9.9.9"})
-        code, out, err = self.invoke(["check"], fake)
+        code, out, err = self.invoke(["check", "--repeats", "1"], fake)
         self.assertEqual(code, 2)
         self.assertIn("fixture %s differs in: cli_version" % fixture_dir.name, err)
         self.assertEqual(self.files_under(self.results), {})
@@ -528,9 +550,10 @@ class ReportCommandTests(CliCase):
         self.assertEqual(rep["fixture_id"], fixture_dir.name)
         self.assertEqual(rep["baseline"], "compared")
         first, second = rep["instances"]
-        self.assertEqual(first["process"], dict({cid: "pass" for cid in m.CHECK_IDS}, PC8="fail"))
-        self.assertEqual(second["process"], {cid: "pass" for cid in m.CHECK_IDS})
-        self.assertEqual(first["metrics"]["resolved"]["harness"], 1.0)
+        self.assertEqual(first["repeats"][0]["process"], dict({cid: "pass" for cid in m.CHECK_IDS}, PC8="fail"))
+        self.assertEqual(second["repeats"][0]["process"], {cid: "pass" for cid in m.CHECK_IDS})
+        self.assertEqual(first["process_fails"], dict({cid: 0 for cid in m.CHECK_IDS}, PC8=1))
+        self.assertEqual(first["metrics"]["resolved"]["harness"], [1.0])
         self.assertEqual(first["metrics"]["resolved"]["verdict"], "within")
         self.assertEqual(first["metrics"]["f2p_frac"]["verdict"], "above")
 
@@ -580,7 +603,8 @@ class ReportCommandTests(CliCase):
         rep = self.load(self.results / (run_dir.name + ".json"))
         for inst in rep["instances"]:
             for cell in inst["metrics"].values():
-                self.assertIsNone(cell["harness"])
+                self.assertEqual(cell["harness"], [None])
+                self.assertIsNone(cell["harness_summary"])
                 self.assertEqual(cell["verdict"], "n/a")
 
     def test_vo8_report_unknown_run_id(self):
@@ -682,11 +706,182 @@ class RealScoringWiringTests(CliCase):
         fake = FakeRuns(self.runs)
         with mock.patch.object(evaluate_mod, "evaluate", fake_evaluate), \
                 mock.patch.object(evaluate_mod, "read_files", fake_read_files):
-            code, out, err = self.invoke(["check"], fake)
+            code, out, err = self.invoke(["check", "--repeats", "1"], fake)
         self.assertEqual(code, 0, err)
         self.assertEqual(sorted(set(seen)), sorted(CORE_IDS))
         rows = [json.loads(l) for l in (self.runs / "fakerun01" / "scores.harness.jsonl").read_text(encoding="utf-8").splitlines()]
         self.assertEqual([r["instance_id"] for r in rows], CORE_IDS)
+
+
+def score_by_repeat(instance, prediction, **kw):
+    """Repeat 1 resolves, later repeats do not; the repeat comes from the prediction line (default 1)."""
+    k = prediction.get("repeat", 1)
+    return m.score(instance["instance_id"], resolved=(k == 1), swt=(k == 1), f2p=1.0 if k == 1 else 0.5,
+                   primary=0.5, secondary=0.25, incompat=0.0, sampled=18)
+
+
+class RepeatsConfigTests(unittest.TestCase):
+    def test_o7_config_defaults_are_three(self):
+        self.assertEqual(cli.CONFIG["check"]["repeats"], 3)
+        self.assertEqual(cli.CONFIG["baseline"]["repeats"], 3)
+
+
+class RepeatsCheckTests(CliCase):
+    def test_o7_default_repeats_comes_from_config_and_reaches_run(self):
+        self.write_matching_fixture()
+        fake = FakeRuns(self.runs)
+        code, out, err = self.invoke(["check"], fake)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(fake.calls[0]["repeats"], cli.CONFIG["check"]["repeats"])
+        self.assertEqual(fake.calls[0]["repeats"], 3)
+        rep = self.load(self.results / "fakerun01.json")
+        for inst in rep["instances"]:
+            self.assertEqual([r["repeat"] for r in inst["repeats"]], [1, 2, 3])
+
+    def test_o7_config_default_follows_the_config_value(self):
+        self.write_matching_fixture()
+        fake = FakeRuns(self.runs)
+        with mock.patch.dict(cli.CONFIG["check"], {"repeats": 2}):
+            code, out, err = self.invoke(["check"], fake)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(fake.calls[0]["repeats"], 2)
+
+    def test_o7_c26_explicit_repeats_two_scores_process_and_report_per_repeat(self):
+        self.write_matching_fixture()
+        self.stack.enter_context(mock.patch.object(score_mod, "score_prediction", score_by_repeat))
+        fake = FakeRuns(self.runs)
+        code, out, err = self.invoke(["check", "--repeats", "2"], fake)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(len(fake.calls), 1)
+        self.assertEqual(fake.calls[0]["repeats"], 2)
+        self.assertEqual(fake.calls[0]["arms"], ["harness"])
+        run_dir = self.runs / "fakerun01"
+        rows = [json.loads(l) for l in (run_dir / "scores.harness.jsonl").read_text(encoding="utf-8").splitlines()]
+        self.assertEqual(sorted((r["instance_id"], r["repeat"]) for r in rows),
+                         sorted((i, k) for i in CORE_IDS for k in (1, 2)))
+        for row in rows:
+            self.assertEqual(row["resolved"], row["repeat"] == 1, row["instance_id"])
+        for iid in CORE_IDS:
+            self.assertFalse((run_dir / iid / "harness").exists(), iid)
+            first = self.load(run_dir / iid / "harness-r1" / "process.json")
+            second = self.load(run_dir / iid / "harness-r2" / "process.json")
+            self.assertEqual(first["checks"]["PC11"]["verdict"], "pass")
+            self.assertEqual(second["checks"]["PC11"]["verdict"], "fail")
+        json_path, md_path = self.results / "fakerun01.json", self.results / "fakerun01.md"
+        self.assertIn(str(json_path), out)
+        rep = self.load(json_path)
+        self.assertEqual([i["instance_id"] for i in rep["instances"]], CORE_IDS)
+        for inst in rep["instances"]:
+            self.assertEqual([r["repeat"] for r in inst["repeats"]], [1, 2])
+            self.assertEqual(inst["metrics"]["resolved"]["harness"], [1.0, 0.0])
+            self.assertEqual(inst["metrics"]["resolved"]["harness_summary"], {"k": 1, "n": 2})
+            self.assertEqual(inst["metrics"]["f2p_frac"]["harness"], [1.0, 0.5])
+            self.assertEqual([r["process"]["PC11"] for r in inst["repeats"]], ["pass", "fail"])
+            self.assertEqual(inst["process_fails"]["PC11"], 1)
+        self.assertIn("### r2 review", md_path.read_text(encoding="utf-8"))
+
+    def test_o7_repeats_one_keeps_the_legacy_layout_and_rows(self):
+        self.write_matching_fixture()
+        fake = FakeRuns(self.runs)
+        code, out, err = self.invoke(["check", "--repeats", "1"], fake)
+        self.assertEqual(code, 0, err)
+        run_dir = self.runs / "fakerun01"
+        rows = [json.loads(l) for l in (run_dir / "scores.harness.jsonl").read_text(encoding="utf-8").splitlines()]
+        self.assertEqual([(r["instance_id"], r.get("repeat", 1)) for r in rows], [(i, 1) for i in CORE_IDS])
+        for iid in CORE_IDS:
+            self.assertTrue((run_dir / iid / "harness" / "process.json").is_file())
+
+    def test_o7_c27_invalid_repeats_exit_2_before_any_run_or_directory(self):
+        self.write_matching_fixture()
+        for value in ("0", "-1", "abc", "1.5"):
+            with self.subTest(value):
+                fake = FakeRuns(self.runs)
+                code, out, err = self.invoke(["check", "--repeats", value], fake)
+                self.assertEqual(code, 2)
+                self.assertEqual(fake.calls, [])
+                self.assertEqual(fake.resumes, [])
+                self.assertEqual(self.files_under(self.runs), {})
+                self.assertFalse(self.results.exists() and self.files_under(self.results))
+
+    def test_o7_resume_ignores_repeats(self):
+        self.write_matching_fixture()
+        first = FakeRuns(self.runs, halt_calls={0})
+        code, out, err = self.invoke(["check", "--repeats", "2"], first)
+        self.assertEqual(code, 3)
+        self.assertIn("resume with: python3 -m selfcheck check --resume fakerun01", err)
+        code, out, err = self.invoke(["check", "--resume", "fakerun01", "--repeats", "5"], first)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(first.resumes, ["fakerun01"])
+        self.assertEqual(len(first.calls), 1)
+        rep = self.load(self.results / "fakerun01.json")
+        for inst in rep["instances"]:
+            self.assertEqual([r["repeat"] for r in inst["repeats"]], [1, 2])
+
+    def test_o7_check_precheck_failure_still_exits_2_with_repeats(self):
+        code, out, err = self.invoke(["check", "--repeats", "2"], no_run=True)
+        self.assertEqual(code, 2)
+        self.assertIn(NO_FIXTURE_MESSAGE, err)
+
+
+class RepeatsProcessAndReportTests(CliCase):
+    def test_o7_process_keys_scores_and_writes_process_json_per_repeat(self):
+        run_dir = self.harness_run(repeats=2, score_of=lambda iid, k: m.score(iid, resolved=(k == 1), swt=(k == 1)))
+        code, out, err = self.invoke(["process", run_dir.name], no_run=True)
+        self.assertEqual(code, 0, err)
+        for iid in ("proj__a-1", "proj__b-2"):
+            self.assertFalse((run_dir / iid / "harness" / "process.json").exists())
+            first = self.load(run_dir / iid / "harness-r1" / "process.json")
+            second = self.load(run_dir / iid / "harness-r2" / "process.json")
+            self.assertEqual(first["instance_id"], iid)
+            self.assertEqual(first["checks"]["PC11"]["verdict"], "pass")
+            self.assertEqual(second["checks"]["PC11"]["verdict"], "fail")
+        self.assertFalse((run_dir / "proj__a-1" / "baseline" / "process.json").exists())
+
+    def test_o7_report_of_a_repeated_run_shows_every_repeat_and_the_summary(self):
+        run_dir = self.harness_run(repeats=3, score_of=lambda iid, k: m.score(iid, resolved=(k != 2), swt=True))
+        code, out, err = self.invoke(["report", run_dir.name, "--no-baseline"], no_run=True)
+        self.assertEqual(code, 0, err)
+        rep = self.load(self.results / (run_dir.name + ".json"))
+        for inst in rep["instances"]:
+            self.assertEqual([r["repeat"] for r in inst["repeats"]], [1, 2, 3])
+            self.assertEqual(inst["metrics"]["resolved"]["harness"], [1.0, 0.0, 1.0])
+            self.assertEqual(inst["metrics"]["resolved"]["harness_summary"], {"k": 2, "n": 3})
+        text = (self.results / (run_dir.name + ".md")).read_text(encoding="utf-8")
+        self.assertIn("2/3", text)
+        for k in (1, 2, 3):
+            self.assertIn("### r%d review" % k, text)
+
+    def test_o7_report_uses_the_stored_process_json_of_the_matching_repeat(self):
+        run_dir = self.harness_run(repeats=2)
+        checks = {cid: {"verdict": "pass", "detail": "", "evidence": []} for cid in m.CHECK_IDS}
+        checks["PC8"]["verdict"] = "fail"
+        m.write_text(run_dir / "proj__a-1" / "harness-r2" / "process.json", json.dumps({
+            "instance_id": "proj__a-1", "arm": "harness", "workflow_run_id": m.WF, "end_status": "complete",
+            "checks": checks, "metrics": {}, "skipped_lines": 0}))
+        code, out, err = self.invoke(["report", run_dir.name, "--no-baseline"], no_run=True)
+        self.assertEqual(code, 0, err)
+        first = self.load(self.results / (run_dir.name + ".json"))["instances"][0]
+        self.assertEqual([r["process"]["PC8"] for r in first["repeats"]], ["pass", "fail"])
+        self.assertEqual(first["process_fails"]["PC8"], 1)
+
+    def test_o10_legacy_run_scores_and_process_json_give_one_repeat(self):
+        run_dir = self.harness_run(process_json_first=True)
+        code, out, err = self.invoke(["report", run_dir.name, "--no-baseline"], no_run=True)
+        self.assertEqual(code, 0, err)
+        rep = self.load(self.results / (run_dir.name + ".json"))
+        first, second = rep["instances"]
+        self.assertEqual([r["repeat"] for r in first["repeats"]], [1])
+        self.assertEqual(first["repeats"][0]["process"]["PC8"], "fail")
+        self.assertEqual(second["repeats"][0]["process"]["PC8"], "pass")
+        self.assertEqual(first["metrics"]["resolved"]["harness"], [1.0])
+        self.assertIn(report_mod.NOTE_USER_SIM, (self.results / (run_dir.name + ".md")).read_text(encoding="utf-8"))
+
+    def test_o10_legacy_process_command_writes_the_legacy_directory(self):
+        run_dir = self.harness_run()
+        code, out, err = self.invoke(["process", run_dir.name], no_run=True)
+        self.assertEqual(code, 0, err)
+        self.assertTrue((run_dir / "proj__a-1" / "harness" / "process.json").is_file())
+        self.assertFalse((run_dir / "proj__a-1" / "harness-r1").exists())
 
 
 class SubcommandSurfaceTests(unittest.TestCase):

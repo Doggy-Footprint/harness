@@ -5,11 +5,11 @@ from pathlib import Path
 
 from analytics import compliance
 
-from . import patches
+from . import bashparse, patches
 
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 DISPATCH_TOOLS = {"Agent", "Task"}
-CHECK_IDS = tuple(f"PC{n}" for n in range(1, 12))
+CHECK_IDS = tuple(f"PC{n}" for n in range(1, 13))
 _FILE_KEYS = {"file_path", "notebook_path", "path"}
 _MAX_VERIFIER_RESULTS = 2
 _MAX_VERIFIER_DISPATCHES = 2
@@ -125,14 +125,29 @@ def _row_paths(obj: dict) -> list[str]:
     return found
 
 
+def _hit(path: str, entries: list[str]) -> bool:
+    if "$" in path:
+        path = path.split("$", 1)[0]
+        if not path:
+            return False
+    return any(_matches(path, e) for e in entries)
+
+
 def _targets(obj: dict, entries: list[str]) -> bool:
-    if any(_matches(p, e) for p in _row_paths(obj) for e in entries):
-        return True
+    return any(_hit(p, entries) for p in _row_paths(obj))
+
+
+def _command(obj: dict) -> str | None:
     tool_input = obj.get("tool_input")
     command = tool_input.get("command") if isinstance(tool_input, dict) else None
-    if obj.get("tool_name") != "Bash" or not isinstance(command, str):
-        return False
-    return any("." in e.rstrip("/").rsplit("/", 1)[-1] and e in command for e in entries)
+    return command if obj.get("tool_name") == "Bash" and isinstance(command, str) else None
+
+
+def _writes(obj: dict) -> list[str]:
+    if obj.get("tool_name") in EDIT_TOOLS:
+        return _row_paths(obj)
+    command = _command(obj)
+    return bashparse.classify(command)["writes"] if command is not None else []
 
 
 def _is_dispatch(obj: dict, subagent: str | None = None) -> bool:
@@ -210,8 +225,7 @@ def evaluate_entry(entry_dir: Path, *, score: dict | None = None) -> dict:
     main = [r for r in ledger if r["obj"].get("agent_type") is None]
     spec_write = next(
         (i for i, r in enumerate(ledger)
-         if r["obj"].get("tool_name") in EDIT_TOOLS
-         and any(_matches(p, "agent-docs/specs/") for p in _row_paths(r["obj"]))),
+         if any(_hit(p, ["agent-docs/specs/"]) for p in _writes(r["obj"]))),
         None,
     )
     index = {id(r): i for i, r in enumerate(ledger)}
@@ -298,7 +312,7 @@ def evaluate_entry(entry_dir: Path, *, score: dict | None = None) -> dict:
         checks["PC7"] = _result("pass" if good else "fail", detail, [_ref(end)] if source else [])
 
     def edits(rows, entries):
-        return [r for r in rows if r["obj"].get("tool_name") in EDIT_TOOLS and _targets(r["obj"], entries)]
+        return [r for r in rows if any(_hit(p, entries) for p in _writes(r["obj"]))]
 
     after_spec = ledger[spec_write + 1:] if spec_write is not None else []
     if spec_text is None or spec_write is None:
@@ -310,15 +324,28 @@ def evaluate_entry(entry_dir: Path, *, score: dict | None = None) -> dict:
             f"{len(bad)} main edits of test files after spec write", [_ref(r) for r in bad],
         )
 
+    bad, unknown_accesses, test_runs = [], 0, 0
+    for r in ledger:
+        obj = r["obj"]
+        role = obj.get("agent_type")
+        forbidden = tests if role == "implementer" else impl
+        if role not in ("implementer", "test-implementer", "test-verifier"):
+            continue
+        command = _command(obj)
+        if command is None:
+            if _targets(obj, forbidden):
+                bad.append(r)
+            continue
+        info = bashparse.classify(command)
+        if role == "implementer":
+            test_runs += info["test_runs"]
+        if any(_hit(p, forbidden) for p in info["reads"] + info["writes"]):
+            bad.append(r)
+        elif any(_hit(p, forbidden) for p in info["mentions"]):
+            unknown_accesses += 1
     if spec_text is None:
         checks["PC9"] = _na("no spec text")
     else:
-        bad = [
-            r for r in ledger
-            if (r["obj"].get("agent_type") == "implementer" and _targets(r["obj"], tests))
-            or (r["obj"].get("agent_type") in ("test-implementer", "test-verifier")
-                and _targets(r["obj"], impl))
-        ]
         checks["PC9"] = _result(
             "fail" if bad else "pass", f"{len(bad)} cross-role accesses", [_ref(r) for r in bad]
         )
@@ -351,6 +378,24 @@ def evaluate_entry(entry_dir: Path, *, score: dict | None = None) -> dict:
             [{"file": "prediction.json", "line": 1}] if false_pass else [],
         )
 
+    if spec_text is None:
+        checks["PC12"] = _na("no spec text")
+    elif not ledger:
+        checks["PC12"] = _na("ledger missing or empty")
+    else:
+        implementation_rows = [
+            (i, r) for i, r in enumerate(ledger)
+            if r["obj"].get("agent_type") in (None, "implementer")
+            and any(_hit(p, impl + tests) for p in _writes(r["obj"]))
+        ]
+        first = implementation_rows[0] if implementation_rows else None
+        late = first is not None and (spec_write is None or first[0] < spec_write)
+        checks["PC12"] = _result(
+            "fail" if late else "pass",
+            "implementation or test write before spec write" if late else "spec written first",
+            [_ref(first[1])] if late else [],
+        )
+
     if arm == "baseline":
         checks = {cid: _na("baseline arm") for cid in CHECK_IDS}
     for c in checks.values():
@@ -370,6 +415,8 @@ def evaluate_entry(entry_dir: Path, *, score: dict | None = None) -> dict:
         "main_implementation_edits": len(
             edits([r for r in after_spec if r["obj"].get("agent_type") is None], impl)
         ),
+        "implementer_test_runs": test_runs,
+        "unknown_bash_accesses": unknown_accesses,
         "self_reported_kill": _kill_from(verification_results[-1]["obj"] if verification_results else None),
         "measured_kill": ((score or {}).get("kill") or {}).get("primary"),
     }

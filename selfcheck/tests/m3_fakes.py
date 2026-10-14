@@ -27,7 +27,7 @@ EXEMPT = {
     "run_id", "instance_id", "arm", "selfcheck_commit", "harness_ref", "harness_commit", "start_commit",
     "install", "prompt_template_hash", "images",
 }
-CHECK_IDS = ["PC%d" % n for n in range(1, 12)]
+CHECK_IDS = ["PC%d" % n for n in range(1, 13)]
 
 
 def tb(path):
@@ -247,6 +247,10 @@ def fixture_id_of(conds):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
+def dirname(arm, repeat=None):
+    return arm if repeat is None else "%s-r%d" % (arm, repeat)
+
+
 def state(status="completed", *, results=None, elapsed_s=12.5, rate_limit=None, **over):
     st = F.driver_state_dict(status=status, results=results if results is not None else [], elapsed_s=elapsed_s,
                              rate_limit=rate_limit)
@@ -255,7 +259,7 @@ def state(status="completed", *, results=None, elapsed_s=12.5, rate_limit=None, 
 
 
 def write_run(runs_dir, run_id, entries, *, halted=None, created_at=0, params=None):
-    """entries: dicts {instance_id, arm, status, manifest?, state?, prediction?, extra?: kwargs for write_entry}.
+    """entries: dicts {instance_id, arm, status, repeat?, manifest?, state?, prediction?, extra?: kwargs for write_entry}.
 
     manifest/state/prediction default to None (file omitted) unless given. Returns the run directory.
     """
@@ -264,12 +268,16 @@ def write_run(runs_dir, run_id, entries, *, halted=None, created_at=0, params=No
     listed = []
     for item in entries:
         iid, arm, status = item["instance_id"], item["arm"], item.get("status", "completed")
-        listed.append({"instance_id": iid, "arm": arm, "status": status})
+        repeat = item.get("repeat")
+        listing = {"instance_id": iid, "arm": arm, "status": status}
+        if repeat is not None:
+            listing["repeat"] = repeat
+        listed.append(listing)
         kw = dict(item.get("extra", {}))
         kw.setdefault("events", None)
         kw.setdefault("ledger", None)
         kw.setdefault("diff", None)
-        write_entry(run_dir, iid, arm, manifest=item.get("manifest"), prediction_=item.get("prediction"),
+        write_entry(run_dir, iid, dirname(arm, repeat), manifest=item.get("manifest"), prediction_=item.get("prediction"),
                     state=item.get("state"), **kw)
     write_text(run_dir / "run.json", json.dumps({
         "run_id": run_id, "entries": listed, "created_at": created_at, "halted": halted,
