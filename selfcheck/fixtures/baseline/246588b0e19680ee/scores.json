@@ -1,0 +1,917 @@
+{
+ "astropy__astropy-14365": [
+  {
+   "repeat": 1,
+   "run_id": "e4f65ca38835dc7b",
+   "score": {
+    "agent_tests": [
+     "astropy/io/ascii/tests/test_qdp.py::test_roundtrip_example_lowercase_commands[False]",
+     "astropy/io/ascii/tests/test_qdp.py::test_roundtrip_example_lowercase_commands[True]"
+    ],
+    "agent_tests_ok": [
+     "astropy/io/ascii/tests/test_qdp.py::test_roundtrip_example_lowercase_commands[False]",
+     "astropy/io/ascii/tests/test_qdp.py::test_roundtrip_example_lowercase_commands[True]"
+    ],
+    "api_mismatch_suspected": false,
+    "evaluations": 8,
+    "f2p_frac": 1.0,
+    "incompatible": {
+     "error": 0,
+     "failed": 0,
+     "missing": 0
+    },
+    "incompatible_frac": 0.0,
+    "instance_id": "astropy__astropy-14365",
+    "kill": {
+     "d_ref": 4,
+     "gold_reference": 1.0,
+     "killed": 4,
+     "killed_in_d_ref": 4,
+     "primary": 1.0,
+     "sampled": 4,
+     "secondary": 1.0,
+     "timeouts": 0
+    },
+    "resolved": true,
+    "src_apply": "ok",
+    "swt": {
+     "applicable": true,
+     "f2p": [
+      "astropy/io/ascii/tests/test_qdp.py::test_roundtrip_example_lowercase_commands[True]"
+     ],
+     "success": true,
+     "x2f": []
+    }
+   },
+   "status": "completed"
+  },
+  {
+   "repeat": 2,
+   "run_id": "2323f291490127f5",
+   "score": {
+    "agent_tests": [
+     "astropy/io/ascii/tests/test_qdp.py::test_read_lowercase_commands[False]",
+     "astropy/io/ascii/tests/test_qdp.py::test_read_lowercase_commands[True]"
+    ],
+    "agent_tests_ok": [
+     "astropy/io/ascii/tests/test_qdp.py::test_read_lowercase_commands[False]",
+     "astropy/io/ascii/tests/test_qdp.py::test_read_lowercase_commands[True]"
+    ],
+    "api_mismatch_suspected": false,
+    "evaluations": 8,
+    "f2p_frac": 1.0,
+    "incompatible": {
+     "error": 0,
+     "failed": 0,
+     "missing": 0
+    },
+    "incompatible_frac": 0.0,
+    "instance_id": "astropy__astropy-14365",
+    "kill": {
+     "d_ref": 4,
+     "gold_reference": 1.0,
+     "killed": 4,
+     "killed_in_d_ref": 4,
+     "primary": 1.0,
+     "sampled": 4,
+     "secondary": 1.0,
+     "timeouts": 0
+    },
+    "resolved": true,
+    "src_apply": "ok",
+    "swt": {
+     "applicable": true,
+     "f2p": [
+      "astropy/io/ascii/tests/test_qdp.py::test_read_lowercase_commands[True]"
+     ],
+     "success": true,
+     "x2f": []
+    }
+   },
+   "status": "completed"
+  }
+ ],
+ "django__django-15731": [
+  {
+   "repeat": 1,
+   "run_id": "e4f65ca38835dc7b",
+   "score": {
+    "agent_tests": [
+     "test_manager_method_signature",
+     "test_manager_method_signature (basic.tests.ManagerMethodSignatureTests)"
+    ],
+    "agent_tests_ok": [
+     "test_manager_method_signature (basic.tests.ManagerMethodSignatureTests)"
+    ],
+    "api_mismatch_suspected": false,
+    "evaluations": 5,
+    "f2p_frac": 1.0,
+    "incompatible": {
+     "error": 0,
+     "failed": 0,
+     "missing": 1
+    },
+    "incompatible_frac": 0.5,
+    "instance_id": "django__django-15731",
+    "kill": {
+     "d_ref": 1,
+     "gold_reference": 1.0,
+     "killed": 1,
+     "killed_in_d_ref": 1,
+     "primary": 1.0,
+     "sampled": 1,
+     "secondary": 1.0,
+     "timeouts": 0
+    },
+    "resolved": true,
+    "src_apply": "ok",
+    "swt": {
+     "applicable": true,
+     "f2p": [
+      "test_manager_method_signature (basic.tests.ManagerMethodSignatureTests)"
+     ],
+     "success": false,
+     "x2f": [
+      "test_manager_method_signature"
+     ]
+    }
+   },
+   "status": "completed"
+  },
+  {
+   "repeat": 2,
+   "run_id": "2323f291490127f5",
+   "score": {
+    "agent_tests": [
+     "test_manager_method_attributes (basic.tests.ManagerTest)",
+     "test_manager_method_signature",
+     "test_manager_method_signature (basic.tests.ManagerTest)"
+    ],
+    "agent_tests_ok": [
+     "test_manager_method_attributes (basic.tests.ManagerTest)",
+     "test_manager_method_signature (basic.tests.ManagerTest)"
+    ],
+    "api_mismatch_suspected": false,
+    "evaluations": 5,
+    "f2p_frac": 1.0,
+    "incompatible": {
+     "error": 0,
+     "failed": 0,
+     "missing": 1
+    },
+    "incompatible_frac": 0.3333333333333333,
+    "instance_id": "django__django-15731",
+    "kill": {
+     "d_ref": 1,
+     "gold_reference": 1.0,
+     "killed": 1,
+     "killed_in_d_ref": 1,
+     "primary": 1.0,
+     "sampled": 1,
+     "secondary": 1.0,
+     "timeouts": 0
+    },
+    "resolved": true,
+    "src_apply": "ok",
+    "swt": {
+     "applicable": true,
+     "f2p": [
+      "test_manager_method_signature (basic.tests.ManagerTest)"
+     ],
+     "success": false,
+     "x2f": [
+      "test_manager_method_signature"
+     ]
+    }
+   },
+   "status": "completed"
+  }
+ ],
+ "matplotlib__matplotlib-14623": [
+  {
+   "repeat": 1,
+   "run_id": "e4f65ca38835dc7b",
+   "score": {
+    "agent_tests": [
+     "lib/matplotlib/tests/test_axes.py::test_invert_axis_via_limits[linear]",
+     "lib/matplotlib/tests/test_axes.py::test_invert_axis_via_limits[log]"
+    ],
+    "agent_tests_ok": [
+     "lib/matplotlib/tests/test_axes.py::test_invert_axis_via_limits[linear]",
+     "lib/matplotlib/tests/test_axes.py::test_invert_axis_via_limits[log]"
+    ],
+    "api_mismatch_suspected": true,
+    "evaluations": 22,
+    "f2p_frac": 1.0,
+    "incompatible": {
+     "error": 0,
+     "failed": 0,
+     "missing": 0
+    },
+    "incompatible_frac": 0.0,
+    "instance_id": "matplotlib__matplotlib-14623",
+    "kill": {
+     "d_ref": 4,
+     "gold_reference": 0.2222222222222222,
+     "killed": 4,
+     "killed_in_d_ref": 4,
+     "primary": 0.2222222222222222,
+     "sampled": 18,
+     "secondary": 1.0,
+     "timeouts": 0
+    },
+    "resolved": true,
+    "src_apply": "ok",
+    "swt": {
+     "applicable": true,
+     "f2p": [
+      "lib/matplotlib/tests/test_axes.py::test_invert_axis_via_limits[log]"
+     ],
+     "success": false,
+     "x2f": [
+      "lib/matplotlib/tests/test_axes.py::TestScatter::test_scatter_marker[png]",
+      "lib/matplotlib/tests/test_axes.py::TestScatter::test_scatter_plot[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_acorr[png]",
+      "lib/matplotlib/tests/test_axes.py::test_alpha[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_arc_ellipse[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_as_mpl_axes_api",
+      "lib/matplotlib/tests/test_axes.py::test_auto_numticks[png]",
+      "lib/matplotlib/tests/test_axes.py::test_auto_numticks_log[png]",
+      "lib/matplotlib/tests/test_axes.py::test_autoscale_tiny_range[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_axhspan_epoch[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_axhspan_epoch[png]",
+      "lib/matplotlib/tests/test_axes.py::test_axvspan_epoch[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_axvspan_epoch[png]",
+      "lib/matplotlib/tests/test_axes.py::test_bar_tick_label_multiple[png]",
+      "lib/matplotlib/tests/test_axes.py::test_bar_tick_label_multiple_old_alignment[png]",
+      "lib/matplotlib/tests/test_axes.py::test_bar_tick_label_single[png]",
+      "lib/matplotlib/tests/test_axes.py::test_barh_tick_label[png]",
+      "lib/matplotlib/tests/test_axes.py::test_basic_annotate[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_basic_annotate[png]",
+      "lib/matplotlib/tests/test_axes.py::test_boxplot[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_boxplot[png]",
+      "lib/matplotlib/tests/test_axes.py::test_boxplot_autorange_whiskers[png]",
+      "lib/matplotlib/tests/test_axes.py::test_boxplot_rc_parameters[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_bxp_baseline[png]",
+      "lib/matplotlib/tests/test_axes.py::test_bxp_precentilewhis[png]",
+      "lib/matplotlib/tests/test_axes.py::test_bxp_rangewhis[png]",
+      "lib/matplotlib/tests/test_axes.py::test_bxp_with_xlabels[png]",
+      "lib/matplotlib/tests/test_axes.py::test_bxp_with_ylabels[png]",
+      "lib/matplotlib/tests/test_axes.py::test_canonical[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_canonical[png]",
+      "lib/matplotlib/tests/test_axes.py::test_const_xy[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_const_xy[png]",
+      "lib/matplotlib/tests/test_axes.py::test_contour_colorbar[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_contour_colorbar[png]",
+      "lib/matplotlib/tests/test_axes.py::test_contour_hatching[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_dash_offset[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_date_timezone_x[png]",
+      "lib/matplotlib/tests/test_axes.py::test_date_timezone_x_and_y[png]",
+      "lib/matplotlib/tests/test_axes.py::test_date_timezone_y[png]",
+      "lib/matplotlib/tests/test_axes.py::test_eb_line_zorder[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_eb_line_zorder[png]",
+      "lib/matplotlib/tests/test_axes.py::test_errorbar[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_errorbar[png]",
+      "lib/matplotlib/tests/test_axes.py::test_errorbar_limits[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_errorbar_limits[png]",
+      "lib/matplotlib/tests/test_axes.py::test_eventplot[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_fill_between_interpolate[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_fill_between_interpolate_decreasing[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_fill_units[png]",
+      "lib/matplotlib/tests/test_axes.py::test_formatter_ticker[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_formatter_ticker[png]",
+      "lib/matplotlib/tests/test_axes.py::test_get_tightbbox_polar",
+      "lib/matplotlib/tests/test_axes.py::test_hexbin_log[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist2d[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist2d[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist2d_density_normed",
+      "lib/matplotlib/tests/test_axes.py::test_hist2d_transpose[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist2d_transpose[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_auto_bins",
+      "lib/matplotlib/tests/test_axes.py::test_hist_density[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_emptydata",
+      "lib/matplotlib/tests/test_axes.py::test_hist_log[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_offset[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_offset[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_bar[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_bar[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_density[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_density[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_step[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_step[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_stepfilled[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_stepfilled[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_stepfilled_alpha[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_stepfilled_alpha[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_weighted[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_weighted[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_step_horiz[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_steplog[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hlines[png]",
+      "lib/matplotlib/tests/test_axes.py::test_horiz_violinplot_baseline[png]",
+      "lib/matplotlib/tests/test_axes.py::test_horiz_violinplot_custompoints_10[png]",
+      "lib/matplotlib/tests/test_axes.py::test_horiz_violinplot_custompoints_200[png]",
+      "lib/matplotlib/tests/test_axes.py::test_horiz_violinplot_showall[png]",
+      "lib/matplotlib/tests/test_axes.py::test_horiz_violinplot_showextrema[png]",
+      "lib/matplotlib/tests/test_axes.py::test_horiz_violinplot_showmeans[png]",
+      "lib/matplotlib/tests/test_axes.py::test_horiz_violinplot_showmedians[png]",
+      "lib/matplotlib/tests/test_axes.py::test_imshow[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_imshow_clip[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_imshow_clip[png]",
+      "lib/matplotlib/tests/test_axes.py::test_log_scales[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_log_scales[png]",
+      "lib/matplotlib/tests/test_axes.py::test_marker_edges[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_markers_fillstyle_rcparams[png]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery[png]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery_line[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery_line[png]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery_linear_scales[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery_linear_scales_zoomed[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery_log_scales[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery_polar[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery_polar[png]",
+      "lib/matplotlib/tests/test_axes.py::test_matshow[png]",
+      "lib/matplotlib/tests/test_axes.py::test_mixed_collection[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_mollweide_grid[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_nonfinite_limits[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_nonfinite_limits[png]",
+      "lib/matplotlib/tests/test_axes.py::test_normal_axes",
+      "lib/matplotlib/tests/test_axes.py::test_o_marker_path_snap[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pcolor_datetime_axis[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pcolor_fast_RGB",
+      "lib/matplotlib/tests/test_axes.py::test_pcolormesh[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_pcolormesh_datetime_axis[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pie_ccw_true[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pie_center_radius[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pie_default[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pie_frame_grid[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pie_linewidth_0[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pie_linewidth_2[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pie_nolabel_but_legend[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pie_rotatelabels_true[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_alignment[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_annotations[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_annotations[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_coord_annotations[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_coord_annotations[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_gridlines",
+      "lib/matplotlib/tests/test_axes.py::test_polar_invertedylim[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_invertedylim_rorigin[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_negative_rmin[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_negative_rmin[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_rlabel_position[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_rlabel_position[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_rlim[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_rlim_bottom[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_rmin[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_rmin[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_rorigin[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_rorigin[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_theta_limits[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_theta_limits[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_theta_position[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_theta_position[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_units[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_units[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_wrap[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_wrap[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polycollection_joinstyle[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_rc_grid[png]",
+      "lib/matplotlib/tests/test_axes.py::test_rc_spines[png]",
+      "lib/matplotlib/tests/test_axes.py::test_retain_tick_visibility[png]",
+      "lib/matplotlib/tests/test_axes.py::test_rgba_markers[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_secondary_xy[png]",
+      "lib/matplotlib/tests/test_axes.py::test_set_get_ticklabels[png]",
+      "lib/matplotlib/tests/test_axes.py::test_shaped_data[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_shaped_data[png]",
+      "lib/matplotlib/tests/test_axes.py::test_single_date[png]",
+      "lib/matplotlib/tests/test_axes.py::test_single_point[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_single_point[png]",
+      "lib/matplotlib/tests/test_axes.py::test_spy[png]",
+      "lib/matplotlib/tests/test_axes.py::test_square_plot",
+      "lib/matplotlib/tests/test_axes.py::test_stackplot[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_stackplot[png]",
+      "lib/matplotlib/tests/test_axes.py::test_stackplot_baseline[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_step_linestyle[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_symlog2[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_symlog[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_titletwiny[png]",
+      "lib/matplotlib/tests/test_axes.py::test_transparent_markers[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_twin_axis_locators_formatters[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_twin_axis_locators_formatters[png]",
+      "lib/matplotlib/tests/test_axes.py::test_vert_violinplot_baseline[png]",
+      "lib/matplotlib/tests/test_axes.py::test_vert_violinplot_custompoints_10[png]",
+      "lib/matplotlib/tests/test_axes.py::test_vert_violinplot_custompoints_200[png]",
+      "lib/matplotlib/tests/test_axes.py::test_vert_violinplot_showall[png]",
+      "lib/matplotlib/tests/test_axes.py::test_vert_violinplot_showextrema[png]",
+      "lib/matplotlib/tests/test_axes.py::test_vert_violinplot_showmeans[png]",
+      "lib/matplotlib/tests/test_axes.py::test_vert_violinplot_showmedians[png]",
+      "lib/matplotlib/tests/test_axes.py::test_vlines[png]"
+     ]
+    }
+   },
+   "status": "completed"
+  },
+  {
+   "repeat": 2,
+   "run_id": "2323f291490127f5",
+   "score": {
+    "agent_tests": [
+     "lib/matplotlib/tests/test_axes.py::test_invert_axis_via_limits[linear]",
+     "lib/matplotlib/tests/test_axes.py::test_invert_axis_via_limits[log]",
+     "lib/matplotlib/tests/test_axes.py::test_invert_axis_via_limits[logit]"
+    ],
+    "agent_tests_ok": [
+     "lib/matplotlib/tests/test_axes.py::test_invert_axis_via_limits[linear]",
+     "lib/matplotlib/tests/test_axes.py::test_invert_axis_via_limits[log]",
+     "lib/matplotlib/tests/test_axes.py::test_invert_axis_via_limits[logit]"
+    ],
+    "api_mismatch_suspected": true,
+    "evaluations": 22,
+    "f2p_frac": 1.0,
+    "incompatible": {
+     "error": 0,
+     "failed": 0,
+     "missing": 0
+    },
+    "incompatible_frac": 0.0,
+    "instance_id": "matplotlib__matplotlib-14623",
+    "kill": {
+     "d_ref": 4,
+     "gold_reference": 0.2222222222222222,
+     "killed": 4,
+     "killed_in_d_ref": 4,
+     "primary": 0.2222222222222222,
+     "sampled": 18,
+     "secondary": 1.0,
+     "timeouts": 0
+    },
+    "resolved": true,
+    "src_apply": "ok",
+    "swt": {
+     "applicable": true,
+     "f2p": [
+      "lib/matplotlib/tests/test_axes.py::test_invert_axis_via_limits[log]",
+      "lib/matplotlib/tests/test_axes.py::test_invert_axis_via_limits[logit]"
+     ],
+     "success": false,
+     "x2f": [
+      "lib/matplotlib/tests/test_axes.py::TestScatter::test_scatter_marker[png]",
+      "lib/matplotlib/tests/test_axes.py::TestScatter::test_scatter_plot[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_acorr[png]",
+      "lib/matplotlib/tests/test_axes.py::test_alpha[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_arc_ellipse[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_as_mpl_axes_api",
+      "lib/matplotlib/tests/test_axes.py::test_auto_numticks[png]",
+      "lib/matplotlib/tests/test_axes.py::test_auto_numticks_log[png]",
+      "lib/matplotlib/tests/test_axes.py::test_autoscale_tiny_range[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_axhspan_epoch[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_axhspan_epoch[png]",
+      "lib/matplotlib/tests/test_axes.py::test_axvspan_epoch[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_axvspan_epoch[png]",
+      "lib/matplotlib/tests/test_axes.py::test_bar_tick_label_multiple[png]",
+      "lib/matplotlib/tests/test_axes.py::test_bar_tick_label_multiple_old_alignment[png]",
+      "lib/matplotlib/tests/test_axes.py::test_bar_tick_label_single[png]",
+      "lib/matplotlib/tests/test_axes.py::test_barh_tick_label[png]",
+      "lib/matplotlib/tests/test_axes.py::test_basic_annotate[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_basic_annotate[png]",
+      "lib/matplotlib/tests/test_axes.py::test_boxplot[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_boxplot[png]",
+      "lib/matplotlib/tests/test_axes.py::test_boxplot_autorange_whiskers[png]",
+      "lib/matplotlib/tests/test_axes.py::test_boxplot_rc_parameters[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_bxp_baseline[png]",
+      "lib/matplotlib/tests/test_axes.py::test_bxp_precentilewhis[png]",
+      "lib/matplotlib/tests/test_axes.py::test_bxp_rangewhis[png]",
+      "lib/matplotlib/tests/test_axes.py::test_bxp_with_xlabels[png]",
+      "lib/matplotlib/tests/test_axes.py::test_bxp_with_ylabels[png]",
+      "lib/matplotlib/tests/test_axes.py::test_canonical[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_canonical[png]",
+      "lib/matplotlib/tests/test_axes.py::test_const_xy[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_const_xy[png]",
+      "lib/matplotlib/tests/test_axes.py::test_contour_colorbar[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_contour_colorbar[png]",
+      "lib/matplotlib/tests/test_axes.py::test_contour_hatching[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_dash_offset[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_date_timezone_x[png]",
+      "lib/matplotlib/tests/test_axes.py::test_date_timezone_x_and_y[png]",
+      "lib/matplotlib/tests/test_axes.py::test_date_timezone_y[png]",
+      "lib/matplotlib/tests/test_axes.py::test_eb_line_zorder[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_eb_line_zorder[png]",
+      "lib/matplotlib/tests/test_axes.py::test_errorbar[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_errorbar[png]",
+      "lib/matplotlib/tests/test_axes.py::test_errorbar_limits[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_errorbar_limits[png]",
+      "lib/matplotlib/tests/test_axes.py::test_eventplot[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_fill_between_interpolate[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_fill_between_interpolate_decreasing[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_fill_units[png]",
+      "lib/matplotlib/tests/test_axes.py::test_formatter_ticker[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_formatter_ticker[png]",
+      "lib/matplotlib/tests/test_axes.py::test_get_tightbbox_polar",
+      "lib/matplotlib/tests/test_axes.py::test_hexbin_log[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist2d[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist2d[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist2d_density_normed",
+      "lib/matplotlib/tests/test_axes.py::test_hist2d_transpose[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist2d_transpose[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_auto_bins",
+      "lib/matplotlib/tests/test_axes.py::test_hist_density[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_emptydata",
+      "lib/matplotlib/tests/test_axes.py::test_hist_log[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_offset[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_offset[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_bar[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_bar[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_density[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_density[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_step[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_step[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_stepfilled[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_stepfilled[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_stepfilled_alpha[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_stepfilled_alpha[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_weighted[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_stacked_weighted[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_step_horiz[png]",
+      "lib/matplotlib/tests/test_axes.py::test_hist_steplog[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_hlines[png]",
+      "lib/matplotlib/tests/test_axes.py::test_horiz_violinplot_baseline[png]",
+      "lib/matplotlib/tests/test_axes.py::test_horiz_violinplot_custompoints_10[png]",
+      "lib/matplotlib/tests/test_axes.py::test_horiz_violinplot_custompoints_200[png]",
+      "lib/matplotlib/tests/test_axes.py::test_horiz_violinplot_showall[png]",
+      "lib/matplotlib/tests/test_axes.py::test_horiz_violinplot_showextrema[png]",
+      "lib/matplotlib/tests/test_axes.py::test_horiz_violinplot_showmeans[png]",
+      "lib/matplotlib/tests/test_axes.py::test_horiz_violinplot_showmedians[png]",
+      "lib/matplotlib/tests/test_axes.py::test_imshow[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_imshow_clip[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_imshow_clip[png]",
+      "lib/matplotlib/tests/test_axes.py::test_log_scales[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_log_scales[png]",
+      "lib/matplotlib/tests/test_axes.py::test_marker_edges[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_markers_fillstyle_rcparams[png]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery[png]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery_line[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery_line[png]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery_linear_scales[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery_linear_scales_zoomed[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery_log_scales[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery_polar[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_markevery_polar[png]",
+      "lib/matplotlib/tests/test_axes.py::test_matshow[png]",
+      "lib/matplotlib/tests/test_axes.py::test_mixed_collection[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_mollweide_grid[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_nonfinite_limits[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_nonfinite_limits[png]",
+      "lib/matplotlib/tests/test_axes.py::test_normal_axes",
+      "lib/matplotlib/tests/test_axes.py::test_o_marker_path_snap[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pcolor_datetime_axis[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pcolor_fast_RGB",
+      "lib/matplotlib/tests/test_axes.py::test_pcolormesh[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_pcolormesh_datetime_axis[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pie_ccw_true[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pie_center_radius[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pie_default[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pie_frame_grid[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pie_linewidth_0[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pie_linewidth_2[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pie_nolabel_but_legend[png]",
+      "lib/matplotlib/tests/test_axes.py::test_pie_rotatelabels_true[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_alignment[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_annotations[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_annotations[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_coord_annotations[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_coord_annotations[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_gridlines",
+      "lib/matplotlib/tests/test_axes.py::test_polar_invertedylim[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_invertedylim_rorigin[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_negative_rmin[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_negative_rmin[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_rlabel_position[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_rlabel_position[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_rlim[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_rlim_bottom[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_rmin[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_rmin[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_rorigin[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_rorigin[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_theta_limits[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_theta_limits[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_theta_position[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_theta_position[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_units[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_units[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_wrap[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_polar_wrap[png]",
+      "lib/matplotlib/tests/test_axes.py::test_polycollection_joinstyle[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_rc_grid[png]",
+      "lib/matplotlib/tests/test_axes.py::test_rc_spines[png]",
+      "lib/matplotlib/tests/test_axes.py::test_retain_tick_visibility[png]",
+      "lib/matplotlib/tests/test_axes.py::test_rgba_markers[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_secondary_xy[png]",
+      "lib/matplotlib/tests/test_axes.py::test_set_get_ticklabels[png]",
+      "lib/matplotlib/tests/test_axes.py::test_shaped_data[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_shaped_data[png]",
+      "lib/matplotlib/tests/test_axes.py::test_single_date[png]",
+      "lib/matplotlib/tests/test_axes.py::test_single_point[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_single_point[png]",
+      "lib/matplotlib/tests/test_axes.py::test_spy[png]",
+      "lib/matplotlib/tests/test_axes.py::test_square_plot",
+      "lib/matplotlib/tests/test_axes.py::test_stackplot[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_stackplot[png]",
+      "lib/matplotlib/tests/test_axes.py::test_stackplot_baseline[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_step_linestyle[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_symlog2[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_symlog[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_titletwiny[png]",
+      "lib/matplotlib/tests/test_axes.py::test_transparent_markers[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_twin_axis_locators_formatters[pdf]",
+      "lib/matplotlib/tests/test_axes.py::test_twin_axis_locators_formatters[png]",
+      "lib/matplotlib/tests/test_axes.py::test_vert_violinplot_baseline[png]",
+      "lib/matplotlib/tests/test_axes.py::test_vert_violinplot_custompoints_10[png]",
+      "lib/matplotlib/tests/test_axes.py::test_vert_violinplot_custompoints_200[png]",
+      "lib/matplotlib/tests/test_axes.py::test_vert_violinplot_showall[png]",
+      "lib/matplotlib/tests/test_axes.py::test_vert_violinplot_showextrema[png]",
+      "lib/matplotlib/tests/test_axes.py::test_vert_violinplot_showmeans[png]",
+      "lib/matplotlib/tests/test_axes.py::test_vert_violinplot_showmedians[png]",
+      "lib/matplotlib/tests/test_axes.py::test_vlines[png]"
+     ]
+    }
+   },
+   "status": "completed"
+  }
+ ],
+ "mwaskom__seaborn-3187": [
+  {
+   "repeat": 1,
+   "run_id": "e4f65ca38835dc7b",
+   "score": {
+    "agent_tests": [
+     "tests/_core/test_plot.py::TestLegendLargeRange::test_legend_values_with_large_range",
+     "tests/test_utils.py::test_locator_to_legend_entries_large_range"
+    ],
+    "agent_tests_ok": [
+     "tests/_core/test_plot.py::TestLegendLargeRange::test_legend_values_with_large_range",
+     "tests/test_utils.py::test_locator_to_legend_entries_large_range"
+    ],
+    "api_mismatch_suspected": false,
+    "evaluations": 16,
+    "f2p_frac": 1.0,
+    "incompatible": {
+     "error": 0,
+     "failed": 0,
+     "missing": 0
+    },
+    "incompatible_frac": 0.0,
+    "instance_id": "mwaskom__seaborn-3187",
+    "kill": {
+     "d_ref": 12,
+     "gold_reference": 1.0,
+     "killed": 6,
+     "killed_in_d_ref": 6,
+     "primary": 0.5,
+     "sampled": 12,
+     "secondary": 0.5,
+     "timeouts": 0
+    },
+    "resolved": true,
+    "src_apply": "ok",
+    "swt": {
+     "applicable": true,
+     "f2p": [
+      "tests/_core/test_plot.py::TestLegendLargeRange::test_legend_values_with_large_range",
+      "tests/test_utils.py::test_locator_to_legend_entries_large_range"
+     ],
+     "success": true,
+     "x2f": []
+    }
+   },
+   "status": "completed"
+  },
+  {
+   "repeat": 2,
+   "run_id": "2323f291490127f5",
+   "score": {
+    "agent_tests": [
+     "tests/_core/test_scales.py::TestContinuous::test_legend_large_values_with_offset",
+     "tests/test_utils.py::test_locator_to_legend_entries_large_values"
+    ],
+    "agent_tests_ok": [
+     "tests/_core/test_scales.py::TestContinuous::test_legend_large_values_with_offset",
+     "tests/test_utils.py::test_locator_to_legend_entries_large_values"
+    ],
+    "api_mismatch_suspected": false,
+    "evaluations": 16,
+    "f2p_frac": 1.0,
+    "incompatible": {
+     "error": 0,
+     "failed": 0,
+     "missing": 0
+    },
+    "incompatible_frac": 0.0,
+    "instance_id": "mwaskom__seaborn-3187",
+    "kill": {
+     "d_ref": 12,
+     "gold_reference": 1.0,
+     "killed": 6,
+     "killed_in_d_ref": 6,
+     "primary": 0.5,
+     "sampled": 12,
+     "secondary": 0.5,
+     "timeouts": 0
+    },
+    "resolved": true,
+    "src_apply": "ok",
+    "swt": {
+     "applicable": true,
+     "f2p": [
+      "tests/_core/test_scales.py::TestContinuous::test_legend_large_values_with_offset",
+      "tests/test_utils.py::test_locator_to_legend_entries_large_values"
+     ],
+     "success": true,
+     "x2f": []
+    }
+   },
+   "status": "completed"
+  }
+ ],
+ "sphinx-doc__sphinx-9602": [
+  {
+   "repeat": 1,
+   "run_id": "e4f65ca38835dc7b",
+   "score": {
+    "agent_tests": [
+     "tests/test_domain_py.py::test_parse_annotation_Literal"
+    ],
+    "agent_tests_ok": [],
+    "api_mismatch_suspected": false,
+    "evaluations": 4,
+    "f2p_frac": 0.0,
+    "incompatible": {
+     "error": 0,
+     "failed": 1,
+     "missing": 0
+    },
+    "incompatible_frac": 1.0,
+    "instance_id": "sphinx-doc__sphinx-9602",
+    "kill": {
+     "d_ref": 17,
+     "gold_reference": 0.9444444444444444,
+     "killed": 0,
+     "killed_in_d_ref": 0,
+     "primary": 0.0,
+     "sampled": 18,
+     "secondary": 0.0,
+     "timeouts": 0
+    },
+    "resolved": false,
+    "src_apply": "ok",
+    "swt": {
+     "applicable": true,
+     "f2p": [],
+     "success": false,
+     "x2f": [
+      "tests/test_domain_py.py::test_parse_annotation_Literal"
+     ]
+    }
+   },
+   "status": "completed"
+  },
+  {
+   "repeat": 2,
+   "run_id": "2323f291490127f5",
+   "score": {
+    "agent_tests": [
+     "tests/test_domain_py.py::test_parse_annotation_Literal"
+    ],
+    "agent_tests_ok": [],
+    "api_mismatch_suspected": false,
+    "evaluations": 4,
+    "f2p_frac": 0.0,
+    "incompatible": {
+     "error": 0,
+     "failed": 1,
+     "missing": 0
+    },
+    "incompatible_frac": 1.0,
+    "instance_id": "sphinx-doc__sphinx-9602",
+    "kill": {
+     "d_ref": 17,
+     "gold_reference": 0.9444444444444444,
+     "killed": 0,
+     "killed_in_d_ref": 0,
+     "primary": 0.0,
+     "sampled": 18,
+     "secondary": 0.0,
+     "timeouts": 0
+    },
+    "resolved": false,
+    "src_apply": "ok",
+    "swt": {
+     "applicable": true,
+     "f2p": [],
+     "success": false,
+     "x2f": [
+      "tests/test_domain_py.py::test_parse_annotation_Literal"
+     ]
+    }
+   },
+   "status": "completed"
+  }
+ ],
+ "sympy__sympy-14531": [
+  {
+   "repeat": 1,
+   "run_id": "e4f65ca38835dc7b",
+   "score": {
+    "agent_tests": [
+     "test_python_relational"
+    ],
+    "agent_tests_ok": [
+     "test_python_relational"
+    ],
+    "api_mismatch_suspected": false,
+    "evaluations": 44,
+    "f2p_frac": 1.0,
+    "incompatible": {
+     "error": 0,
+     "failed": 0,
+     "missing": 0
+    },
+    "incompatible_frac": 0.0,
+    "instance_id": "sympy__sympy-14531",
+    "kill": {
+     "d_ref": 21,
+     "gold_reference": 0.525,
+     "killed": 4,
+     "killed_in_d_ref": 4,
+     "primary": 0.1,
+     "sampled": 40,
+     "secondary": 0.19047619047619047,
+     "timeouts": 0
+    },
+    "resolved": true,
+    "src_apply": "ok",
+    "swt": {
+     "applicable": true,
+     "f2p": [
+      "test_python_relational"
+     ],
+     "success": false,
+     "x2f": [
+      "sympy/printing/tests/test_python.py:test_python_relational",
+      "sympy/printing/tests/test_str.py:test_issue_14567_settings_respected"
+     ]
+    }
+   },
+   "status": "completed"
+  },
+  {
+   "repeat": 2,
+   "run_id": "2323f291490127f5",
+   "score": {
+    "agent_tests": [
+     "test_python_relational"
+    ],
+    "agent_tests_ok": [
+     "test_python_relational"
+    ],
+    "api_mismatch_suspected": false,
+    "evaluations": 44,
+    "f2p_frac": 1.0,
+    "incompatible": {
+     "error": 0,
+     "failed": 0,
+     "missing": 0
+    },
+    "incompatible_frac": 0.0,
+    "instance_id": "sympy__sympy-14531",
+    "kill": {
+     "d_ref": 21,
+     "gold_reference": 0.525,
+     "killed": 4,
+     "killed_in_d_ref": 4,
+     "primary": 0.1,
+     "sampled": 40,
+     "secondary": 0.19047619047619047,
+     "timeouts": 0
+    },
+    "resolved": true,
+    "src_apply": "ok",
+    "swt": {
+     "applicable": true,
+     "f2p": [
+      "test_python_relational"
+     ],
+     "success": false,
+     "x2f": [
+      "sympy/printing/tests/test_python.py:test_python_relational",
+      "sympy/printing/tests/test_str.py:test_settings_respected_in_subexpressions"
+     ]
+    }
+   },
+   "status": "completed"
+  }
+ ]
+}

@@ -226,7 +226,7 @@ def manifest(iid="inst-1", arm="harness", run_id="r1", **over):
         "run_id": run_id, "instance_id": iid, "arm": arm, "selfcheck_commit": "c" * 40,
         "harness_ref": "HEAD", "harness_commit": "d" * 40 if arm == "harness" else None,
         "start_commit": "e" * 40, "install": {"agents_md": "placeholder"},
-        "model": "claude-opus-5-5", "effort": "medium", "aliases": dict(F.SPEC_AGENT_CFG["aliases"]),
+        "model": "claude-opus-5-5", "effort": "low", "aliases": dict(F.SPEC_AGENT_CFG["aliases"]),
         "sdk": F.SPEC_AGENT_CFG["sdk"], "cli_version": "2.1.294", "tools": ["Bash", "Edit"],
         "disallowed_tools": list(F.SPEC_AGENT_CFG["disallowed_tools"]),
         "caps": {"wall_clock_min": 180, "max_user_turns": 8, "idle_grace_s": 120},

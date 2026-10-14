@@ -298,7 +298,7 @@ class RunStateTests(F.RunCase):
     def test_vo9_r1_without_overrides_the_configured_values_are_used(self):
         run_dir = self.go(cap_min=None)
         inp = self.docker.history[self.name(run_dir, 1)].driver_inputs[0]
-        self.assertEqual((inp["model"], inp["effort"], inp["wall_clock_s"]), ("claude-opus-5-5", "medium", 180 * 60))
+        self.assertEqual((inp["model"], inp["effort"], inp["wall_clock_s"]), ("claude-opus-5-5", "low", 180 * 60))
         timeout = [kw["timeout"] for argv, kw in self.docker.execs(self.name(run_dir, 1)) if argv == F.DRIVER_ARGV]
         self.assertEqual(timeout, [180 * 60 + 600])
 

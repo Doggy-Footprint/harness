@@ -58,7 +58,7 @@ SPEC_AGENT_CFG = {
     "cpus": 4,
     "memory": "6g",
     "model": "claude-opus-5-5",
-    "effort": "medium",
+    "effort": "low",
     "aliases": {"opus": "claude-opus-5-5", "sonnet": "claude-sonnet-5-5", "haiku": "claude-haiku-5-5"},
     "wall_clock_min": 180,
     "max_user_turns": 8,

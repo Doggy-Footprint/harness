@@ -1,0 +1,212 @@
+{
+ "conditions": {
+  "aliases": {
+   "haiku": "claude-haiku-5-5",
+   "opus": "claude-opus-5-5",
+   "sonnet": "claude-sonnet-5-5"
+  },
+  "caps": {
+   "idle_grace_s": 120,
+   "max_user_turns": 8,
+   "wall_clock_min": 180
+  },
+  "cli_version": "2.1.294",
+  "container": {
+   "cpus": 4,
+   "memory": "6g",
+   "user": "nonroot"
+  },
+  "disallowed_tools": [
+   "WebSearch",
+   "WebFetch",
+   "EnterWorktree",
+   "ExitWorktree",
+   "CronCreate",
+   "CronDelete",
+   "CronList",
+   "ScheduleWakeup",
+   "RemoteTrigger"
+  ],
+  "effort": "low",
+  "env_keys": [
+   "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+   "ANTHROPIC_DEFAULT_OPUS_MODEL",
+   "ANTHROPIC_DEFAULT_SONNET_MODEL",
+   "CLAUDE_CODE_DISABLE_AUTO_MEMORY",
+   "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+   "CLAUDE_CODE_OAUTH_TOKEN",
+   "CLAUDE_CONFIG_DIR",
+   "CLAUDE_ENV_FILE",
+   "DISABLE_AUTOUPDATER",
+   "HARNESS_TELEMETRY_DIR",
+   "HTTPS_PROXY",
+   "HTTP_PROXY",
+   "PATH"
+  ],
+  "model": "claude-opus-5-5",
+  "network": {
+   "allow_hosts": [
+    "api.anthropic.com"
+   ],
+   "proxy_image": "ubuntu/squid@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029",
+   "squid_conf_hash": "a0f9ab66d8b419edc988c60e5e80ba52fd08bd100541209405517720c204439f"
+  },
+  "sdk": "claude-agent-sdk==0.2.165",
+  "tools": [
+   "Task",
+   "AskUserQuestion",
+   "Bash",
+   "Edit",
+   "EnterPlanMode",
+   "ExitPlanMode",
+   "ListAgents",
+   "NotebookEdit",
+   "Read",
+   "ReportFindings",
+   "SendMessage",
+   "Skill",
+   "TaskStop",
+   "ToolSearch",
+   "Workflow",
+   "Write"
+  ],
+  "user_sim_hash": "2fe27d81221a9995a02ab7bcc60aae0247448f48f2f527c631ccfb327ade2a8a"
+ },
+ "created_at": 1791965301.22702,
+ "fixture_id": "246588b0e19680ee",
+ "images": {
+  "astropy__astropy-14365": {
+   "derived_image": "selfcheck-agent.arm64.astropy__astropy-14365:944b3012f925",
+   "derived_image_id": "sha256:d8d14e262f6968e19b8e7f673e92feed5937fcca40cea56b7ba5e030eddf07ca",
+   "instance_image_id": "sha256:beeba8305dae06bcebff4324074d6ba4c94997cff85d7976915b862752051fe5",
+   "testbed_tools_resolved": [
+    "click==8.1.8",
+    "glob2==0.7",
+    "junit-xml==1.9",
+    "mutmut==2.5.1",
+    "parso==0.8.7",
+    "pony==0.7.19",
+    "six==1.17.0",
+    "toml==0.10.2"
+   ],
+   "tools_image_id": "sha256:de60c2523a9deac2716d316bbcd382725f865cd36591f9f05a21720fc051a9b6"
+  },
+  "django__django-15731": {
+   "derived_image": "selfcheck-agent.arm64.django__django-15731:337276bdbcd0",
+   "derived_image_id": "sha256:abe284d4028a28f9e3f309646ffe7a44977ac1e23e8ea64ab028ea85cee51f0a",
+   "instance_image_id": "sha256:32764cc02c83ac2ffce33af3ef929c51d4891970aa37b5af2ad06ea570c28087",
+   "testbed_tools_resolved": [
+    "coverage==7.10.7",
+    "glob2==0.7",
+    "hypothesis==6.141.1",
+    "iniconfig==2.1.0",
+    "junit-xml==1.9",
+    "mutmut==2.5.1",
+    "parso==0.8.7",
+    "pluggy==1.6.0",
+    "pony==0.7.19",
+    "Pygments==2.21.0",
+    "pytest==8.4.2",
+    "pytest-cov==7.1.0",
+    "six==1.17.0",
+    "toml==0.10.2"
+   ],
+   "tools_image_id": "sha256:de60c2523a9deac2716d316bbcd382725f865cd36591f9f05a21720fc051a9b6"
+  },
+  "matplotlib__matplotlib-14623": {
+   "derived_image": "selfcheck-agent.arm64.matplotlib__matplotlib-14623:1fd9cb9e7d01",
+   "derived_image_id": "sha256:f74e29a8d6429d92f013d2a376c3abe5ec015ec29a0b5093dc34fb25d370026c",
+   "instance_image_id": "sha256:87f4a5f89452cb10e916b800e49f19ba8e8e7127a41eb4dd06da96949bf90419",
+   "testbed_tools_resolved": [
+    "attrs==25.3.0",
+    "click==8.1.8",
+    "glob2==0.7",
+    "hypothesis==6.113.0",
+    "junit-xml==1.9",
+    "mutmut==2.5.1",
+    "pony==0.7.19",
+    "sortedcontainers==2.4.0",
+    "toml==0.10.2"
+   ],
+   "tools_image_id": "sha256:de60c2523a9deac2716d316bbcd382725f865cd36591f9f05a21720fc051a9b6"
+  },
+  "mwaskom__seaborn-3187": {
+   "derived_image": "selfcheck-agent.arm64.mwaskom__seaborn-3187:b68ac04d7737",
+   "derived_image_id": "sha256:5f96572ba097ce35c2f1171028fce6045db1ffc7d62af28c5e5126bdce6c4a5a",
+   "instance_image_id": "sha256:0c33627dc88d7728b345e2ac6b84a86ea2b3e75741818765c27e7b91e8e693e4",
+   "testbed_tools_resolved": [
+    "attrs==26.1.0",
+    "click==8.1.8",
+    "glob2==0.7",
+    "hypothesis==6.141.1",
+    "junit-xml==1.9",
+    "mutmut==2.5.1",
+    "parso==0.8.7",
+    "pony==0.7.19",
+    "sortedcontainers==2.4.0",
+    "toml==0.10.2"
+   ],
+   "tools_image_id": "sha256:de60c2523a9deac2716d316bbcd382725f865cd36591f9f05a21720fc051a9b6"
+  },
+  "sphinx-doc__sphinx-9602": {
+   "derived_image": "selfcheck-agent.arm64.sphinx-doc__sphinx-9602:31a5c7496067",
+   "derived_image_id": "sha256:bf3fbc261e24db4d04783ac188e96a0a3f8bd5c48073ddc77c7ee5f0152a8a65",
+   "instance_image_id": "sha256:043dd96d998504656e4eee675e5924164db9b27df477da77137c1b40c44d8c22",
+   "testbed_tools_resolved": [
+    "attrs==26.1.0",
+    "click==8.1.8",
+    "glob2==0.7",
+    "hypothesis==6.141.1",
+    "junit-xml==1.9",
+    "mutmut==2.5.1",
+    "parso==0.8.7",
+    "pony==0.7.19",
+    "sortedcontainers==2.4.0",
+    "toml==0.10.2"
+   ],
+   "tools_image_id": "sha256:de60c2523a9deac2716d316bbcd382725f865cd36591f9f05a21720fc051a9b6"
+  },
+  "sympy__sympy-14531": {
+   "derived_image": "selfcheck-agent.arm64.sympy__sympy-14531:86c5f9589acc",
+   "derived_image_id": "sha256:3bd12375af0861bdfb73ecbae7243a3500bdce5dd73a968c9f6c32e4f00fb692",
+   "instance_image_id": "sha256:b93f519b3e2184a1ce5e6ae74d80b5ab98b28c005f07885bf5dbd5cfc7645436",
+   "testbed_tools_resolved": [
+    "attrs==26.1.0",
+    "click==8.1.8",
+    "coverage==7.10.7",
+    "exceptiongroup==1.3.1",
+    "glob2==0.7",
+    "hypothesis==6.141.1",
+    "iniconfig==2.1.0",
+    "junit-xml==1.9",
+    "mutmut==2.5.1",
+    "packaging==26.3",
+    "parso==0.8.7",
+    "pluggy==1.6.0",
+    "pony==0.7.19",
+    "Pygments==2.21.0",
+    "pytest==8.4.2",
+    "pytest-cov==7.1.0",
+    "six==1.17.0",
+    "sortedcontainers==2.4.0",
+    "toml==0.10.2",
+    "tomli==2.5.0",
+    "typing_extensions==4.16.0"
+   ],
+   "tools_image_id": "sha256:de60c2523a9deac2716d316bbcd382725f865cd36591f9f05a21720fc051a9b6"
+  }
+ },
+ "instances": [
+  "astropy__astropy-14365",
+  "django__django-15731",
+  "matplotlib__matplotlib-14623",
+  "mwaskom__seaborn-3187",
+  "sphinx-doc__sphinx-9602",
+  "sympy__sympy-14531"
+ ],
+ "repeats": 2,
+ "runs": [
+  "e4f65ca38835dc7b",
+  "2323f291490127f5"
+ ]
+}
