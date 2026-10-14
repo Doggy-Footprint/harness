@@ -1,4 +1,4 @@
-File: 3435f4b651e6d0e3-test-quality-audit-findings.md
-Summary: Audit of 11 verifier+mutation-passed runs: mutant selection bias, non-discriminating inputs, subset oracles, verifier scope acceptance, mislabeled mutants
-Related Files: harness/skills/workflow-approach/SKILL.md, harness/agents/test-implementer.md, harness/agents/test-verifier.md, harness/agents/mutant-triager.md, harness/bin/test_scan.py, tests/test_test_scan.py, tests/test_test_scan_rules.py, tests/test_installer.py
-Related Symbols: Verification Obligations, Execution Ledger, hand mutations, mutation-tool triage, LANGUAGES, runner_candidates
+File: 3192c062a0fd880f-selfcheck-checker-gaps-and-repeats.md
+Summary: First live selfcheck check exposed PC8 blind to Bash spec writes, no retroactive-spec check, and a single harness run per instance
+Related Files: selfcheck/process.py, selfcheck/__main__.py, selfcheck/run.py, selfcheck/report.py, selfcheck/fixture.py, selfcheck/results/a41e64cb9bbbef03.md
+Related Symbols: evaluate_entry, PC8, PC2, PC9, cmd_check, run.run, report.build

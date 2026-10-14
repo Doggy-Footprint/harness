@@ -60,3 +60,9 @@ File: 1ba36300e7469498-selfcheck-m3-verifier-limit.md
 Summary: selfcheck M3 analysis stopped at verifier limit; EG1-EG3 test gaps open, implementation correct by reading
 Related Files: selfcheck/process.py, selfcheck/fixture.py, selfcheck/report.py, selfcheck/run.py, selfcheck/__main__.py, selfcheck/tests/test_fixture.py, selfcheck/tests/test_process.py, selfcheck/tests/test_report.py, selfcheck/tests/test_cli_m3.py
 Related Symbols: evaluate_entry, PC10, fixture.create, report.build, halt_reason
+
+---
+File: 3435f4b651e6d0e3-test-quality-audit-findings.md
+Summary: Audit of 11 verifier+mutation-passed runs: mutant selection bias, non-discriminating inputs, subset oracles, verifier scope acceptance, mislabeled mutants
+Related Files: harness/skills/workflow-approach/SKILL.md, harness/agents/test-implementer.md, harness/agents/test-verifier.md, harness/agents/mutant-triager.md, harness/bin/test_scan.py, tests/test_test_scan.py, tests/test_test_scan_rules.py, tests/test_installer.py
+Related Symbols: Verification Obligations, Execution Ledger, hand mutations, mutation-tool triage, LANGUAGES, runner_candidates
