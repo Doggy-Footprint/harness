@@ -1,0 +1,295 @@
+{
+ "baseline": "compared",
+ "fixture_id": "246588b0e19680ee",
+ "harness_commit": "bf8048ed39310b6280be7a9c2b52d29726fa7517",
+ "harness_ref": "HEAD",
+ "instances": [
+  {
+   "cost_usd": 4.526542999999999,
+   "elapsed_s": 251.228,
+   "instance_id": "sphinx-doc__sphinx-9602",
+   "metrics": {
+    "f2p_frac": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": 0.0,
+     "range": [
+      0.0,
+      0.0
+     ],
+     "verdict": "within"
+    },
+    "incompatible_frac": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": 0.14285714285714285,
+     "range": [
+      1.0,
+      1.0
+     ],
+     "verdict": "below"
+    },
+    "kill_primary": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": 0.8888888888888888,
+     "range": [
+      0.0,
+      0.0
+     ],
+     "verdict": "above"
+    },
+    "kill_secondary": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": 0.9411764705882353,
+     "range": [
+      0.0,
+      0.0
+     ],
+     "verdict": "above"
+    },
+    "resolved": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": 0.0,
+     "range": [
+      0.0,
+      0.0
+     ],
+     "verdict": "within"
+    },
+    "swt_success": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": 0.0,
+     "range": [
+      0.0,
+      0.0
+     ],
+     "verdict": "within"
+    }
+   },
+   "process": {
+    "PC1": "pass",
+    "PC10": "pass",
+    "PC11": "fail",
+    "PC2": "pass",
+    "PC3": "pass",
+    "PC4": "fail",
+    "PC5": "fail",
+    "PC6": "pass",
+    "PC7": "pass",
+    "PC8": "n/a",
+    "PC9": "fail"
+   },
+   "small_sample": false,
+   "status": "completed"
+  },
+  {
+   "cost_usd": 5.64163016,
+   "elapsed_s": 951.835,
+   "instance_id": "mwaskom__seaborn-3187",
+   "metrics": {
+    "f2p_frac": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": 0.0,
+     "range": [
+      1.0,
+      1.0
+     ],
+     "verdict": "below"
+    },
+    "incompatible_frac": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": 0.5,
+     "range": [
+      0.0,
+      0.0
+     ],
+     "verdict": "above"
+    },
+    "kill_primary": {
+     "baseline": [
+      0.5,
+      0.5
+     ],
+     "harness": 0.0,
+     "range": [
+      0.5,
+      0.5
+     ],
+     "verdict": "below"
+    },
+    "kill_secondary": {
+     "baseline": [
+      0.5,
+      0.5
+     ],
+     "harness": 0.0,
+     "range": [
+      0.5,
+      0.5
+     ],
+     "verdict": "below"
+    },
+    "resolved": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": 0.0,
+     "range": [
+      1.0,
+      1.0
+     ],
+     "verdict": "below"
+    },
+    "swt_success": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": 0.0,
+     "range": [
+      1.0,
+      1.0
+     ],
+     "verdict": "below"
+    }
+   },
+   "process": {
+    "PC1": "pass",
+    "PC10": "pass",
+    "PC11": "fail",
+    "PC2": "pass",
+    "PC3": "pass",
+    "PC4": "pass",
+    "PC5": "fail",
+    "PC6": "pass",
+    "PC7": "pass",
+    "PC8": "n/a",
+    "PC9": "fail"
+   },
+   "small_sample": false,
+   "status": "completed"
+  },
+  {
+   "cost_usd": 1.622055,
+   "elapsed_s": 138.251,
+   "instance_id": "astropy__astropy-14365",
+   "metrics": {
+    "f2p_frac": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": 1.0,
+     "range": [
+      1.0,
+      1.0
+     ],
+     "verdict": "within"
+    },
+    "incompatible_frac": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": 0.0,
+     "range": [
+      0.0,
+      0.0
+     ],
+     "verdict": "within"
+    },
+    "kill_primary": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": 1.0,
+     "range": [
+      1.0,
+      1.0
+     ],
+     "verdict": "within"
+    },
+    "kill_secondary": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": 1.0,
+     "range": [
+      1.0,
+      1.0
+     ],
+     "verdict": "within"
+    },
+    "resolved": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": 1.0,
+     "range": [
+      1.0,
+      1.0
+     ],
+     "verdict": "within"
+    },
+    "swt_success": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": 1.0,
+     "range": [
+      1.0,
+      1.0
+     ],
+     "verdict": "within"
+    }
+   },
+   "process": {
+    "PC1": "pass",
+    "PC10": "pass",
+    "PC11": "pass",
+    "PC2": "fail",
+    "PC3": "pass",
+    "PC4": "fail",
+    "PC5": "fail",
+    "PC6": "pass",
+    "PC7": "pass",
+    "PC8": "n/a",
+    "PC9": "pass"
+   },
+   "small_sample": true,
+   "status": "completed"
+  }
+ ],
+ "notes": [
+  "\ud1b5\uacc4\uc801 \uc720\uc758\uc131\uc740 \uac80\uc815\ud558\uc9c0 \uc54a\uc558\ub2e4. \ubc94\uc704\ub294 \uae30\uc900\uc120 \ubc18\ubcf5 \uc2e4\ud589\uc758 \ucd5c\uc19f\uac12\uacfc \ucd5c\ub313\uac12\uc774\uba70 above/within/below\ub294 \uadf8 \ubc94\uc704\uc640\uc758 \uc704\uce58 \uad00\uacc4\uc77c \ubfd0\uc774\ub2e4.",
+  "\ud45c\ubcf8\uc774 \uc791\uc740 \uc778\uc2a4\ud134\uc2a4(\ucef4\ud30c\uc77c \uac00\ub2a5\ud55c \ubcc0\uc774 \uc218\uac00 \uae30\uc900 \ubbf8\ub9cc)\uc758 kill \uc9c0\ud45c\ub294 \ucc38\uace0\uc6a9\uc774\ub2e4."
+ ],
+ "run_id": "a41e64cb9bbbef03"
+}
