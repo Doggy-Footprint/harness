@@ -1263,6 +1263,277 @@ class RepeatsRunTests(F.RunCase):
         self.assertNotIn("repeat", line)
 
 
+AGENT_DIR = F.ROOT / "selfcheck" / "agent"
+INFORMED_CFG = {"model": "claude-opus-5-5", "effort": "low", "timeout_s": 900, "poll_s": 2}
+
+
+def sha_of(*names):
+    digest = hashlib.sha256()
+    for name in names:
+        digest.update((AGENT_DIR / name).read_bytes())
+    return digest.hexdigest()
+
+
+class InformedRunTests(F.RunCase):
+    """Spec 54ad633104783ebe O4 (R6, R15, R18, C1, C2, C25): run.run / run.resume with fake docker and a fake Relay."""
+
+    def setUp(self):
+        super().setUp()
+        self.cfg["informed"] = dict(INFORMED_CFG)
+        self.docker.configure(diff_text=PLANTED_DIFF)
+        self.recorder = F.RelayRecorder()
+        for patcher in (mock.patch("selfcheck.informed.Relay", self.recorder),
+                        mock.patch.object(run, "Relay", self.recorder, create=True)):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.reviewer_calls = []
+
+        def reviewer(prompt):
+            self.reviewer_calls.append(prompt)
+            return "{}"
+
+        self.reviewer = reviewer
+
+    def go(self, ids=(ROW_A,), arms=("harness",), **kw):
+        kw.setdefault("call_fn", self.reviewer)
+        return super().go(ids=ids, arms=arms, **kw)
+
+    def informed_name(self, run_dir, n):
+        return self.name(run_dir, n)
+
+    def listing(self, run_dir):
+        return self.load(run_dir / "run.json")["entries"]
+
+    def test_o4_c1_both_conditions_order_dirs_predictions_and_containers(self):
+        run_dir = self.go(conditions=("unassisted", "informed"), repeats=2)
+        self.assertEqual(self.listing(run_dir), [
+            {"instance_id": ROW_A, "arm": "harness", "repeat": 1, "status": "completed"},
+            {"instance_id": ROW_A, "arm": "harness", "user_mode": "informed", "repeat": 1, "status": "completed"},
+            {"instance_id": ROW_A, "arm": "harness", "repeat": 2, "status": "completed"},
+            {"instance_id": ROW_A, "arm": "harness", "user_mode": "informed", "repeat": 2, "status": "completed"},
+        ])
+        for sub in ("harness-r1", "harness-informed-r1", "harness-r2", "harness-informed-r2"):
+            for name in ("manifest.json", "state.json", "prediction.json"):
+                self.assertTrue((run_dir / ROW_A / sub / name).is_file(), (sub, name))
+        self.assertFalse((run_dir / ROW_A / "harness-informed").exists())
+        for fname, subs in (("predictions.harness.jsonl", ("harness-r1", "harness-r2")),
+                            ("predictions.harness-informed.jsonl", ("harness-informed-r1", "harness-informed-r2"))):
+            lines = [json.loads(l) for l in (run_dir / fname).read_text(encoding="utf-8").splitlines()]
+            self.assertEqual([l["repeat"] for l in lines], [1, 2], fname)
+            for k, (line, sub) in enumerate(zip(lines, subs), 1):
+                self.assertEqual(line, dict(self.load(run_dir / ROW_A / sub / "prediction.json"), repeat=k))
+        self.assertEqual([e[1] for e in self.docker.started()], [self.name(run_dir, n) for n in (1, 2, 3, 4)])
+        self.assertEqual(len(self.recorder.relays), 2)
+
+    def test_o4_repeats_one_uses_the_unsuffixed_informed_directory(self):
+        run_dir = self.go(conditions=("unassisted", "informed"))
+        self.assertEqual(self.listing(run_dir), [
+            {"instance_id": ROW_A, "arm": "harness", "status": "completed"},
+            {"instance_id": ROW_A, "arm": "harness", "user_mode": "informed", "status": "completed"},
+        ])
+        self.assertTrue((run_dir / ROW_A / "harness" / "prediction.json").is_file())
+        self.assertTrue((run_dir / ROW_A / "harness-informed" / "prediction.json").is_file())
+        self.assertEqual(self.load(run_dir / ROW_A / "harness-informed" / "manifest.json")["instance_id"], ROW_A)
+
+    def test_o4_c3_informed_only_runs_only_informed_entries(self):
+        run_dir = self.go(conditions=("informed",))
+        self.assertEqual(self.listing(run_dir),
+                         [{"instance_id": ROW_A, "arm": "harness", "user_mode": "informed", "status": "completed"}])
+        self.assertFalse((run_dir / ROW_A / "harness").exists())
+        self.assertFalse((run_dir / "predictions.harness.jsonl").exists())
+        self.assertTrue((run_dir / "predictions.harness-informed.jsonl").is_file())
+
+    def test_o4_c2_default_conditions_keep_the_current_layout_and_use_no_relay(self):
+        run_dir = self.go(arms=("baseline", "harness"))
+        self.assertEqual(self.listing(run_dir), [
+            {"instance_id": ROW_A, "arm": "baseline", "status": "completed"},
+            {"instance_id": ROW_A, "arm": "harness", "status": "completed"},
+        ])
+        self.assertEqual(sorted(p.name for p in (run_dir / ROW_A).iterdir()), ["baseline", "harness"])
+        self.assertFalse(list(run_dir.glob("predictions.*informed*")))
+        self.assertEqual(self.recorder.relays, [])
+        for name in (self.name(run_dir, 1), self.name(run_dir, 2)):
+            files = self.docker.history[name].files
+            self.assertFalse([p for p in files if p.endswith("informed_driver.py")])
+            self.assertIn(F.DRIVER_ARGV, [a for a, _ in self.docker.execs(name)])
+            self.assertNotIn(F.INFORMED_DRIVER_ARGV, [a for a, _ in self.docker.execs(name)])
+        manifest = self.load(run_dir / ROW_A / "harness" / "manifest.json")
+        self.assertNotIn("user_mode", manifest)
+        self.assertEqual(manifest["user_sim_hash"], sha_of("user_sim.py", "driver.py"))
+
+    def test_o4_unassisted_conditions_tuple_equals_the_default(self):
+        run_dir = self.go(conditions=("unassisted",))
+        self.assertEqual(self.listing(run_dir), [{"instance_id": ROW_A, "arm": "harness", "status": "completed"}])
+        self.assertEqual(self.recorder.relays, [])
+
+    def test_o4_informed_applies_to_the_harness_arm_only_and_follows_the_unassisted_entry(self):
+        run_dir = self.go(arms=("baseline", "harness"), conditions=("unassisted", "informed"))
+        self.assertEqual([(e["arm"], e.get("user_mode")) for e in self.listing(run_dir)],
+                         [("baseline", None), ("harness", None), ("harness", "informed")])
+        self.assertEqual(len(self.recorder.relays), 1)
+
+    def test_o4_c25_informed_entry_staging_relay_dir_argv_input_and_relay_order(self):
+        run_dir = self.go(conditions=("unassisted", "informed"))
+        plain, inf = self.name(run_dir, 1), self.name(run_dir, 2)
+        files = self.docker.history[inf].files
+        for name in ("driver.py", "user_sim.py", "informed_driver.py"):
+            self.assertEqual(files["/opt/selfcheck/agent/" + name], (AGENT_DIR / name).read_bytes(), name)
+        self.assertFalse([p for p in self.docker.history[plain].files if p.endswith("informed_driver.py")])
+        log = self.docker.log
+        driver_at = self.docker.exec_index(inf, F.INFORMED_DRIVER_ARGV)
+        self.assertIsNotNone(driver_at)
+        self.assertIsNone(self.docker.exec_index(inf, F.DRIVER_ARGV))
+        relay_dir_exec = [i for i, e in enumerate(log) if e[0] == "exec" and e[1] == inf and i < driver_at
+                          and F.RELAY_DIR in " ".join(e[2])]
+        self.assertTrue(relay_dir_exec, "no exec creating the relay directory before the driver")
+        self.assertIn("nonroot", " ".join(" ".join(log[i][2]) for i in relay_dir_exec))
+        starts = [i for i, e in enumerate(log) if e[0] == "relay_start" and e[1] == inf]
+        stops = [i for i, e in enumerate(log) if e[0] == "relay_stop" and e[1] == inf]
+        self.assertEqual((len(starts), len(stops)), (1, 1))
+        self.assertLess(starts[0], driver_at)
+        self.assertLess(driver_at, stops[0])
+        self.assertEqual([e for e in log if e[0] in ("relay_start", "relay_stop") and e[1] == plain], [])
+        kw = log[driver_at][3]
+        self.assertEqual((kw["user"], kw["workdir"]), ("nonroot", "/testbed"))
+        self.assertEqual(kw["timeout"], 300 + 600)
+        base = self.docker.history[plain].driver_inputs[0]
+        self.assertEqual(self.docker.history[inf].driver_inputs[0], dict(
+            base, user_mode="informed", relay_dir=F.RELAY_DIR, relay_timeout_s=960, relay_poll_s=1))
+        self.assertNotIn("user_mode", base)
+
+    def test_o4_g4_prep_exec_creates_and_chowns_the_directories_when_executed(self):
+        import subprocess
+        import sys
+        run_dir = self.go(conditions=("informed",))
+        name = self.name(run_dir, 1)
+        driver_at = self.docker.exec_index(name, F.INFORMED_DRIVER_ARGV)
+        preps = [e for e in self.docker.log[:driver_at] if e[0] == "exec" and e[1] == name
+                 and e[2][:2] == ["sh", "-c"] and "/selfcheck/relay" in e[2][2]]
+        self.assertEqual(len(preps), 1)
+        self.assertEqual(preps[0][3]["user"], "root")
+        root = Path(self.tmp) / "croot"
+        shim = Path(self.tmp) / "shim"
+        shim.mkdir()
+        log = Path(self.tmp) / "chown.log"
+        (shim / "chown").write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> ' + str(log) + "\n")
+        (shim / "chown").chmod(0o755)
+        cmd = re.sub(r"/selfcheck(?=[/\s;&|\"']|$)", str(root / "selfcheck"), preps[0][2][2])
+        env = dict(os.environ, PATH=str(shim) + os.pathsep + os.environ["PATH"])
+        (root / "selfcheck").mkdir(parents=True)
+        proc = subprocess.run(["sh", "-c", cmd], env=env, capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        for sub in ("in", "out", "relay"):
+            self.assertTrue((root / "selfcheck" / sub).is_dir(), sub)
+        calls = [l.split() for l in log.read_text().splitlines()]
+        owned = set()
+        for args in calls:
+            owners = [a for a in args if a.startswith("nonroot")]
+            self.assertTrue(owners, args)
+            self.assertTrue(all(o in ("nonroot", "nonroot:nonroot") for o in owners), args)
+            owned.update(a for a in args if a.startswith(str(root)))
+        self.assertTrue({str(root / "selfcheck" / "out"), str(root / "selfcheck" / "relay")} <= owned, owned)
+
+    def test_o4_relay_is_built_from_the_entry_container_instance_record_path_and_token(self):
+        run_dir = self.go(conditions=("informed",))
+        (relay,) = self.recorder.relays
+        self.assertEqual(relay.container.cid, self.name(run_dir, 1))
+        self.assertEqual(relay.instance, self.rows[ROW_A])
+        self.assertEqual(relay.record_path, run_dir / ROW_A / "harness-informed" / "informed.jsonl")
+        self.assertEqual(relay.token, self.token)
+        self.assertEqual(relay.poll_s, 2)
+        relay.call_fn("PROMPT-X")
+        self.assertEqual(self.reviewer_calls, ["PROMPT-X"])
+
+    def test_o4_relay_is_stopped_when_the_driver_exec_raises(self):
+        for label, exc in (("docker error", F.DockerError("exec failed")), ("other", RuntimeError("boom"))):
+            with self.subTest(label):
+                self.docker = F.FakeDocker()
+                self.egress.docker = self.docker
+                self.recorder.relays.clear()
+
+                def failing(container, inp, exc=exc):
+                    raise exc
+
+                self.docker.configure(diff_text=PLANTED_DIFF, driver=failing)
+                try:
+                    self.go(conditions=("informed",))
+                except Exception:
+                    pass
+                (relay,) = self.recorder.relays
+                self.assertTrue(relay.started)
+                self.assertTrue(relay.stopped)
+                kinds = [e[0] for e in self.docker.log if e[0] in ("relay_start", "relay_stop")]
+                self.assertEqual(kinds, ["relay_start", "relay_stop"])
+
+    def test_o4_informed_manifest_records_user_mode_and_the_three_file_hash(self):
+        run_dir = self.go(conditions=("unassisted", "informed"))
+        plain = self.load(run_dir / ROW_A / "harness" / "manifest.json")
+        inf = self.load(run_dir / ROW_A / "harness-informed" / "manifest.json")
+        self.assertEqual(inf["user_mode"], "informed")
+        self.assertEqual(inf["user_sim_hash"], sha_of("user_sim.py", "driver.py", "informed_driver.py"))
+        self.assertEqual(plain["user_sim_hash"], sha_of("user_sim.py", "driver.py"))
+        self.assertEqual(inf["arm"], "harness")
+        for key in ("model", "effort", "aliases", "sdk", "disallowed_tools", "caps", "container", "env_keys",
+                    "prompt_template_hash", "cli_version", "tools", "network"):
+            self.assertEqual(inf[key], plain[key], key)
+
+    def test_o4_r15_token_in_the_relay_record_is_scrubbed_with_the_entry(self):
+        self.recorder.record_text = json.dumps({"n": 1, "raw_output": "leak {token}"})
+        run_dir = self.go(conditions=("informed",))
+        record = run_dir / ROW_A / "harness-informed" / "informed.jsonl"
+        text = record.read_text(encoding="utf-8")
+        self.assertNotIn(self.token, text)
+        self.assertIn("[REDACTED]", text)
+        self.assertEqual(files_containing(run_dir, self.token.encode()), [])
+        state = self.load(run_dir / ROW_A / "harness-informed" / "state.json")
+        self.assertGreaterEqual(state["scrubbed_occurrences"], 1)
+        self.assertEqual(state["status"], "completed")
+
+    def test_o4_c11_r18_resume_of_an_interrupted_informed_entry_uses_the_informed_driver_and_a_new_relay(self):
+        self.docker.configure(driver=F.returning(F.driver_state_dict(**INTERRUPTED)))
+        run_dir = self.go(conditions=("informed",))
+        name = self.name(run_dir, 1)
+        self.assertEqual(self.listing(run_dir)[0]["status"], "interrupted")
+        self.docker.history[name].script.driver = F.returning(F.driver_state_dict(phrases_sent=3, elapsed_s=80.0))
+        self.assertEqual(self.resume(run_dir.name), run_dir)
+        self.assertEqual(len(self.recorder.relays), 2)
+        first, second = self.recorder.relays
+        self.assertTrue(first.stopped and second.started and second.stopped)
+        self.assertEqual(second.record_path, first.record_path)
+        execs = [a for a, _ in self.docker.execs(name)]
+        self.assertEqual(execs.count(F.INFORMED_DRIVER_ARGV), 2)
+        self.assertNotIn(F.DRIVER_ARGV, execs)
+        log = self.docker.log
+        second_start = [i for i, e in enumerate(log) if e[0] == "relay_start"][1]
+        second_exec = [i for i, e in enumerate(log) if e[0] == "exec" and e[2] == F.INFORMED_DRIVER_ARGV][1]
+        second_stop = [i for i, e in enumerate(log) if e[0] == "relay_stop"][1]
+        self.assertLess(second_start, second_exec)
+        self.assertLess(second_exec, second_stop)
+        resumed = self.docker.history[name].driver_inputs[1]
+        self.assertEqual(resumed["resume"], {"session_id": "sess-A", "phrases_sent": 2, "elapsed_s": 33.5})
+        for key, value in (("user_mode", "informed"), ("relay_dir", F.RELAY_DIR), ("relay_poll_s", 1)):
+            self.assertEqual(resumed[key], value)
+        self.assertEqual(self.listing(run_dir)[0]["status"], "completed")
+        self.assertEqual(self.listing(run_dir)[0]["user_mode"], "informed")
+
+    def test_o4_resume_of_an_unassisted_entry_uses_no_relay(self):
+        self.docker.configure(driver=F.returning(F.driver_state_dict(**INTERRUPTED)))
+        run_dir = self.go(conditions=("unassisted",))
+        self.docker.history[self.name(run_dir, 1)].script.driver = F.returning(F.driver_state_dict())
+        self.resume(run_dir.name)
+        self.assertEqual(self.recorder.relays, [])
+
+    def test_o4_entry_helpers_for_informed_entries(self):
+        root = Path("/runs/r1")
+        base = {"instance_id": "i1", "arm": "harness", "user_mode": "informed"}
+        self.assertEqual(run.entry_dir(root, base), root / "i1" / "harness-informed")
+        self.assertEqual(run.entry_dir(root, dict(base, repeat=2)), root / "i1" / "harness-informed-r2")
+        self.assertEqual(run.entry_dir(root, {"instance_id": "i1", "arm": "harness", "repeat": 2}),
+                         root / "i1" / "harness-r2")
+        self.assertEqual(run.entry_mode(base), "informed")
+        self.assertEqual(run.entry_mode({"instance_id": "i1", "arm": "harness"}), "unassisted")
+
+
 class EgressTests(unittest.TestCase):
     PROXY = "selfcheck-proxy-t"
 

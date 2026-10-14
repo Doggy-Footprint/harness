@@ -1,3 +1,4 @@
+import functools
 import hashlib
 import json
 import os
@@ -7,7 +8,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from . import docker_exec, extract, images, manifest, swe
+from . import docker_exec, extract, images, informed, manifest, review, swe
 from .agent import user_sim
 
 ROOT = Path(__file__).parent
@@ -21,6 +22,11 @@ DRIVER_DIR = "/opt/selfcheck/agent"
 DRIVER_ARGV = [
     "/opt/selfcheck-py/venv/bin/python", f"{DRIVER_DIR}/driver.py", f"{IN_DIR}/input.json",
 ]
+INFORMED_DRIVER_ARGV = [
+    "/opt/selfcheck-py/venv/bin/python", f"{DRIVER_DIR}/informed_driver.py", f"{IN_DIR}/input.json",
+]
+RELAY_POLL_S = 1
+RELAY_TIMEOUT_MARGIN_S = 60
 PLACEHOLDERS = (
     "[#TODO][3-5 lines of description of the project]",
     "[#TODO]Alert user to set up definition & north-start of the project.",
@@ -148,7 +154,7 @@ def _read_json(path: Path):
 
 
 class _Ctx:
-    def __init__(self, cfg, docker, run_id, run_dir, token_path, token, params, instances):
+    def __init__(self, cfg, docker, run_id, run_dir, token_path, token, params, instances, call_fn=None):
         self.cfg = cfg
         self.docker = docker
         self.run_id = run_id
@@ -158,6 +164,7 @@ class _Ctx:
         self.params = params
         self.entries = instances
         self.halted = None
+        self.call_fn = call_fn
 
 
 def _effective(cfg: dict, model, effort, cap_min) -> dict:
@@ -182,9 +189,28 @@ def _write_run_json(ctx: _Ctx, created_at) -> None:
     )
 
 
+def entry_mode(entry: dict) -> str:
+    return entry.get("user_mode", "unassisted")
+
+
+def _arm_key(entry: dict) -> str:
+    return entry["arm"] + ("-informed" if entry_mode(entry) == "informed" else "")
+
+
 def entry_dir(run_dir, entry: dict) -> Path:
-    name = entry["arm"] if "repeat" not in entry else f"{entry['arm']}-r{entry['repeat']}"
+    name = _arm_key(entry) if "repeat" not in entry else f"{_arm_key(entry)}-r{entry['repeat']}"
     return Path(run_dir) / entry["instance_id"] / name
+
+
+def _informed_cfg(cfg: dict) -> dict:
+    return cfg.get("informed") or json.loads((ROOT / "config.json").read_text())["informed"]
+
+
+def _default_call_fn(cfg: dict):
+    icfg = _informed_cfg(cfg)
+    return functools.partial(
+        review.claude_call, model=icfg["model"], effort=icfg["effort"], timeout_s=icfg["timeout_s"]
+    )
 
 
 def entry_repeat(entry: dict) -> int:
@@ -200,7 +226,7 @@ def _write_predictions(ctx: _Ctx) -> None:
             text = pred.read_text().strip()
             if "repeat" in e:
                 text = json.dumps({**json.loads(text), "repeat": e["repeat"]}, sort_keys=True)
-            lines.setdefault(e["arm"], []).append(text)
+            lines.setdefault(_arm_key(e), []).append(text)
     for arm, rows in lines.items():
         (ctx.run_dir / f"predictions.{arm}.jsonl").write_text("".join(r + "\n" for r in rows))
 
@@ -221,6 +247,8 @@ def _halt_after(ctx: _Ctx, entry: dict, created_at) -> bool:
     if reason is None:
         return False
     ctx.halted = {"reason": reason, "instance_id": entry["instance_id"], "arm": entry["arm"]}
+    if entry_mode(entry) == "informed":
+        ctx.halted["user_mode"] = "informed"
     if "repeat" in entry:
         ctx.halted["repeat"] = entry["repeat"]
     _write_run_json(ctx, created_at)
@@ -229,7 +257,7 @@ def _halt_after(ctx: _Ctx, entry: dict, created_at) -> bool:
 
 def run(
     instances, arms, *, cfg, harness_ref="HEAD", model=None, effort=None, cap_min=None,
-    repeats=1, docker=docker_exec, now=time.time,
+    repeats=1, conditions=("unassisted",), docker=docker_exec, now=time.time, call_fn=None,
 ) -> Path:
     token_path = _token_path(cfg)
     token = token_path.read_text().strip()
@@ -250,12 +278,17 @@ def run(
     for inst in instances:
         for k in range(1, repeats + 1):
             for arm in arms:
-                pairs.append((inst, arm))
-                entry = {"instance_id": inst["instance_id"], "arm": arm}
-                if repeats > 1:
-                    entry["repeat"] = k
-                entries.append({**entry, "status": "pending"})
-    ctx = _Ctx(eff, docker, run_id, run_dir, token_path, token, params, entries)
+                for mode in informed.CONDITIONS:
+                    if mode not in conditions or (mode == "informed" and arm != "harness"):
+                        continue
+                    pairs.append((inst, arm))
+                    entry = {"instance_id": inst["instance_id"], "arm": arm}
+                    if mode == "informed":
+                        entry["user_mode"] = mode
+                    if repeats > 1:
+                        entry["repeat"] = k
+                    entries.append({**entry, "status": "pending"})
+    ctx = _Ctx(eff, docker, run_id, run_dir, token_path, token, params, entries, call_fn)
     created_at = now()
     _write_json(run_dir / "params.json", params, indent=1)
     _write_run_json(ctx, created_at)
@@ -268,7 +301,7 @@ def run(
     return run_dir
 
 
-def resume(run_id: str, *, cfg, docker=docker_exec) -> Path:
+def resume(run_id: str, *, cfg, docker=docker_exec, call_fn=None) -> Path:
     run_dir = Path(cfg["runs_dir"]).expanduser() / run_id
     meta = _read_json(run_dir / "run.json")
     if meta is None:
@@ -285,7 +318,7 @@ def resume(run_id: str, *, cfg, docker=docker_exec) -> Path:
         if line.strip():
             row = json.loads(line)
             pool[row["instance_id"]] = row
-    ctx = _Ctx(eff, docker, run_id, run_dir, token_path, token, params, meta["entries"])
+    ctx = _Ctx(eff, docker, run_id, run_dir, token_path, token, params, meta["entries"], call_fn)
     ctx.halted = None
     _write_run_json(ctx, meta["created_at"])
     for n, entry in enumerate(ctx.entries, start=1):
@@ -367,9 +400,9 @@ def _install_harness(ctx: _Ctx, container, instance: dict, log: list[str]):
     return None, start_commit, install
 
 
-def _driver_input(ctx: _Ctx, instance: dict, arm: str, resume_info) -> dict:
+def _driver_input(ctx: _Ctx, instance: dict, arm: str, resume_info, user_mode: str = "unassisted") -> dict:
     cfg = ctx.cfg
-    return {
+    inp = {
         "run_id": ctx.run_id,
         "arm": arm,
         "prompt": compose_prompt(instance, arm),
@@ -386,13 +419,23 @@ def _driver_input(ctx: _Ctx, instance: dict, arm: str, resume_info) -> dict:
         "proxy_url": proxy_url(cfg),
         "resume": resume_info,
     }
+    if user_mode == "informed":
+        inp.update(
+            user_mode="informed", relay_dir=informed.RELAY_DIR,
+            relay_timeout_s=_informed_cfg(cfg)["timeout_s"] + RELAY_TIMEOUT_MARGIN_S,
+            relay_poll_s=RELAY_POLL_S,
+        )
+    return inp
 
 
-def _stage_driver(container) -> None:
+def _stage_driver(container, user_mode: str = "unassisted") -> None:
+    names = ("driver.py", "user_sim.py")
+    if user_mode == "informed":
+        names += ("informed_driver.py",)
     with tempfile.TemporaryDirectory() as td:
         stage = Path(td) / "agent"
         stage.mkdir()
-        for name in ("driver.py", "user_sim.py"):
+        for name in names:
             (stage / name).write_bytes((ROOT / "agent" / name).read_bytes())
         container.copy_in(stage, DRIVER_DIR)
 
@@ -440,6 +483,7 @@ def _run_entry(ctx: _Ctx, n: int, instance: dict, arm: str, *, resume_state, ent
         host["error"] = reason
         return _finalize(ctx, d, state, host)
 
+    mode = entry_mode(entry or {})
     prior_manifest = _read_json(d / "manifest.json") if resume_state is not None else None
     if resume_state is not None:
         if not docker.container_exists(name):
@@ -469,13 +513,19 @@ def _run_entry(ctx: _Ctx, n: int, instance: dict, arm: str, *, resume_state, ent
         )
         resume_info = None
     try:
-        return _drive(ctx, container, n, instance, arm, d, host, fail, prior_manifest, resume_info)
+        return _drive(
+            ctx, container, n, instance, arm, d, host, fail, prior_manifest, resume_info,
+            user_mode=mode,
+        )
     except Exception:
         container.remove()
         raise
 
 
-def _drive(ctx, container, n, instance, arm, d, host, fail, prior_manifest, resume_info) -> str:
+def _drive(
+    ctx, container, n, instance, arm, d, host, fail, prior_manifest, resume_info,
+    user_mode: str = "unassisted",
+) -> str:
     docker, cfg = ctx.docker, ctx.cfg
     raw = d / "raw"
     install_log: list[str] = []
@@ -487,11 +537,15 @@ def _drive(ctx, container, n, instance, arm, d, host, fail, prior_manifest, resu
             _, out, _ = container.exec(["git", "rev-parse", "HEAD"], user="nonroot", workdir="/testbed")
             start_commit = out.strip()
     else:
-        _stage_driver(container)
-        container.exec(
-            ["sh", "-c", f"mkdir -p {IN_DIR} {OUT_DIR} && chown nonroot:nonroot {OUT_DIR}"],
-            user="root",
-        )
+        _stage_driver(container, user_mode)
+        if user_mode == "informed":
+            prep = (
+                f"mkdir -p {IN_DIR} {OUT_DIR} {informed.RELAY_DIR} "
+                f"&& chown nonroot:nonroot {OUT_DIR} {informed.RELAY_DIR}"
+            )
+        else:
+            prep = f"mkdir -p {IN_DIR} {OUT_DIR} && chown nonroot:nonroot {OUT_DIR}"
+        container.exec(["sh", "-c", prep], user="root")
         if arm == "harness":
             reason, start_commit, install = _install_harness(ctx, container, instance, install_log)
             if reason:
@@ -508,13 +562,26 @@ def _drive(ctx, container, n, instance, arm, d, host, fail, prior_manifest, resu
                 return fail(f"git failed: {out.strip()}")
             start_commit = out.strip()
 
-    inp = _driver_input(ctx, instance, arm, resume_info)
+    inp = _driver_input(ctx, instance, arm, resume_info, user_mode)
     container.write_text(f"{IN_DIR}/input.json", json.dumps(inp))
     elapsed = resume_info["elapsed_s"] if resume_info else 0
     timeout = inp["wall_clock_s"] - elapsed + cfg["host_grace_s"]
-    code, out, timed_out = container.exec(
-        DRIVER_ARGV, timeout=timeout, user="nonroot", workdir="/testbed"
-    )
+    relay = None
+    if user_mode == "informed":
+        relay = informed.Relay(
+            container, instance, d / "informed.jsonl",
+            call_fn=ctx.call_fn or _default_call_fn(cfg), poll_s=_informed_cfg(cfg)["poll_s"],
+            token=ctx.token,
+        )
+        relay.start()
+    try:
+        code, out, timed_out = container.exec(
+            INFORMED_DRIVER_ARGV if user_mode == "informed" else DRIVER_ARGV, timeout=timeout, user="nonroot",
+            workdir="/testbed",
+        )
+    finally:
+        if relay is not None:
+            relay.stop()
     freeze_info = extract.freeze(container) if timed_out else None
     blob = container.read_bytes(f"{OUT_DIR}/state.json")
     try:
@@ -579,7 +646,7 @@ def _drive(ctx, container, n, instance, arm, d, host, fail, prior_manifest, resu
             start_commit=start_commit, install=install, images=images_info,
             proxy={"allow_hosts": cfg["allow_hosts"], "proxy_image": cfg["proxy_image"],
                    "squid_conf_hash": squid_hash},
-            driver_state=driver_state, prompt=inp["prompt"],
+            driver_state=driver_state, prompt=inp["prompt"], user_mode=user_mode,
         ),
         indent=1, sort_keys=True,
     )

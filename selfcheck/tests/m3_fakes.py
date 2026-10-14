@@ -247,8 +247,15 @@ def fixture_id_of(conds):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
-def dirname(arm, repeat=None):
-    return arm if repeat is None else "%s-r%d" % (arm, repeat)
+def dirname(arm, repeat=None, mode=None):
+    """Entry directory: <arm>[-informed][-r<k>] (spec 54ad633104783ebe R2)."""
+    name = arm if mode in (None, "unassisted") else "%s-%s" % (arm, mode)
+    return name if repeat is None else "%s-r%d" % (name, repeat)
+
+
+def informed_manifest(iid="inst-1", run_id="r1", **over):
+    """Informed harness manifest: user_mode key and a user_sim_hash over three files (R4)."""
+    return manifest(iid, "harness", run_id, **dict({"user_mode": "informed", "user_sim_hash": "i" * 16}, **over))
 
 
 def state(status="completed", *, results=None, elapsed_s=12.5, rate_limit=None, **over):
@@ -269,7 +276,10 @@ def write_run(runs_dir, run_id, entries, *, halted=None, created_at=0, params=No
     for item in entries:
         iid, arm, status = item["instance_id"], item["arm"], item.get("status", "completed")
         repeat = item.get("repeat")
+        mode = item.get("user_mode")
         listing = {"instance_id": iid, "arm": arm, "status": status}
+        if mode is not None:
+            listing["user_mode"] = mode
         if repeat is not None:
             listing["repeat"] = repeat
         listed.append(listing)
@@ -277,7 +287,7 @@ def write_run(runs_dir, run_id, entries, *, halted=None, created_at=0, params=No
         kw.setdefault("events", None)
         kw.setdefault("ledger", None)
         kw.setdefault("diff", None)
-        write_entry(run_dir, iid, dirname(arm, repeat), manifest=item.get("manifest"), prediction_=item.get("prediction"),
+        write_entry(run_dir, iid, dirname(arm, repeat, mode), manifest=item.get("manifest"), prediction_=item.get("prediction"),
                     state=item.get("state"), **kw)
     write_text(run_dir / "run.json", json.dumps({
         "run_id": run_id, "entries": listed, "created_at": created_at, "halted": halted,

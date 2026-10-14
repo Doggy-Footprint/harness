@@ -99,7 +99,7 @@ class ReviewCliCase(m3.CliCase):
         with mock.patch.object(review, "claude_call", fake):
             return self.invoke(argv, no_run=True)
 
-    def review_run(self, ids=IDS, with_baseline=True, repeats=None):
+    def review_run(self, ids=IDS, with_baseline=True, repeats=None, informed=False):
         entries = []
         for iid in ids:
             for k in ([None] if repeats is None else range(1, repeats + 1)):
@@ -112,6 +112,15 @@ class ReviewCliCase(m3.CliCase):
                               "raw_files": {R.TRANSCRIPT_DIR + "/" + R.UUID_A + ".jsonl":
                                             m.jsonl_text(R.default_rows())}},
                 }, **tag))
+                if informed:
+                    entries.append(dict({
+                        "instance_id": iid, "arm": "harness", "status": "completed", "user_mode": "informed",
+                        "manifest": m.informed_manifest(iid, self.RUN), "state": m.state(),
+                        "prediction": m.prediction(iid, "harness", self.RUN, **tag),
+                        "extra": {"events": m.compliant_events(), "diff": m.archived_diff(),
+                                  "raw_files": {R.TRANSCRIPT_DIR + "/" + R.UUID_A + ".jsonl":
+                                                m.jsonl_text(R.default_rows())}},
+                    }, **tag))
         if with_baseline:
             entries.append({"instance_id": ids[0], "arm": "baseline", "status": "completed",
                             "manifest": m.manifest(ids[0], "baseline", self.RUN), "state": m.state(),
@@ -125,8 +134,8 @@ class ReviewCliCase(m3.CliCase):
         return run_dir
 
     @staticmethod
-    def review_of(run_dir, iid, repeat=None):
-        path = run_dir / iid / m.dirname("harness", repeat) / "review.json"
+    def review_of(run_dir, iid, repeat=None, mode=None):
+        path = run_dir / iid / m.dirname("harness", repeat, mode) / "review.json"
         return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
 
@@ -349,6 +358,70 @@ class RepeatReviewCommandTests(ReviewCliCase):
         self.assertEqual(first[1]["review"]["understanding"], "diverged")
         self.assertEqual(rep["false_claims"], [{"instance_id": "proj__a-1", "repeat": 2, "category": "understanding",
                                                 "summary": "WRONG-FACT", "citation": "[t:1]"}])
+
+
+class InformedReviewCommandTests(ReviewCliCase):
+    """Spec 54ad633104783ebe O13 (R17, C24)."""
+
+    def test_o13_c24_unassisted_and_informed_entries_are_reviewed_and_labeled(self):
+        run_dir = self.review_run(informed=True)
+        before = m.tree(run_dir)
+        code, out, err = self.invoke_review(["review", self.RUN])
+        self.assertEqual(code, 0, err)
+        expected = sorted(["%s ok" % i for i in IDS] + ["%s informed ok" % i for i in IDS])
+        self.assertEqual(sorted(out.splitlines()), expected)
+        self.assertEqual(len(self.fake.calls), 6)
+        self.assertEqual(sorted(self.fake.reviewed()), sorted(IDS * 2))
+        for iid in IDS:
+            self.assertEqual(self.review_of(run_dir, iid)["status"], "ok")
+            got = self.review_of(run_dir, iid, mode="informed")
+            self.assertEqual((got["status"], got["instance_id"]), ("ok", iid))
+        after = m.tree(run_dir)
+        self.assertEqual(set(after) - set(before),
+                         {"%s/%s/review.json" % (i, d) for i in IDS for d in ("harness", "harness-informed")})
+        for path, data in before.items():
+            self.assertEqual(after[path], data, path)
+        self.assertFalse((run_dir / IDS[0] / "baseline" / "review.json").exists())
+
+    def test_o13_repeat_labels_carry_informed_and_the_repeat(self):
+        run_dir = self.review_run(IDS[:1], informed=True, repeats=2)
+        code, out, err = self.invoke_review(["review", self.RUN])
+        self.assertEqual(code, 0, err)
+        lines = out.splitlines()
+        self.assertEqual(len(lines), 4)
+        for k in (1, 2):
+            self.assertIn("%s informed r%d ok" % (IDS[0], k), lines)
+            self.assertEqual(self.review_of(run_dir, IDS[0], k, "informed")["status"], "ok")
+            self.assertEqual(self.review_of(run_dir, IDS[0], k)["status"], "ok")
+        self.assertEqual(len([l for l in lines if "informed" in l]), 2)
+
+    def test_o13_instances_filter_covers_informed_entries_of_the_listed_instances(self):
+        run_dir = self.review_run(informed=True)
+        code, out, err = self.invoke_review(["review", self.RUN, "--instances", IDS[1]])
+        self.assertEqual(code, 0, err)
+        self.assertEqual(sorted(out.splitlines()), sorted(["%s ok" % IDS[1], "%s informed ok" % IDS[1]]))
+        self.assertIsNone(self.review_of(run_dir, IDS[0], mode="informed"))
+
+    def test_o13_failure_of_an_informed_review_exits_1_and_the_rest_continue(self):
+        run_dir = self.review_run(IDS[:1], informed=True)
+        calls = []
+
+        def plan(iid):
+            calls.append(iid)
+            return RuntimeError("down") if len(calls) == 2 else R.model_text(R.payload())
+
+        code, out, err = self.invoke_review(["review", self.RUN], FakeClaude(plan))
+        self.assertEqual(code, 1)
+        self.assertEqual(len(calls), 2)
+        statuses = sorted([self.review_of(run_dir, IDS[0])["status"], self.review_of(run_dir, IDS[0], mode="informed")["status"]])
+        self.assertEqual(statuses, ["error", "ok"])
+
+    def test_o13_unassisted_only_run_is_reviewed_exactly_as_before(self):
+        run_dir = self.review_run()
+        code, out, err = self.invoke_review(["review", self.RUN])
+        self.assertEqual(code, 0, err)
+        self.assertEqual(out.splitlines(), ["%s ok" % i for i in IDS])
+        self.assertFalse(list(run_dir.glob("*/harness-informed")))
 
 
 class ReviewSurfaceTests(unittest.TestCase):

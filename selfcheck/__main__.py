@@ -5,8 +5,8 @@ import sys
 from pathlib import Path
 
 from . import (
-    calibrate, docker_exec, evaluate, fixture, images, mutants, patches, pool, process, report, review,
-    run, score, swe, validate,
+    calibrate, docker_exec, evaluate, fixture, images, informed, manifest, mutants, patches, pool,
+    process, report, review, run, score, swe, validate,
 )
 
 ROOT = Path(__file__).parent
@@ -289,21 +289,30 @@ def _read_token() -> str:
     return run._token_path(CONFIG["agent"]).read_text().strip()
 
 
-def _harness_entries(run_dir: Path) -> list[dict]:
+def _harness_entries(run_dir: Path, mode: str | None = None) -> list[dict]:
     meta = json.loads((run_dir / "run.json").read_text())
-    return [e for e in meta["entries"] if e["arm"] == "harness"]
+    return [
+        e for e in meta["entries"]
+        if e["arm"] == "harness" and (mode is None or run.entry_mode(e) == mode)
+    ]
 
 
-def _load_scores(run_dir: Path) -> dict[tuple[str, int], dict]:
-    path = run_dir / "scores.harness.jsonl"
+def _scores_name(mode: str) -> str:
+    return "scores.harness-informed.jsonl" if mode == "informed" else "scores.harness.jsonl"
+
+
+def _load_scores(run_dir: Path, mode: str = "unassisted") -> dict[tuple[str, int], dict]:
+    path = run_dir / _scores_name(mode)
     rows = _read_jsonl(path) if path.is_file() else []
     return {(r["instance_id"], r.get("repeat", 1)): r for r in rows}
 
 
-def _process_entries(run_dir: Path, *, write: bool) -> dict[tuple[str, int], dict]:
-    scores = _load_scores(run_dir)
+def _process_entries(
+    run_dir: Path, *, write: bool, mode: str = "unassisted"
+) -> dict[tuple[str, int], dict]:
+    scores = _load_scores(run_dir, mode)
     out = {}
-    for entry in _harness_entries(run_dir):
+    for entry in _harness_entries(run_dir, mode):
         key = (entry["instance_id"], run.entry_repeat(entry))
         edir = run.entry_dir(run_dir, entry)
         if not edir.is_dir():
@@ -318,19 +327,23 @@ def _process_entries(run_dir: Path, *, write: bool) -> dict[tuple[str, int], dic
     return out
 
 
-def _label(iid: str, repeat: int, multi: bool) -> str:
-    return f"{iid} r{repeat}" if multi else iid
+def _label(iid: str, repeat: int, multi: bool, mode: str = "unassisted") -> str:
+    base = f"{iid} informed" if mode == "informed" else iid
+    return f"{base} r{repeat}" if multi else base
 
 
 def cmd_process(args) -> int:
     run_dir = _run_dir(args.run_id)
     if run_dir is None:
         return _unknown_run(args.run_id)
-    results = _process_entries(run_dir, write=True)
-    multi = any(repeat != 1 for _, repeat in results)
-    for (iid, repeat), result in results.items():
-        counts = [sum(c["verdict"] == v for c in result["checks"].values()) for v in ("pass", "fail", "n/a")]
-        print(f"{_label(iid, repeat, multi)} pass={counts[0]} fail={counts[1]} n/a={counts[2]}")
+    by_mode = {m: _process_entries(run_dir, write=True, mode=m) for m in informed.CONDITIONS}
+    multi = any(repeat != 1 for results in by_mode.values() for _, repeat in results)
+    for mode, results in by_mode.items():
+        for (iid, repeat), result in results.items():
+            counts = [
+                sum(c["verdict"] == v for c in result["checks"].values()) for v in ("pass", "fail", "n/a")
+            ]
+            print(f"{_label(iid, repeat, multi, mode)} pass={counts[0]} fail={counts[1]} n/a={counts[2]}")
     return 0
 
 
@@ -377,15 +390,36 @@ def cmd_baseline(args) -> int:
     return 0
 
 
+def _entry_manifests(run_dir: Path, mode: str) -> list[dict]:
+    manifests = []
+    for entry in _harness_entries(run_dir, mode):
+        path = run.entry_dir(run_dir, entry) / "manifest.json"
+        if path.is_file():
+            manifests.append(json.loads(path.read_text()))
+    return manifests
+
+
+def _manifest_candidates(run_dir: Path) -> list[list[dict]]:
+    manifests = _entry_manifests(run_dir, "unassisted")
+    if manifests or not _harness_entries(run_dir, "informed"):
+        return [manifests]
+    # Baseline fixtures record the two-file user_sim_hash, so informed manifests carry the
+    # unassisted hash and lose user_mode before the lookup.
+    return [[
+        {**{k: v for k, v in m.items() if k != "user_mode"}, "user_sim_hash": manifest.user_sim_hash()}
+        for m in _entry_manifests(run_dir, "informed")
+    ]]
+
+
 def _emit_report(run_dir: Path, *, no_baseline: bool, token: str) -> int:
     fixture_dir = None
     if not no_baseline:
-        manifests = []
-        for entry in _harness_entries(run_dir):
-            path = run.entry_dir(run_dir, entry) / "manifest.json"
-            if path.is_file():
-                manifests.append(json.loads(path.read_text()))
-        fixture_dir, differing = fixture.find(_repo_path(CONFIG["baseline"]["fixtures_dir"]), manifests)
+        for candidate in _manifest_candidates(run_dir):
+            fixture_dir, differing = fixture.find(
+                _repo_path(CONFIG["baseline"]["fixtures_dir"]), candidate
+            )
+            if fixture_dir is not None:
+                break
         if fixture_dir is None:
             for fid, keys in differing.items():
                 print(f"fixture {fid} differs in: {', '.join(keys)}", file=sys.stderr)
@@ -397,6 +431,8 @@ def _emit_report(run_dir: Path, *, no_baseline: bool, token: str) -> int:
         run_dir, fixture_dir=fixture_dir, scores=_load_scores(run_dir),
         processes=_process_entries(run_dir, write=False),
         min_mutants=CONFIG["report"]["min_mutants"], reviews=None,
+        informed_scores=_load_scores(run_dir, "informed"),
+        informed_processes=_process_entries(run_dir, write=False, mode="informed"),
     )
     try:
         paths = report.write(built, _repo_path(CONFIG["report"]["results_dir"]), token=token)
@@ -444,7 +480,8 @@ def cmd_review(args) -> int:
             edir, rows[iid], call_fn=call_fn, token=token,
             model=CONFIG["review"]["model"], effort=CONFIG["review"]["effort"],
         )
-        print(f"{_label(iid, run.entry_repeat(entry), multi)} {result['status']}", flush=True)
+        label = _label(iid, run.entry_repeat(entry), multi, run.entry_mode(entry))
+        print(f"{label} {result['status']}", flush=True)
         failed = failed or result["status"] == "error"
     return 1 if failed else 0
 
@@ -453,6 +490,11 @@ def cmd_check(args) -> int:
     cfg = CONFIG["agent"]
     if args.resume and _run_dir(args.resume) is None:
         return _unknown_run(args.resume)
+    conditions = tuple(dict.fromkeys(_csv(args.conditions) or ["unassisted"]))
+    unknown = [c for c in conditions if c not in informed.CONDITIONS]
+    if unknown and not args.resume:
+        print(f"unknown conditions: {', '.join(unknown)}", file=sys.stderr)
+        return 2
     try:
         token = _read_token()
         if not (args.no_baseline or args.resume or fixture.precheck(
@@ -472,7 +514,8 @@ def cmd_check(args) -> int:
             if ids is None:
                 rows = [r for r in rows if r.get("core")]
             run_dir = run.run(
-                rows, ["harness"], cfg=cfg, harness_ref=args.harness_ref, repeats=args.repeats
+                rows, ["harness"], cfg=cfg, harness_ref=args.harness_ref, repeats=args.repeats,
+                conditions=conditions,
             )
     except run.UnknownRunError:
         return _unknown_run(args.resume)
@@ -490,13 +533,16 @@ def cmd_check(args) -> int:
             file=sys.stderr,
         )
         return 3
-    predictions = run_dir / "predictions.harness.jsonl"
     score_one = _score_fn()
-    results = [
-        {**score_one(p), "repeat": p.get("repeat", 1)} for p in _read_jsonl(predictions)
-    ] if predictions.is_file() else []
-    _write_jsonl(run_dir / "scores.harness.jsonl", results)
-    _process_entries(run_dir, write=True)
+    modes = ["unassisted"] + (["informed"] if _harness_entries(run_dir, "informed") else [])
+    for mode in modes:
+        suffix = "-informed" if mode == "informed" else ""
+        predictions = run_dir / f"predictions.harness{suffix}.jsonl"
+        results = [
+            {**score_one(p), "repeat": p.get("repeat", 1)} for p in _read_jsonl(predictions)
+        ] if predictions.is_file() else []
+        _write_jsonl(run_dir / _scores_name(mode), results)
+        _process_entries(run_dir, write=True, mode=mode)
     return _emit_report(run_dir, no_baseline=args.no_baseline, token=token)
 
 
@@ -540,7 +586,7 @@ def build_parser() -> argparse.ArgumentParser:
     base.add_argument("action", choices=("create",))
     add("check", cmd_check, harness_ref={"default": "HEAD"}, resume={},
         repeats={"type": _positive_int, "default": CONFIG["check"]["repeats"]},
-        no_baseline={"action": "store_true"})
+        no_baseline={"action": "store_true"}, conditions={"default": "unassisted"})
     add("report", cmd_report, instances=False, no_baseline={"action": "store_true"}).add_argument("run_id")
     add("review", cmd_review).add_argument("run_id")
     return parser

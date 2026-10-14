@@ -151,7 +151,8 @@ class BuildReviewTests(ReviewReportCase):
         with_reviews = report.build(run_dir, fixture_dir=fixture_dir, scores=scores, processes=processes,
                                     min_mutants=10, reviews=reviews)
         self.assertEqual(set(plain) - {"false_claims"}, {"run_id", "harness_ref", "harness_commit", "fixture_id",
-                                                         "baseline", "instances", "notes"})
+                                                         "baseline", "instances", "notes", "informed",
+                                                         "informed_effect"})
         for rep in (plain, with_reviews):
             self.assertIn("false_claims", rep)
             for inst in rep["instances"]:

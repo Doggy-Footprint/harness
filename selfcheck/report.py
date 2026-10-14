@@ -2,7 +2,7 @@ import json
 import statistics
 from pathlib import Path
 
-from .run import entry_dir, entry_repeat
+from .run import entry_dir, entry_mode, entry_repeat
 
 METRICS = (
     "resolved", "f2p_frac", "swt_success", "kill_primary", "kill_secondary", "incompatible_frac",
@@ -19,6 +19,9 @@ NOTE_SMALL_SAMPLE = (
 )
 NOTE_USER_SIM = (
     "시뮬레이션된 사용자는 모든 추천을 그대로 수락하므로 Ask 품질은 측정되지 않는다."
+)
+NOTE_INFORMED_EFFECT = (
+    "difference from unassisted: effect of a user who reads the brief; unassisted is the primary score"
 )
 NOTE_PC5 = (
     "PC5는 오탐일 수 있다. 하네스 텔레메트리가 한 Bash 명령 안의 첫 번째 `seed.py` 호출만 기록하기 때문이다."
@@ -122,28 +125,16 @@ def _summary_cell(summary: dict | None) -> str:
     return f"{_cell(summary['median'])} [{_cell(summary['min'])}, {_cell(summary['max'])}]"
 
 
-def build(
-    run_dir: Path, *, fixture_dir: Path | None, scores: dict, processes: dict, min_mutants: int,
-    reviews: dict | None = None,
-) -> dict:
-    run_dir = Path(run_dir)
-    meta = _read_json(run_dir / "run.json")
-    params = _read_json(run_dir / "params.json") or {}
-    fixture_scores = {}
-    fixture_manifest = None
-    if fixture_dir is not None:
-        fixture_dir = Path(fixture_dir)
-        fixture_manifest = _read_json(fixture_dir / "manifest.json")
-        fixture_scores = _read_json(fixture_dir / "scores.json") or {}
-
-    harness_entries = [e for e in meta["entries"] if e["arm"] == "harness"]
-    if reviews is None:
-        reviews = _load_reviews(run_dir, harness_entries)
+def _blocks(
+    run_dir: Path, entries: list[dict], *, fixture_dir, fixture_scores: dict, scores: dict,
+    processes: dict, reviews: dict, min_mutants: int,
+) -> tuple[list[dict], list[dict], dict]:
     grouped: dict[str, list[dict]] = {}
-    for entry in harness_entries:
+    for entry in entries:
         grouped.setdefault(entry["instance_id"], []).append(entry)
     instances = []
     false_claims = []
+    medians: dict[str, dict] = {}
     for iid, entries in grouped.items():
         entries = sorted(entries, key=entry_repeat)
         base_scores = [r.get("score") for r in fixture_scores.get(iid, [])] if fixture_dir else []
@@ -189,6 +180,7 @@ def build(
             summary = _summary(m, harness)
             median = statistics.median([v for v in harness if v is not None]) if summary else None
             verdicts = [verdict(v, values) for v in harness]
+            medians.setdefault(iid, {})[m] = median
             metrics[m] = {
                 "harness": harness,
                 "harness_summary": summary,
@@ -209,6 +201,48 @@ def build(
                 c: sum(r["process"].get(c) == "fail" for r in rows) for c in cids
             },
         })
+    return instances, false_claims, medians
+
+
+def _effect(unassisted: dict, informed: dict) -> dict:
+    return {
+        iid: {
+            m: None if unassisted[iid].get(m) is None or v is None else v - unassisted[iid][m]
+            for m, v in medians.items()
+        }
+        for iid, medians in informed.items() if iid in unassisted
+    }
+
+
+def build(
+    run_dir: Path, *, fixture_dir: Path | None, scores: dict, processes: dict, min_mutants: int,
+    reviews: dict | None = None, informed_scores: dict | None = None,
+    informed_processes: dict | None = None,
+) -> dict:
+    run_dir = Path(run_dir)
+    meta = _read_json(run_dir / "run.json")
+    params = _read_json(run_dir / "params.json") or {}
+    fixture_scores = {}
+    fixture_manifest = None
+    if fixture_dir is not None:
+        fixture_dir = Path(fixture_dir)
+        fixture_manifest = _read_json(fixture_dir / "manifest.json")
+        fixture_scores = _read_json(fixture_dir / "scores.json") or {}
+
+    harness_entries = [e for e in meta["entries"] if e["arm"] == "harness"]
+    plain = [e for e in harness_entries if entry_mode(e) == "unassisted"]
+    informed_entries = [e for e in harness_entries if entry_mode(e) == "informed"]
+    if reviews is None:
+        reviews = _load_reviews(run_dir, plain)
+    common = dict(fixture_dir=fixture_dir, fixture_scores=fixture_scores, min_mutants=min_mutants)
+    instances, false_claims, medians = _blocks(
+        run_dir, plain, scores=scores, processes=processes, reviews=reviews, **common
+    )
+    informed_blocks, _, informed_medians = _blocks(
+        run_dir, informed_entries, scores=informed_scores or {},
+        processes=informed_processes or {}, reviews=_load_reviews(run_dir, informed_entries),
+        **common,
+    )
     notes = [NOTE_NO_SIGNIFICANCE, NOTE_USER_SIM, NOTE_PC5]
     if any(i["small_sample"] for i in instances):
         notes.append(NOTE_SMALL_SAMPLE)
@@ -220,6 +254,8 @@ def build(
         "baseline": "compared" if fixture_dir else "skipped",
         "instances": instances,
         "false_claims": false_claims,
+        "informed": informed_blocks,
+        "informed_effect": _effect(medians, informed_medians),
         "notes": notes,
     }
 
@@ -246,6 +282,45 @@ def _review_lines(inst_review, findings) -> list[str]:
     return lines
 
 
+def _instance_lines(inst: dict, title: str) -> list[str]:
+    lines: list[str] = []
+    reps = inst["repeats"]
+    cols = [f"r{r['repeat']}" for r in reps]
+    lines += ["", f"## {title}", ""]
+    lines += [
+        "| " + " | ".join(
+            ["metric", *cols, "summary", "baseline (per repeat)", "range", "verdict",
+             "repeats above/within/below"]
+        ) + " |",
+        "| " + " | ".join(["---"] * (len(cols) + 6)) + " |",
+    ]
+    for m in METRICS:
+        row = inst["metrics"][m]
+        name = m + SMALL_SAMPLE_SUFFIX if inst["small_sample"] and m in KILL_METRICS else m
+        rng = "n/a" if row["range"] is None else f"[{_cell(row['range'][0])}, {_cell(row['range'][1])}]"
+        base = ", ".join(_cell(v) for v in row["baseline"]) or "n/a"
+        rv = row["repeat_verdicts"]
+        lines.append("| " + " | ".join([
+            name, *(_cell(v) for v in row["harness"]), _summary_cell(row["harness_summary"]),
+            base, rng, row["verdict"], f"{rv['above']}/{rv['within']}/{rv['below']}",
+        ]) + " |")
+    lines.append("")
+    lines += [
+        f"r{r['repeat']} ({r['status']}) cost_usd: {_cell(r['cost_usd'])}, "
+        f"elapsed_s: {_cell(r['elapsed_s'])}"
+        for r in reps
+    ]
+    lines += ["", "| " + " | ".join(["check", *cols, "fails"]) + " |"]
+    lines.append("| " + " | ".join(["---"] * (len(cols) + 2)) + " |")
+    for cid, fails in inst["process_fails"].items():
+        cells = [r["process"].get(cid, "n/a") for r in reps]
+        lines.append("| " + " | ".join([cid, *cells, str(fails)]) + " |")
+    for r in reps:
+        lines += ["", f"### r{r['repeat']} review", ""]
+        lines += _review_lines(r["review"], r["review_findings"])
+    return lines
+
+
 def render_markdown(report: dict) -> str:
     fixture = report["fixture_id"] if report["fixture_id"] else "baseline skipped"
     lines = [
@@ -256,40 +331,17 @@ def render_markdown(report: dict) -> str:
         f"- fixture: {fixture}",
     ]
     for inst in report["instances"]:
-        reps = inst["repeats"]
-        cols = [f"r{r['repeat']}" for r in reps]
-        lines += ["", f"## {inst['instance_id']}", ""]
+        lines += _instance_lines(inst, inst["instance_id"])
+    for inst in report.get("informed") or []:
+        lines += _instance_lines(inst, f"informed condition: {inst['instance_id']}")
+    if report.get("informed"):
+        lines += ["", "## informed effect", "", NOTE_INFORMED_EFFECT, ""]
         lines += [
-            "| " + " | ".join(
-                ["metric", *cols, "summary", "baseline (per repeat)", "range", "verdict",
-                 "repeats above/within/below"]
-            ) + " |",
-            "| " + " | ".join(["---"] * (len(cols) + 6)) + " |",
+            "| " + " | ".join(["instance", *METRICS]) + " |",
+            "| " + " | ".join(["---"] * (len(METRICS) + 1)) + " |",
         ]
-        for m in METRICS:
-            row = inst["metrics"][m]
-            name = m + SMALL_SAMPLE_SUFFIX if inst["small_sample"] and m in KILL_METRICS else m
-            rng = "n/a" if row["range"] is None else f"[{_cell(row['range'][0])}, {_cell(row['range'][1])}]"
-            base = ", ".join(_cell(v) for v in row["baseline"]) or "n/a"
-            rv = row["repeat_verdicts"]
-            lines.append("| " + " | ".join([
-                name, *(_cell(v) for v in row["harness"]), _summary_cell(row["harness_summary"]),
-                base, rng, row["verdict"], f"{rv['above']}/{rv['within']}/{rv['below']}",
-            ]) + " |")
-        lines.append("")
-        lines += [
-            f"r{r['repeat']} ({r['status']}) cost_usd: {_cell(r['cost_usd'])}, "
-            f"elapsed_s: {_cell(r['elapsed_s'])}"
-            for r in reps
-        ]
-        lines += ["", "| " + " | ".join(["check", *cols, "fails"]) + " |"]
-        lines.append("| " + " | ".join(["---"] * (len(cols) + 2)) + " |")
-        for cid, fails in inst["process_fails"].items():
-            cells = [r["process"].get(cid, "n/a") for r in reps]
-            lines.append("| " + " | ".join([cid, *cells, str(fails)]) + " |")
-        for r in reps:
-            lines += ["", f"### r{r['repeat']} review", ""]
-            lines += _review_lines(r["review"], r["review_findings"])
+        for iid, effect in (report.get("informed_effect") or {}).items():
+            lines.append("| " + " | ".join([iid, *(_cell(effect.get(m)) for m in METRICS)]) + " |")
     lines += ["", "## false claims", ""]
     if report["false_claims"]:
         lines += ["| instance | repeat | category | summary | citation |", "| --- | --- | --- | --- | --- |"]

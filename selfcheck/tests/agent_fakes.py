@@ -15,6 +15,7 @@ import subprocess
 import tarfile
 import shutil
 import tempfile
+import threading
 import time
 import unittest
 from unittest import mock
@@ -91,6 +92,11 @@ PREDICTION_KEYS = {
 }
 
 DRIVER_ARGV = ["/opt/selfcheck-py/venv/bin/python", "/opt/selfcheck/agent/driver.py", "/selfcheck/in/input.json"]
+# Spec 54ad633104783ebe R6: the informed entry runs informed_driver.py staged next to driver.py, same interpreter and input path.
+INFORMED_DRIVER_ARGV = [
+    "/opt/selfcheck-py/venv/bin/python", "/opt/selfcheck/agent/informed_driver.py", "/selfcheck/in/input.json",
+]
+RELAY_DIR = "/selfcheck/relay"
 SEED_STATUS_ARGV = ["/opt/selfcheck-py/venv/bin/python", ".harness/bin/seed.py", "status"]
 SEED_RESTORE_ARGV = ["/opt/selfcheck-py/venv/bin/python", ".harness/bin/seed.py", "restore"]
 KILL_ARGV = ["sh", "-c", "kill -9 -1"]
@@ -689,6 +695,18 @@ class _State:
             self.files["/testbed/AGENTS.md"] = script.agents_md.encode("utf-8")
 
 
+def _is_prep_exec(argv):
+    """Root `sh -c` that creates /selfcheck/in and /selfcheck/out and chowns /selfcheck/out to nonroot.
+
+    The informed entry's variant also creates and chowns /selfcheck/relay (spec leaves the exact command open).
+    """
+    if len(argv) != 3 or argv[:2] != ["sh", "-c"]:
+        return False
+    cmd = argv[2]
+    return ("mkdir" in cmd and "/selfcheck/in" in cmd and "/selfcheck/out" in cmd
+            and "chown" in cmd and "nonroot" in cmd)
+
+
 def _name_index(name):
     match = re.search(r"-(\d+)$", name)
     return int(match.group(1)) if match else None
@@ -721,6 +739,8 @@ class FakeContainer:
         state = self._st
         if not state.running:
             raise DockerError("container %s is not running" % self.cid)
+        if user not in (None, "root", "nonroot"):
+            return 126, "unable to find user %s: no matching entries in passwd file\n" % user, False
         script = state.script
         joined = " ".join(argv)
         for fragment, outcome in script.exec_fail.items():
@@ -751,9 +771,9 @@ class FakeContainer:
             if script.diff_fail:
                 return script.diff_fail[0], script.diff_fail[1], False
             return 0, script.diff_text, False
-        if argv == DRIVER_ARGV:
+        if argv == DRIVER_ARGV or argv == INFORMED_DRIVER_ARGV:
             return self._run_driver(state, script, timeout)
-        if argv == MKDIR_OUT_ARGV:
+        if argv == MKDIR_OUT_ARGV or _is_prep_exec(argv):
             state.out_ready = True
             return 0, "", False
         if argv == EXTRACT_ARGV:
@@ -1118,3 +1138,205 @@ class RunCase(unittest.TestCase):
     @staticmethod
     def name(run_dir, n):
         return "selfcheck-agent-%s-%d" % (Path(run_dir).name, n)
+
+
+# ----------------------------------------------------------------------------------------------
+# Informed-condition fakes (spec 54ad633104783ebe)
+# ----------------------------------------------------------------------------------------------
+
+class HybridClock(FakeClock):
+    """FakeClock that also advances with real time, so a timeout measured on either clock elapses."""
+
+    def __init__(self, start=1000.0):
+        super().__init__(start)
+        self._t0 = time.monotonic()
+
+    def __call__(self):
+        return self.value + (time.monotonic() - self._t0)
+
+
+class RelayResponder:
+    """Thread standing in for the host relay: answers req-<n>.json in a directory.
+
+    policy(request) -> dict body (written with `n` added) | None (no response) | ("raw", text) | ("delay", s, body).
+    """
+
+    def __init__(self, directory, policy=None, poll_s=0.005):
+        self.dir = Path(directory)
+        self.policy = policy or (lambda req: None)
+        self.poll_s = poll_s
+        self.seen = []
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._done = set()
+
+    def __enter__(self):
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc):
+        self._stop.set()
+        self._thread.join(5)
+        return False
+
+    def write(self, n, body):
+        if isinstance(body, tuple) and body[0] == "raw":
+            (self.dir / ("resp-%d.json" % n)).write_text(body[1], encoding="utf-8")
+            return
+        tmp = self.dir / ("resp-%d.json.tmp" % n)
+        tmp.write_text(json.dumps(dict(body, n=n)), encoding="utf-8")
+        os.replace(tmp, self.dir / ("resp-%d.json" % n))
+
+    def _handle(self, n, req):
+        out = self.policy(req)
+        if out is None:
+            return
+        if isinstance(out, tuple) and out[0] == "delay":
+            threading.Timer(out[1], self.write, (n, out[2])).start()
+            return
+        self.write(n, out)
+
+    def _loop(self):
+        while not self._stop.is_set():
+            for path in sorted(self.dir.glob("req-*.json")):
+                n = int(path.stem.split("-")[1])
+                if n in self._done:
+                    continue
+                try:
+                    req = json.loads(path.read_text(encoding="utf-8"))
+                except ValueError:
+                    continue
+                self._done.add(n)
+                self.seen.append(req)
+                self._handle(n, req)
+            time.sleep(self.poll_s)
+
+
+class FakeRelay:
+    """Replacement for informed.Relay: logs construction/start/stop into the fake docker log."""
+
+    def __init__(self, recorder, container, instance, record_path, *, call_fn, poll_s, token):
+        self.recorder = recorder
+        self.container = container
+        self.instance = instance
+        self.record_path = Path(record_path)
+        self.call_fn = call_fn
+        self.poll_s = poll_s
+        self.token = token
+        self.started = False
+        self.stopped = False
+
+    def _log(self, kind):
+        self.container._d.log.append((kind, self.container.cid, self.record_path))
+
+    def start(self):
+        self.started = True
+        self._log("relay_start")
+        if self.recorder.record_text is not None:
+            self.record_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.record_path, "a", encoding="utf-8") as fh:
+                fh.write(self.recorder.record_text.replace("{token}", self.token) + "\n")
+
+    def stop(self):
+        self.stopped = True
+        self._log("relay_stop")
+
+
+class RelayRecorder:
+    """Callable used to patch informed.Relay; keeps every constructed FakeRelay."""
+
+    def __init__(self, record_text=None):
+        self.relays = []
+        self.record_text = record_text
+
+    def __call__(self, container, instance, record_path, *, call_fn, poll_s, token):
+        relay = FakeRelay(self, container, instance, record_path, call_fn=call_fn, poll_s=poll_s, token=token)
+        self.relays.append(relay)
+        return relay
+
+
+class RelayFakeContainer:
+    """Container whose /selfcheck/relay is a real temp directory; every write and exec is logged.
+
+    exec runs the argv for real (POSIX tools) with the container path remapped to the temp directory.
+    """
+
+    def __init__(self, root, fail_write=None):
+        self.root = Path(root)
+        self.root.mkdir(parents=True, exist_ok=True)
+        self.cid = "relay-fake"
+        self.ops = []
+        self.fail_write = fail_write  # predicate(dest) -> True makes that write/copy raise, like a docker cp failure
+
+    def _map(self, text):
+        return text.replace(RELAY_DIR, str(self.root))
+
+    def _unmap(self, text):
+        return text.replace(str(self.root), RELAY_DIR)
+
+    def _path(self, dest):
+        return Path(self._map(dest))
+
+    def put_request(self, n, obj):
+        tmp = self.root / ("req-%d.json.part" % n)
+        tmp.write_text(json.dumps(obj), encoding="utf-8")
+        os.replace(tmp, self.root / ("req-%d.json" % n))
+
+    def exec(self, argv, *, timeout=None, user=None, workdir=None):
+        argv = list(argv)
+        self.ops.append(("exec", argv))
+        if user not in (None, "root", "nonroot"):
+            return 126, "unable to find user %s: no matching entries in passwd file\n" % user, False
+        proc = subprocess.run([self._map(a) for a in argv], capture_output=True, text=True)
+        return proc.returncode, self._unmap(proc.stdout + proc.stderr), False
+
+    def write_text(self, dest, text):
+        self.ops.append(("write", dest, text))
+        if self.fail_write is not None and self.fail_write(dest):
+            raise RuntimeError("docker cp failed: write refused for %s" % dest)
+        path = self._path(dest)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    def copy_in(self, local, dest):
+        data = Path(local).read_bytes()
+        if dest.endswith("/") or self._path(dest).is_dir():
+            dest = dest.rstrip("/") + "/" + Path(local).name
+        self.ops.append(("write", dest, data.decode("utf-8", "replace")))
+        if self.fail_write is not None and self.fail_write(dest):
+            raise RuntimeError("docker cp failed: write refused for %s" % dest)
+        path = self._path(dest)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+
+    def read_bytes(self, src):
+        path = self._path(src)
+        return path.read_bytes() if path.is_file() else None
+
+    def copy_out(self, src, local):
+        local = Path(local)
+        local.mkdir(parents=True, exist_ok=True)
+        path = self._path(src[:-2] if src.endswith("/.") else src)
+        if path.is_dir():
+            for item in path.iterdir():
+                if item.is_file():
+                    shutil.copy(item, local / item.name)
+        elif path.is_file():
+            shutil.copy(path, local / path.name)
+
+    def response_files(self):
+        out = {}
+        for p in sorted(self.root.glob("resp-*")):
+            try:
+                out[p.name] = p.read_text(encoding="utf-8")
+            except FileNotFoundError:  # renamed between listing and reading
+                continue
+        return out
+
+    def everything_written(self):
+        """Text of every write, every exec argv, and every response file left behind."""
+        parts = []
+        for op in self.ops:
+            parts.append(" ".join(op[1]) if op[0] == "exec" else op[2])
+        parts.extend(self.response_files().values())
+        return "\n".join(parts)

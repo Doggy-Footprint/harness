@@ -4,6 +4,7 @@ Seams patched: selfcheck.run.run / resume, selfcheck.score.score_prediction and 
 (fixtures_dir, results_dir, progress, token_file, runs_dir). No docker, no network, no real token.
 """
 import contextlib
+import hashlib
 import io
 import json
 import shutil
@@ -20,13 +21,20 @@ from selfcheck import run as run_mod
 from selfcheck import score as score_mod
 from selfcheck.tests import agent_fakes as F
 from selfcheck.tests import m3_fakes as m
+from selfcheck.tests import review_fakes as R
 
 POOL_IDS = list(F.pool_rows())
 CORE_IDS = [i for i, row in F.pool_rows().items() if row.get("core")]
 NO_FIXTURE_MESSAGE = "no baseline fixture matches the current conditions; run `python3 -m selfcheck baseline create`"
 
 
+def informed_score(iid):
+    return m.score(iid, resolved=False, swt=True, f2p=0.75, primary=0.5, secondary=0.25, incompat=0.0, sampled=18)
+
+
 def fake_score(instance, prediction, **kw):
+    if "INFORMED-MARK" in (prediction or {}).get("src_diff", ""):
+        return informed_score(instance["instance_id"])
     return m.score(instance["instance_id"], f2p=1.0, primary=0.5, secondary=0.25, incompat=0.0, sampled=18)
 
 
@@ -42,31 +50,45 @@ class FakeRuns:
         self.calls = []
         self.resumes = []
 
-    def build(self, run_id, instances, arms, harness_ref, halted, repeats=1):
+    @staticmethod
+    def modes_for(arm, conditions):
+        """Entry modes of one (instance, repeat, arm): unassisted first, informed only for the harness arm."""
+        if arm != "harness":
+            return [None]
+        return [None if c == "unassisted" else c for c in ("unassisted", "informed") if c in conditions]
+
+    def build(self, run_id, instances, arms, harness_ref, halted, repeats=1, conditions=("unassisted",)):
         entries = []
         n_call = len(self.calls)
         over = dict(self.manifest_over, **self.per_call_over.get(n_call, {}))
         for position, iid in enumerate([r["instance_id"] for r in instances]):
             for k in range(1, repeats + 1):
                 for arm in arms:
-                    first = halted and not entries
-                    tag = {"repeat": k} if repeats > 1 else {}
-                    if halted and entries:
-                        entries.append(dict({"instance_id": iid, "arm": arm, "status": "pending"}, **tag))
-                        continue
-                    pred = m.prediction(iid, arm, run_id, **tag)
-                    if self.leak:
-                        pred["src_diff"] = "leak " + self.leak
-                    item = dict({
-                        "instance_id": iid, "arm": arm, "status": "interrupted" if first else "completed",
-                        "manifest": m.manifest(iid, arm, run_id, harness_ref=harness_ref, **over),
-                        "state": m.state("interrupted" if first else "completed"),
-                        "prediction": None if first else pred,
-                    }, **tag)
-                    if arm == "harness":
-                        item["extra"] = {"events": m.compliant_events(), "ledger": m.compliant_ledger_items(),
-                                         "diff": m.archived_diff()}
-                    entries.append(item)
+                    for mode in self.modes_for(arm, conditions):
+                        first = halted and not entries
+                        tag = {"repeat": k} if repeats > 1 else {}
+                        mtag = {} if mode is None else {"user_mode": mode}
+                        if halted and entries:
+                            entries.append(dict({"instance_id": iid, "arm": arm, "status": "pending"}, **tag, **mtag))
+                            continue
+                        extra_pred = {} if mode is None else {"src_diff": "INFORMED-MARK"}
+                        pred = m.prediction(iid, arm, run_id, **extra_pred, **tag)
+                        if self.leak:
+                            pred["src_diff"] = "leak " + self.leak
+                        if mode is None:
+                            manifest = m.manifest(iid, arm, run_id, harness_ref=harness_ref, **over)
+                        else:
+                            manifest = m.informed_manifest(iid, run_id, harness_ref=harness_ref, **over)
+                        item = dict({
+                            "instance_id": iid, "arm": arm, "status": "interrupted" if first else "completed",
+                            "manifest": manifest,
+                            "state": m.state("interrupted" if first else "completed"),
+                            "prediction": None if first else pred,
+                        }, **tag, **mtag)
+                        if arm == "harness":
+                            item["extra"] = {"events": m.compliant_events(), "ledger": m.compliant_ledger_items(),
+                                             "diff": m.archived_diff()}
+                        entries.append(item)
         record = None
         if halted:
             record = {"reason": "interrupted", "instance_id": entries[0]["instance_id"], "arm": entries[0]["arm"]}
@@ -74,9 +96,11 @@ class FakeRuns:
                 record["repeat"] = entries[0]["repeat"]
         params = {"harness_ref": harness_ref, "harness_commit": "d" * 40, "selfcheck_commit": "c" * 40}
         run_dir = m.write_run(self.runs_dir, run_id, entries, halted=record, params=params)
-        for arm in set(arms):
-            lines = [json.dumps(e["prediction"]) for e in entries if e["arm"] == arm and e.get("prediction")]
-            m.write_text(run_dir / ("predictions.%s.jsonl" % arm), "\n".join(lines) + ("\n" if lines else ""))
+        for arm, mode in sorted({(e["arm"], e.get("user_mode")) for e in entries}, key=str):
+            name = arm if mode is None else "%s-%s" % (arm, mode)
+            lines = [json.dumps(e["prediction"]) for e in entries
+                     if e["arm"] == arm and e.get("user_mode") == mode and e.get("prediction")]
+            m.write_text(run_dir / ("predictions.%s.jsonl" % name), "\n".join(lines) + ("\n" if lines else ""))
         return run_dir
 
     def run(self, instances, arms, *, cfg, harness_ref="HEAD", model=None, effort=None, cap_min=None, repeats=1,
@@ -85,9 +109,12 @@ class FakeRuns:
         if not token.exists():
             raise run_mod.TokenFileMissing("token file missing: %s" % token)
         n = len(self.calls) + 1
+        conditions = tuple(extra.get("conditions", ("unassisted",)))
         self.calls.append({"instances": [r["instance_id"] for r in instances], "arms": list(arms),
-                           "harness_ref": harness_ref, "cfg": cfg, "repeats": repeats})
-        return self.build("fakerun%02d" % n, instances, list(arms), harness_ref, (n - 1) in self.halt_calls, repeats)
+                           "harness_ref": harness_ref, "cfg": cfg, "repeats": repeats, "conditions": conditions,
+                           "passed_conditions": "conditions" in extra})
+        return self.build("fakerun%02d" % n, instances, list(arms), harness_ref, (n - 1) in self.halt_calls, repeats,
+                          conditions)
 
     def resume(self, run_id, *, cfg, **extra):
         self.resumes.append(run_id)
@@ -99,8 +126,10 @@ class FakeRuns:
         arms = sorted({e["arm"] for e in listing["entries"]})
         iids = list(dict.fromkeys(i["instance_id"] for i in instances))
         repeats = max(e.get("repeat", 1) for e in listing["entries"])
+        conditions = tuple(sorted({e.get("user_mode", "unassisted") for e in listing["entries"] if e["arm"] == "harness"})) \
+            or ("unassisted",)
         shutil.rmtree(run_dir)
-        return self.build(run_id, [{"instance_id": i} for i in iids], arms, "HEAD", False, repeats)
+        return self.build(run_id, [{"instance_id": i} for i in iids], arms, "HEAD", False, repeats, conditions)
 
 
 class Boom(AssertionError):
@@ -179,7 +208,7 @@ class CliCase(unittest.TestCase):
 
     def harness_run(self, run_id="runharness000001", ids=("proj__a-1", "proj__b-2"), *, scores=True,
                     process_json_first=False, harness_ref="HEAD", skip_ledger_for=(), extra_manifest=None,
-                    repeats=None, score_of=None):
+                    repeats=None, score_of=None, informed=None):
         """repeats=None: legacy layout (no repeat key). Otherwise N repeats per instance in `<iid>/harness-r<k>`."""
         entries = []
         ks = [None] if repeats is None else list(range(1, repeats + 1))
@@ -188,6 +217,8 @@ class CliCase(unittest.TestCase):
                 extra = {"events": m.compliant_events(), "ledger": m.compliant_ledger_items(),
                          "diff": m.archived_diff()}
                 tag = {} if k is None else {"repeat": k}
+                if informed == "only":
+                    continue
                 entries.append(dict({
                     "instance_id": iid, "arm": "harness", "status": "completed",
                     "manifest": m.manifest(iid, "harness", run_id, harness_ref=harness_ref, **(extra_manifest or {})),
@@ -196,9 +227,28 @@ class CliCase(unittest.TestCase):
         entries.append({"instance_id": ids[0], "arm": "baseline", "status": "completed",
                         "manifest": m.manifest(ids[0], "baseline", run_id), "state": m.state(),
                         "prediction": m.prediction(ids[0], "baseline", run_id)})
+        if informed in ("both", "only"):
+            for iid in ids:
+                for k in ks:
+                    tag = {} if k is None else {"repeat": k}
+                    entries.append(dict({
+                        "instance_id": iid, "arm": "harness", "status": "completed", "user_mode": "informed",
+                        "manifest": m.informed_manifest(iid, run_id, harness_ref=harness_ref),
+                        "state": m.state(),
+                        "prediction": m.prediction(iid, "harness", run_id, src_diff="INFORMED-MARK", **tag),
+                        "extra": {"events": m.compliant_events(), "ledger": m.compliant_ledger_items(),
+                                  "diff": m.archived_diff()},
+                    }, **tag))
         run_dir = m.write_run(self.runs, run_id, entries,
                               params={"harness_ref": harness_ref, "harness_commit": "d" * 40})
-        if scores:
+        if informed in ("both", "only"):
+            rows = []
+            for iid in ids:
+                for k in ks:
+                    row = informed_score(iid)
+                    rows.append(json.dumps(row if k is None else dict(row, repeat=k)))
+            m.write_text(run_dir / "scores.harness-informed.jsonl", "\n".join(rows) + "\n")
+        if scores and informed != "only":
             rows = []
             for iid in ids:
                 for k in ks:
@@ -882,6 +932,229 @@ class RepeatsProcessAndReportTests(CliCase):
         self.assertEqual(code, 0, err)
         self.assertTrue((run_dir / "proj__a-1" / "harness" / "process.json").is_file())
         self.assertFalse((run_dir / "proj__a-1" / "harness-r1").exists())
+
+
+AGENT_DIR = F.ROOT / "selfcheck" / "agent"
+REAL_UNASSISTED_HASH = hashlib.sha256(
+    (AGENT_DIR / "user_sim.py").read_bytes() + (AGENT_DIR / "driver.py").read_bytes()).hexdigest()
+EFFECT_EQUAL_EXCEPT = {"resolved": -1.0, "f2p_frac": -0.25, "swt_success": 0.0, "kill_primary": 0.0,
+                       "kill_secondary": 0.0, "incompatible_frac": 0.0}
+
+
+def jsonl(path):
+    return [json.loads(l) for l in Path(path).read_text(encoding="utf-8").splitlines() if l.strip()]
+
+
+class ReportReviewMixin:
+    @staticmethod
+    def okfile(iid, cats):
+        return json.dumps({"status": "ok", "instance_id": iid, "model": R.MODEL, "effort": R.EFFORT, "categories": cats,
+                           "false_claims": [{"category": "understanding", "summary": "WRONG-FACT", "citation": "[t:1]"}]})
+
+
+class ConditionsCheckTests(CliCase):
+    """Spec 54ad633104783ebe O1/O2 (R1, R2, R3, R5, C1-C4)."""
+
+    def check(self, *flags, fake=None):
+        fake = fake or FakeRuns(self.runs)
+        code, out, err = self.invoke(["check", *flags], fake)
+        return fake, code, out, err
+
+    def test_o1_c2_default_conditions_keep_the_current_files_and_entries(self):
+        self.write_matching_fixture()
+        fake, code, out, err = self.check("--repeats", "1")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(fake.calls[0]["conditions"], ("unassisted",))
+        run_dir = self.runs / "fakerun01"
+        entries = self.load(run_dir / "run.json")["entries"]
+        self.assertEqual([e["instance_id"] for e in entries], CORE_IDS)
+        for e in entries:
+            self.assertNotIn("user_mode", e)
+        self.assertEqual(sorted(p.name for p in run_dir.glob("*.jsonl")), ["predictions.harness.jsonl", "scores.harness.jsonl"])
+        for iid in CORE_IDS:
+            self.assertEqual(sorted(p.name for p in (run_dir / iid).iterdir()), ["harness"])
+        rep = self.load(self.results / "fakerun01.json")
+        self.assertEqual(rep["informed"], [])
+        self.assertEqual(rep["informed_effect"], {})
+        self.assertNotIn("## informed", (self.results / "fakerun01.md").read_text(encoding="utf-8"))
+
+    def test_o1_g7_bare_check_through_the_real_parser_runs_unassisted(self):
+        self.write_matching_fixture()
+        fake, code, out, err = self.check()
+        self.assertEqual(code, 0, err)
+        self.assertEqual(len(fake.calls), 1)
+        self.assertEqual(fake.calls[0]["conditions"], ("unassisted",))
+        self.assertNotIn("unknown conditions", err)
+
+    def test_o1_unassisted_only_flag_equals_the_default(self):
+        self.write_matching_fixture()
+        fake, code, _, err = self.check("--conditions", "unassisted", "--repeats", "1")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(fake.calls[0]["conditions"], ("unassisted",))
+        self.assertEqual(sorted(p.name for p in (self.runs / "fakerun01").glob("*.jsonl")),
+                         ["predictions.harness.jsonl", "scores.harness.jsonl"])
+
+    def test_o1_o2_c1_both_conditions_with_two_repeats(self):
+        fixture_dir = self.write_matching_fixture()
+        fake, code, out, err = self.check("--conditions", "unassisted,informed", "--repeats", "2")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(len(fake.calls), 1)
+        self.assertEqual(set(fake.calls[0]["conditions"]), {"unassisted", "informed"})
+        self.assertEqual(fake.calls[0]["repeats"], 2)
+        self.assertEqual(fake.calls[0]["arms"], ["harness"])
+        run_dir = self.runs / "fakerun01"
+        for iid in CORE_IDS:
+            self.assertEqual(sorted(p.name for p in (run_dir / iid).iterdir()),
+                             ["harness-informed-r1", "harness-informed-r2", "harness-r1", "harness-r2"])
+        plain = jsonl(run_dir / "scores.harness.jsonl")
+        inf = jsonl(run_dir / "scores.harness-informed.jsonl")
+        want = sorted((i, k) for i in CORE_IDS for k in (1, 2))
+        self.assertEqual(sorted((r["instance_id"], r["repeat"]) for r in plain), want)
+        self.assertEqual(sorted((r["instance_id"], r["repeat"]) for r in inf), want)
+        self.assertTrue(all(r["resolved"] and r["f2p_frac"] == 1.0 for r in plain))
+        self.assertTrue(all((not r["resolved"]) and r["f2p_frac"] == 0.75 for r in inf))
+        for iid in CORE_IDS:
+            for k in (1, 2):
+                plain_pc = self.load(run_dir / iid / ("harness-r%d" % k) / "process.json")
+                inf_pc = self.load(run_dir / iid / ("harness-informed-r%d" % k) / "process.json")
+                self.assertEqual(plain_pc["checks"]["PC11"]["verdict"], "pass")
+                self.assertEqual(inf_pc["checks"]["PC11"]["verdict"], "fail")
+        rep = self.load(self.results / "fakerun01.json")
+        self.assertEqual(rep["fixture_id"], fixture_dir.name)
+        self.assertEqual([i["instance_id"] for i in rep["instances"]], CORE_IDS)
+        self.assertEqual([b["instance_id"] for b in rep["informed"]], CORE_IDS)
+        for inst, block in zip(rep["instances"], rep["informed"]):
+            self.assertEqual(inst["metrics"]["f2p_frac"]["harness"], [1.0, 1.0])
+            self.assertEqual(block["metrics"]["f2p_frac"]["harness"], [0.75, 0.75])
+            self.assertEqual([r["process"]["PC11"] for r in block["repeats"]], ["fail", "fail"])
+            self.assertEqual([r["process"]["PC11"] for r in inst["repeats"]], ["pass", "pass"])
+        self.assertEqual(rep["informed_effect"], {iid: EFFECT_EQUAL_EXCEPT for iid in CORE_IDS})
+        text = (self.results / "fakerun01.md").read_text(encoding="utf-8")
+        self.assertLess(text.index("## informed condition"), text.index("## informed effect"))
+
+    def test_o1_o2_c3_informed_only_matches_a_fixture_recorded_by_unassisted_runs(self):
+        fixture_dir = self.write_matching_fixture(user_sim_hash=REAL_UNASSISTED_HASH)
+        fake, code, out, err = self.check("--conditions", "informed", "--repeats", "1")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(fake.calls[0]["conditions"], ("informed",))
+        run_dir = self.runs / "fakerun01"
+        self.assertEqual([e.get("user_mode") for e in self.load(run_dir / "run.json")["entries"]],
+                         ["informed"] * len(CORE_IDS))
+        for iid in CORE_IDS:
+            self.assertEqual(sorted(p.name for p in (run_dir / iid).iterdir()), ["harness-informed"])
+            self.assertTrue((run_dir / iid / "harness-informed" / "process.json").is_file())
+        self.assertTrue((run_dir / "predictions.harness-informed.jsonl").is_file())
+        self.assertTrue((run_dir / "scores.harness-informed.jsonl").is_file())
+        self.assertEqual(len(jsonl(run_dir / "scores.harness-informed.jsonl")), len(CORE_IDS))
+        plain_scores = run_dir / "scores.harness.jsonl"
+        self.assertTrue(not plain_scores.exists() or jsonl(plain_scores) == [])
+        self.assertFalse((run_dir / "predictions.harness.jsonl").exists() and jsonl(run_dir / "predictions.harness.jsonl"))
+        rep = self.load(self.results / "fakerun01.json")
+        self.assertEqual(rep["fixture_id"], fixture_dir.name)
+        self.assertEqual(rep["baseline"], "compared")
+        self.assertEqual(rep["instances"], [])
+        self.assertEqual(rep["informed_effect"], {})
+        self.assertEqual([b["instance_id"] for b in rep["informed"]], CORE_IDS)
+
+    def test_o2_informed_only_lookup_still_compares_every_other_condition(self):
+        fixture_dir = self.write_matching_fixture(user_sim_hash=REAL_UNASSISTED_HASH)
+        fake = FakeRuns(self.runs, manifest_over={"cli_version": "9.9.9"})
+        _, code, out, err = self.check("--conditions", "informed", "--repeats", "1", fake=fake)
+        self.assertEqual(code, 2)
+        self.assertIn("fixture %s differs in: cli_version" % fixture_dir.name, err)
+        self.assertEqual(self.files_under(self.results), {})
+
+    def test_o2_informed_only_lookup_does_not_ignore_a_different_unassisted_hash(self):
+        fixture_dir = self.write_matching_fixture()
+        _, code, out, err = self.check("--conditions", "informed", "--repeats", "1")
+        self.assertEqual(code, 2)
+        self.assertIn("fixture %s differs in: user_sim_hash" % fixture_dir.name, err)
+
+    def test_o2_unassisted_entries_decide_the_lookup_when_present(self):
+        fixture_dir = self.write_matching_fixture()
+        fake, code, out, err = self.check("--conditions", "unassisted,informed", "--repeats", "1")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(self.load(self.results / "fakerun01.json")["fixture_id"], fixture_dir.name)
+
+    def test_o1_c4_unknown_condition_exits_2_before_any_run(self):
+        self.write_matching_fixture()
+        fake, code, out, err = self.check("--conditions", "informed,bogus")
+        self.assertEqual(code, 2)
+        self.assertIn("unknown conditions: bogus", err.splitlines())
+        self.assertEqual(fake.calls, [])
+        self.assertEqual(fake.resumes, [])
+        self.assertEqual(self.files_under(self.runs), {})
+        self.assertEqual(self.files_under(self.results), {})
+
+    def test_o1_c4_several_unknown_names_are_all_listed(self):
+        self.write_matching_fixture()
+        fake, code, out, err = self.check("--conditions", "bogus,other,unassisted")
+        self.assertEqual(code, 2)
+        line = [l for l in err.splitlines() if l.startswith("unknown conditions: ")]
+        self.assertEqual(len(line), 1)
+        self.assertIn("bogus", line[0])
+        self.assertIn("other", line[0])
+        self.assertNotIn("unassisted", line[0])
+        self.assertEqual(fake.calls, [])
+
+    def test_o1_resume_ignores_conditions_and_resumes_the_recorded_entries(self):
+        self.write_matching_fixture()
+        first = FakeRuns(self.runs, halt_calls={0})
+        code, out, err = self.invoke(["check", "--conditions", "unassisted,informed", "--repeats", "1"], first)
+        self.assertEqual(code, 3)
+        code, out, err = self.invoke(["check", "--resume", "fakerun01", "--conditions", "unassisted"], first)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(first.resumes, ["fakerun01"])
+        self.assertEqual(len(first.calls), 1)
+        rep = self.load(self.results / "fakerun01.json")
+        self.assertEqual([b["instance_id"] for b in rep["informed"]], CORE_IDS)
+        self.assertEqual([i["instance_id"] for i in rep["instances"]], CORE_IDS)
+
+
+class InformedReportCommandTests(CliCase):
+    IDS = ("proj__a-1", "proj__b-2")
+
+    def test_o2_report_of_an_informed_only_run_finds_the_unassisted_fixture(self):
+        fixture_dir = self.write_matching_fixture(ids=self.IDS, user_sim_hash=REAL_UNASSISTED_HASH)
+        run_dir = self.harness_run(informed="only")
+        code, out, err = self.invoke(["report", run_dir.name], no_run=True)
+        self.assertEqual(code, 0, err)
+        rep = self.load(self.results / (run_dir.name + ".json"))
+        self.assertEqual(rep["fixture_id"], fixture_dir.name)
+        self.assertEqual(rep["instances"], [])
+        self.assertEqual([b["instance_id"] for b in rep["informed"]], list(self.IDS))
+        self.assertEqual(rep["informed"][0]["metrics"]["f2p_frac"]["harness"], [0.75])
+        self.assertEqual(rep["informed"][0]["metrics"]["f2p_frac"]["verdict"], "within")
+
+    def test_o2_report_of_a_run_with_both_conditions_uses_the_unassisted_manifests(self):
+        fixture_dir = self.write_matching_fixture(ids=self.IDS)
+        run_dir = self.harness_run(informed="both")
+        code, out, err = self.invoke(["report", run_dir.name], no_run=True)
+        self.assertEqual(code, 0, err)
+        rep = self.load(self.results / (run_dir.name + ".json"))
+        self.assertEqual(rep["fixture_id"], fixture_dir.name)
+        self.assertEqual(rep["informed_effect"]["proj__a-1"]["resolved"], -1.0)
+
+    def test_o13_report_loads_each_informed_entrys_review_json_into_its_block(self):
+        run_dir = self.harness_run(informed="both", repeats=2)
+        cats = R.payload(understanding=R.category("diverged", R.finding("WRONG-FACT", "[t:1]", True)))
+        ok = ReportReviewMixin.okfile("proj__a-1", cats)
+        m.write_text(run_dir / "proj__a-1" / "harness-informed-r2" / "review.json", ok)
+        code, out, err = self.invoke(["report", run_dir.name, "--no-baseline"], no_run=True)
+        self.assertEqual(code, 0, err)
+        rep = self.load(self.results / (run_dir.name + ".json"))
+        block = rep["informed"][0]["repeats"]
+        self.assertEqual(block[0]["review"], "not run")
+        self.assertEqual(block[1]["review"]["understanding"], "diverged")
+        for repeat in rep["instances"][0]["repeats"]:
+            self.assertEqual(repeat["review"], "not run")
+
+    def test_o12_report_without_informed_entries_has_empty_informed_keys(self):
+        run_dir = self.harness_run()
+        code, out, err = self.invoke(["report", run_dir.name, "--no-baseline"], no_run=True)
+        self.assertEqual(code, 0, err)
+        rep = self.load(self.results / (run_dir.name + ".json"))
+        self.assertEqual((rep["informed"], rep["informed_effect"]), ([], {}))
 
 
 class SubcommandSurfaceTests(unittest.TestCase):

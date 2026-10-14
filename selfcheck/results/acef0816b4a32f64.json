@@ -1,0 +1,217 @@
+{
+ "baseline": "compared",
+ "false_claims": [],
+ "fixture_id": "246588b0e19680ee",
+ "harness_commit": "106884acfab6bda33330fe4c18dc8f838b895abb",
+ "harness_ref": "HEAD",
+ "informed": [
+  {
+   "instance_id": "mwaskom__seaborn-3187",
+   "metrics": {
+    "f2p_frac": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0
+     ],
+     "harness_summary": {
+      "max": 1.0,
+      "median": 1.0,
+      "min": 1.0
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 1
+     },
+     "verdict": "within"
+    },
+    "incompatible_frac": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": [
+      0.0
+     ],
+     "harness_summary": {
+      "max": 0.0,
+      "median": 0.0,
+      "min": 0.0
+     },
+     "range": [
+      0.0,
+      0.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 1
+     },
+     "verdict": "within"
+    },
+    "kill_primary": {
+     "baseline": [
+      0.5,
+      0.5
+     ],
+     "harness": [
+      1.0
+     ],
+     "harness_summary": {
+      "max": 1.0,
+      "median": 1.0,
+      "min": 1.0
+     },
+     "range": [
+      0.5,
+      0.5
+     ],
+     "repeat_verdicts": {
+      "above": 1,
+      "below": 0,
+      "n/a": 0,
+      "within": 0
+     },
+     "verdict": "above"
+    },
+    "kill_secondary": {
+     "baseline": [
+      0.5,
+      0.5
+     ],
+     "harness": [
+      1.0
+     ],
+     "harness_summary": {
+      "max": 1.0,
+      "median": 1.0,
+      "min": 1.0
+     },
+     "range": [
+      0.5,
+      0.5
+     ],
+     "repeat_verdicts": {
+      "above": 1,
+      "below": 0,
+      "n/a": 0,
+      "within": 0
+     },
+     "verdict": "above"
+    },
+    "resolved": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0
+     ],
+     "harness_summary": {
+      "k": 1,
+      "n": 1
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 1
+     },
+     "verdict": "within"
+    },
+    "swt_success": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0
+     ],
+     "harness_summary": {
+      "k": 1,
+      "n": 1
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 1
+     },
+     "verdict": "within"
+    }
+   },
+   "process_fails": {
+    "PC1": 0,
+    "PC10": 0,
+    "PC11": 0,
+    "PC12": 0,
+    "PC2": 0,
+    "PC3": 0,
+    "PC4": 0,
+    "PC5": 1,
+    "PC6": 0,
+    "PC7": 0,
+    "PC8": 0,
+    "PC9": 0
+   },
+   "repeats": [
+    {
+     "cost_usd": 6.843082100000001,
+     "elapsed_s": 1174.321,
+     "metrics": {
+      "f2p_frac": 1.0,
+      "incompatible_frac": 0.0,
+      "kill_primary": 1.0,
+      "kill_secondary": 1.0,
+      "resolved": 1.0,
+      "swt_success": 1.0
+     },
+     "process": {
+      "PC1": "pass",
+      "PC10": "pass",
+      "PC11": "pass",
+      "PC12": "pass",
+      "PC2": "pass",
+      "PC3": "pass",
+      "PC4": "pass",
+      "PC5": "fail",
+      "PC6": "pass",
+      "PC7": "pass",
+      "PC8": "pass",
+      "PC9": "pass"
+     },
+     "repeat": 1,
+     "review": "not run",
+     "review_findings": {},
+     "status": "completed"
+    }
+   ],
+   "small_sample": false
+  }
+ ],
+ "informed_effect": {},
+ "instances": [],
+ "notes": [
+  "\ud1b5\uacc4\uc801 \uc720\uc758\uc131\uc740 \uac80\uc815\ud558\uc9c0 \uc54a\uc558\ub2e4. \ubc94\uc704\ub294 \uae30\uc900\uc120 \ubc18\ubcf5 \uc2e4\ud589\uc758 \ucd5c\uc19f\uac12\uacfc \ucd5c\ub313\uac12\uc774\uba70 above/within/below\ub294 \uadf8 \ubc94\uc704\uc640\uc758 \uc704\uce58 \uad00\uacc4\uc77c \ubfd0\uc774\ub2e4.",
+  "\uc2dc\ubbac\ub808\uc774\uc158\ub41c \uc0ac\uc6a9\uc790\ub294 \ubaa8\ub4e0 \ucd94\ucc9c\uc744 \uadf8\ub300\ub85c \uc218\ub77d\ud558\ubbc0\ub85c Ask \ud488\uc9c8\uc740 \uce21\uc815\ub418\uc9c0 \uc54a\ub294\ub2e4.",
+  "PC5\ub294 \uc624\ud0d0\uc77c \uc218 \uc788\ub2e4. \ud558\ub124\uc2a4 \ud154\ub808\uba54\ud2b8\ub9ac\uac00 \ud55c Bash \uba85\ub839 \uc548\uc758 \uccab \ubc88\uc9f8 `seed.py` \ud638\ucd9c\ub9cc \uae30\ub85d\ud558\uae30 \ub54c\ubb38\uc774\ub2e4."
+ ],
+ "run_id": "acef0816b4a32f64"
+}

@@ -216,7 +216,7 @@ class BuildTests(BuildCase):
         run_dir, fixture_dir, scores, processes = self.two_instances()
         rep = call_build(run_dir, fixture_dir, scores, processes)
         self.assertEqual(set(rep), {"run_id", "harness_ref", "harness_commit", "fixture_id", "baseline", "instances",
-                                    "notes", "false_claims"})
+                                    "notes", "false_claims", "informed", "informed_effect"})
         for inst in rep["instances"]:
             self.assertEqual(set(inst), INSTANCE_KEYS)
             self.assertEqual(set(inst["metrics"]), set(METRICS))
@@ -919,9 +919,294 @@ class LeakTests(BuildCase):
         run_dir = self.make_run([self.harness_entry(I1)])
         rep = call_build(run_dir, None, one({I1: sc(I1)}), one({I1: proc(I1)}))
         self.assertEqual(set(rep), {"run_id", "harness_ref", "harness_commit", "fixture_id", "baseline", "instances",
-                                    "notes", "false_claims"})
+                                    "notes", "false_claims", "informed", "informed_effect"})
         self.assertEqual(set(rep["instances"][0]), INSTANCE_KEYS)
         self.assertEqual(set(rep["instances"][0]["repeats"][0]), REPEAT_KEYS)
+
+
+NOTE_EFFECT = "difference from unassisted: effect of a user who reads the brief; unassisted is the primary score"
+I3 = "inst-c"
+
+
+class InformedReportCase(BuildCase):
+    """Spec 54ad633104783ebe O12 (R16, C21-C23, C22, Q1)."""
+
+    def informed_entry(self, iid, repeat=None, status="completed"):
+        item = {
+            "instance_id": iid, "arm": "harness", "status": status, "user_mode": "informed",
+            "manifest": m.informed_manifest(iid, RUN, harness_ref="feature/z"),
+            "state": m.state(status, results=None, elapsed_s=5.5),
+            "prediction": m.prediction(iid, "harness", RUN),
+        }
+        if repeat is not None:
+            item["repeat"] = repeat
+        return item
+
+    def triple(self, iid, specs):
+        return {(iid, k): sc(iid, **kw) for k, kw in enumerate(specs, 1) if kw is not None}
+
+    def full_report(self, with_informed=True):
+        shutil.rmtree(self.runs, True)
+        shutil.rmtree(self.fixtures, True)
+        self.fixtures.mkdir()
+        entries = [self.harness_entry(I1, repeat=k) for k in (1, 2, 3)] + [self.harness_entry(I3)]
+        if with_informed:
+            entries += [self.informed_entry(I1, repeat=k) for k in (1, 2, 3)] + [self.informed_entry(I2)]
+        run_dir = self.make_run(entries)
+        fixture_dir = self.make_fixture([I1, I2, I3], {
+            I1: [sc(I1, f2p=0.25, resolved=False, swt=False), sc(I1, f2p=0.5, resolved=True)],
+            I2: [sc(I2, f2p=0.5), sc(I2, f2p=0.75)],
+            I3: [sc(I3), sc(I3)],
+        })
+        scores = self.triple(I1, [dict(resolved=True, f2p=0.25, primary=None), dict(resolved=False, f2p=0.5, primary=None),
+                                  dict(resolved=True, f2p=0.75, primary=None)])
+        scores.update({(I3, 1): sc(I3)})
+        procs = {key: proc(key[0]) for key in scores}
+        inf_scores = self.triple(I1, [dict(resolved=False, f2p=0.5, primary=0.25, secondary=None, incompat=0.25),
+                                      dict(resolved=False, f2p=0.75, primary=None, secondary=None, incompat=0.25),
+                                      dict(resolved=True, f2p=1.0, primary=0.5, secondary=None, incompat=0.25)])
+        inf_scores[(I2, 1)] = sc(I2, f2p=0.5)
+        inf_procs = {key: proc(key[0], PC8="fail") for key in inf_scores}
+        kw = dict(informed_scores=inf_scores, informed_processes=inf_procs) if with_informed else {}
+        rep = report.build(run_dir, fixture_dir=fixture_dir, scores=scores, processes=procs, min_mutants=10, **kw)
+        return rep, fixture_dir
+
+
+class InformedBuildTests(InformedReportCase):
+    def test_o12_c21_unassisted_instances_are_as_before(self):
+        with_inf, _ = self.full_report(True)
+        without, _ = self.full_report(False)
+        self.assertEqual([i["instance_id"] for i in with_inf["instances"]], [I1, I3])
+        self.assertEqual(with_inf["instances"], without["instances"])
+        for key in ("run_id", "harness_ref", "harness_commit", "fixture_id", "baseline", "false_claims"):
+            self.assertEqual(with_inf[key], without[key], key)
+        self.assertEqual(set(with_inf), {"run_id", "harness_ref", "harness_commit", "fixture_id", "baseline", "instances",
+                                         "notes", "false_claims", "informed", "informed_effect"})
+
+    def test_o12_c21_informed_blocks_have_the_instance_block_shape_and_the_same_baseline(self):
+        rep, _ = self.full_report()
+        blocks = rep["informed"]
+        self.assertEqual([b["instance_id"] for b in blocks], [I1, I2])
+        for block in blocks:
+            self.assertEqual(set(block), INSTANCE_KEYS)
+            self.assertEqual(set(block["metrics"]), set(METRICS))
+            for cell in block["metrics"].values():
+                self.assertEqual(set(cell), CELL_KEYS)
+            for repeat in block["repeats"]:
+                self.assertEqual(set(repeat), REPEAT_KEYS)
+        first = blocks[0]
+        plain = rep["instances"][0]
+        self.assertEqual([r["repeat"] for r in first["repeats"]], [1, 2, 3])
+        self.assertEqual(first["metrics"]["f2p_frac"], cell_of(
+            [0.5, 0.75, 1.0], stat(0.75, 0.5, 1.0), [0.25, 0.5], [0.25, 0.5], "above", rv(within=1, above=2)))
+        self.assertEqual(first["metrics"]["resolved"]["harness"], [0.0, 0.0, 1.0])
+        self.assertEqual(first["metrics"]["resolved"]["harness_summary"], {"k": 1, "n": 3})
+        self.assertEqual(plain["metrics"]["f2p_frac"]["verdict"], "within")
+        for name in METRICS:
+            self.assertEqual(first["metrics"][name]["baseline"], plain["metrics"][name]["baseline"], name)
+            self.assertEqual(first["metrics"][name]["range"], plain["metrics"][name]["range"], name)
+        self.assertEqual(first["process_fails"], dict(NO_FAILS, PC8=3))
+        self.assertEqual([r["process"]["PC8"] for r in first["repeats"]], ["fail"] * 3)
+        self.assertEqual(plain["process_fails"], NO_FAILS)
+        second = blocks[1]
+        self.assertEqual(second["metrics"]["f2p_frac"]["baseline"], [0.5, 0.75])
+        self.assertEqual([r["status"] for r in second["repeats"]], ["completed"])
+
+    def test_o12_c21_c23_effect_is_the_median_difference_and_null_when_a_median_is_missing(self):
+        rep, _ = self.full_report()
+        self.assertEqual(rep["informed_effect"], {I1: {
+            "resolved": -1.0,            # medians 0.0 vs 1.0
+            "f2p_frac": 0.25,            # 0.75 vs 0.5
+            "swt_success": 0.0,          # both 1.0
+            "kill_primary": None,        # unassisted has no median
+            "kill_secondary": None,      # informed has no median
+            "incompatible_frac": 0.25,   # 0.25 vs 0.0
+        }})
+
+    def test_o12_effect_only_lists_instances_present_in_both_conditions(self):
+        rep, _ = self.full_report()
+        self.assertEqual(list(rep["informed_effect"]), [I1])
+        self.assertNotIn(I2, rep["informed_effect"])
+        self.assertNotIn(I3, rep["informed_effect"])
+
+    def test_o12_c22_without_informed_entries_the_keys_are_empty(self):
+        rep, _ = self.full_report(False)
+        self.assertEqual(rep["informed"], [])
+        self.assertEqual(rep["informed_effect"], {})
+        text = report.render_markdown(rep)
+        self.assertNotIn("## informed", text)
+
+    def test_o12_informed_only_run_has_no_unassisted_instances(self):
+        shutil.rmtree(self.runs, True)
+        run_dir = self.make_run([self.informed_entry(I2)])
+        rep = report.build(run_dir, fixture_dir=None, scores={}, processes={}, min_mutants=10,
+                           informed_scores={(I2, 1): sc(I2)}, informed_processes={(I2, 1): proc(I2)})
+        self.assertEqual(rep["instances"], [])
+        self.assertEqual([b["instance_id"] for b in rep["informed"]], [I2])
+        self.assertEqual(rep["informed_effect"], {})
+        self.assertEqual(rep["informed"][0]["metrics"]["resolved"]["harness"], [1.0])
+
+    def test_o12_informed_entries_do_not_leak_into_the_unassisted_blocks(self):
+        shutil.rmtree(self.runs, True)
+        run_dir = self.make_run([self.harness_entry(I1), self.informed_entry(I1)])
+        rep = report.build(run_dir, fixture_dir=None, scores={(I1, 1): sc(I1, f2p=0.25)}, processes={(I1, 1): proc(I1)},
+                           min_mutants=10, informed_scores={(I1, 1): sc(I1, f2p=0.75)},
+                           informed_processes={(I1, 1): proc(I1, PC9="fail")})
+        self.assertEqual(rep["instances"][0]["metrics"]["f2p_frac"]["harness"], [0.25])
+        self.assertEqual(rep["informed"][0]["metrics"]["f2p_frac"]["harness"], [0.75])
+        self.assertEqual(rep["instances"][0]["process_fails"], NO_FAILS)
+        self.assertEqual(rep["informed"][0]["process_fails"], dict(NO_FAILS, PC9=1))
+        self.assertEqual(rep["informed_effect"][I1]["f2p_frac"], 0.5)
+
+    def test_o12_write_accepts_a_report_with_informed_sections(self):
+        rep, _ = self.full_report()
+        self.results.mkdir()
+        json_path, md_path = report.write(rep, self.results, token=self.token)
+        self.assertEqual(json.loads(json_path.read_text(encoding="utf-8")), rep)
+        self.assertIn("## informed effect", md_path.read_text(encoding="utf-8"))
+
+
+class InformedRenderTests(InformedReportCase):
+    def test_o12_markdown_order_is_unassisted_then_informed_then_effect_with_the_note(self):
+        rep, _ = self.full_report()
+        text = report.render_markdown(rep)
+        inf, eff = text.index("## informed condition"), text.index("## informed effect")
+        self.assertLess(inf, eff)
+        self.assertLess(text.rindex(I3), inf)
+        self.assertLess(text.index(I1), inf)
+        self.assertGreater(text.index(I2), inf)
+        self.assertLess(text.index(I2), eff)
+        section = text[eff:]
+        self.assertIn(NOTE_EFFECT, section)
+        self.assertIn(I1, section)
+        self.assertNotIn(I2, section)
+        self.assertNotIn(I3, section)
+        values = floats(section)
+        for expected in (-1.0, 0.25):
+            self.assertIn(expected, values)
+
+    def test_o12_informed_sections_use_the_same_table_format(self):
+        rep, _ = self.full_report()
+        lines = report.render_markdown(rep).splitlines()
+        header3 = "| metric | r1 | r2 | r3 | summary | baseline (per repeat) | range | verdict | repeats above/within/below |"
+        header1 = "| metric | r1 | summary | baseline (per repeat) | range | verdict | repeats above/within/below |"
+        self.assertEqual(lines.count(header3), 2)
+        self.assertEqual(lines.count(header1), 2)
+        self.assertEqual(lines.count("| check | r1 | r2 | r3 | fails |"), 2)
+
+    def test_o12_c22_unassisted_markdown_lines_survive_adding_informed_entries(self):
+        with_inf, _ = self.full_report(True)
+        without, _ = self.full_report(False)
+        full = report.render_markdown(with_inf).splitlines()
+        base = report.render_markdown(without).splitlines()
+        position = 0
+        for line in base:
+            try:
+                position = full.index(line, position) + 1
+            except ValueError:
+                self.fail("unassisted markdown line lost or reordered: %r" % line)
+
+
+BASE_COMMIT = "106884acfab6bda33330fe4c18dc8f838b895abb"
+
+
+def base_report_module():
+    """selfcheck/report.py exactly as at the base commit, loaded as an independent oracle renderer."""
+    import importlib.util
+    import subprocess
+    source = subprocess.run(["git", "show", "%s:selfcheck/report.py" % BASE_COMMIT], cwd=m.F.ROOT, capture_output=True,
+                            check=True).stdout.decode("utf-8")
+    spec = importlib.util.spec_from_loader("selfcheck._report_base", loader=None)
+    module = importlib.util.module_from_spec(spec)
+    module.__package__ = "selfcheck"
+    exec(compile(source, "report_base.py", "exec"), module.__dict__)
+    return module
+
+
+def tables_of(lines):
+    """Consecutive runs of table lines."""
+    tables, current = [], []
+    for line in lines:
+        if line.lstrip().startswith("|"):
+            current.append(line)
+        elif current:
+            tables.append(current)
+            current = []
+    if current:
+        tables.append(current)
+    return tables
+
+
+class MarkdownOracleTests(InformedReportCase):
+    """G2 (table validity) and G3 (byte equality with the base-commit renderer when no informed entries exist)."""
+
+    def assert_valid_table(self, table):
+        self.assertGreaterEqual(len(table), 3, table)
+        for line in table:
+            self.assertTrue(line.startswith("| ") and line.endswith(" |"), line)
+            self.assertNotIn("||", line)
+        header, sep, rows = cells_of(table[0]), cells_of(table[1]), [cells_of(l) for l in table[2:]]
+        self.assertTrue(all(header), header)
+        self.assertEqual(sep, ["---"] * len(header))
+        self.assertEqual(table[1], "| " + " | ".join(sep) + " |")
+        for row in rows:
+            self.assertEqual(len(row), len(header), row)
+        return header, rows
+
+    def test_g2_informed_effect_and_condition_tables_are_valid_markdown_tables(self):
+        rep, _ = self.full_report()
+        lines = report.render_markdown(rep).splitlines()
+        eff_at = lines.index("## informed effect")
+        inf_at = next(i for i, l in enumerate(lines) if l.startswith("## informed condition"))
+        effect_tables = tables_of(lines[eff_at:])
+        self.assertEqual(len(effect_tables), 1)
+        header, rows = self.assert_valid_table(effect_tables[0])
+        flat = [c for row in rows for c in row] + header
+        first_col = [row[0] for row in rows]
+        for name in METRICS:
+            self.assertTrue(name in header or any(name in c for c in first_col), name)
+        self.assertTrue(any(I1 in c for c in flat))
+        self.assertFalse(any(I2 in c or I3 in c for c in flat))
+        self.assertGreaterEqual(len(rows), 1)
+        informed_tables = tables_of(lines[inf_at:eff_at])
+        self.assertGreaterEqual(len(informed_tables), 4)  # two instances x (metric table, check table)
+        shapes = []
+        for table in informed_tables:
+            header, rows = self.assert_valid_table(table)
+            shapes.append(header[0])
+        self.assertEqual(shapes.count("metric"), 2)
+        self.assertEqual(shapes.count("check"), 2)
+        unassisted = tables_of(lines[:inf_at])
+        for table in unassisted:
+            self.assert_valid_table(table)
+
+    def reports_without_informed(self):
+        from selfcheck.tests import review_fakes as R
+        out = {}
+        shutil.rmtree(self.runs, True)
+        run_dir, fixture_dir, scores, processes = BuildTests.two_instances(self)
+        out["plain"] = call_build(run_dir, fixture_dir, scores, processes)
+        cats = R.payload(understanding=R.category("diverged", R.finding("WRONG", "[t:1]", True)))
+        ok = {"status": "ok", "instance_id": I1, "model": R.MODEL, "effort": R.EFFORT, "categories": cats,
+              "false_claims": [{"category": "understanding", "summary": "WRONG", "citation": "[t:1]"}]}
+        bad = {"status": "error", "instance_id": I2, "error": "boom"}
+        out["reviews"] = call_build(run_dir, fixture_dir, scores, processes, reviews={(I1, 1): ok, (I2, 1): bad})
+        out["no baseline"] = call_build(run_dir, None, scores, processes)
+        shutil.rmtree(self.fixtures)
+        self.fixtures.mkdir()
+        empty = self.make_fixture([I1, I2], {I1: [None, None], I2: [None, None]})
+        out["empty baseline cell"] = call_build(run_dir, empty, scores, processes)
+        out["repeats"] = call_build(self.repeated_run(I1, 3), None, {}, {})
+        return out
+
+    def test_g3_markdown_without_informed_entries_equals_the_base_commit_renderer(self):
+        base = base_report_module()
+        for label, rep in self.reports_without_informed().items():
+            with self.subTest(label):
+                self.assertEqual(rep["informed"], [])
+                self.assertEqual(rep["informed_effect"], {})
+                old_shape = {k: v for k, v in rep.items() if k not in ("informed", "informed_effect")}
+                self.assertEqual(report.render_markdown(rep), base.render_markdown(old_shape))
 
 
 if __name__ == "__main__":

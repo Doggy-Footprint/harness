@@ -37,7 +37,7 @@ After stages 1 and 2 are complete, open a workflow-approach spec for selfcheck:
 - Whether the baseline arm needs a matching informed condition, given it never asks.
 
 ## Spec
-none — not started; blocked on stages 1 and 2. Prior selfcheck spec: `agent-docs/spec-logs/94b886658b88a7ef-selfcheck-analysis.md` (v6, complete).
+Completed in `agent-docs/spec-logs/54ad633104783ebe-selfcheck-informed-reviewer-condition.md` (v4, complete, run 54ad633104783ebe). Earlier: none — not started; blocked on stages 1 and 2. Prior selfcheck spec: `agent-docs/spec-logs/94b886658b88a7ef-selfcheck-analysis.md` (v6, complete).
 
 ## Execution Ledger
 - Evidence: live check `a41e64cb9bbbef03` (opus-5-5, effort low, harness `bf8048e`), baseline fixture `246588b0e19680ee`, report `selfcheck/results/a41e64cb9bbbef03.md`.

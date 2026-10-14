@@ -212,5 +212,62 @@ class BuildTests(ManifestCase):
                 self.assertNotIn("freeze_after", built["images"])
 
 
+AGENT_DIR = F.ROOT / "selfcheck" / "agent"
+BASELINE_FIXTURE = F.ROOT / "selfcheck" / "fixtures" / "baseline" / "246588b0e19680ee" / "manifest.json"
+
+
+def real_hash(*names):
+    digest = hashlib.sha256()
+    for name in names:
+        digest.update((AGENT_DIR / name).read_bytes())
+    return digest.hexdigest()
+
+
+class InformedManifestTests(unittest.TestCase):
+    """Spec 54ad633104783ebe O3 (R4, C5). No patching: the hashes are over the real agent files."""
+
+    def build(self, **over):
+        kwargs = dict(
+            run_id="0123456789abcdef", instance=INSTANCE, arm="harness", cfg=F.cfg_copy(),
+            selfcheck_commit="c" * 40, harness_ref="HEAD", harness_commit="d" * 40, start_commit=F.INSTALL_HEAD,
+            install=dict(INSTALL), images=copy.deepcopy(IMAGES), proxy=copy.deepcopy(PROXY),
+            driver_state=driver_state(), prompt=prompt_for("harness"),
+        )
+        kwargs.update(over)
+        return manifest.build(**kwargs)
+
+    def test_o3_unassisted_output_is_unchanged(self):
+        for label, kw in (("default", {}), ("explicit", {"user_mode": "unassisted"})):
+            with self.subTest(label):
+                built = self.build(**kw)
+                self.assertEqual(set(built), F.MANIFEST_KEYS)
+                self.assertNotIn("user_mode", built)
+                self.assertEqual(built["user_sim_hash"], real_hash("user_sim.py", "driver.py"))
+
+    def test_o3_unassisted_hash_equals_the_recorded_baseline_fixture(self):
+        recorded = json.loads(BASELINE_FIXTURE.read_text(encoding="utf-8"))["conditions"]["user_sim_hash"]
+        self.assertEqual(self.build()["user_sim_hash"], recorded)
+
+    def test_o3_informed_adds_the_key_and_hashes_three_files_in_order(self):
+        built = self.build(user_mode="informed")
+        self.assertEqual(set(built), F.MANIFEST_KEYS | {"user_mode"})
+        self.assertEqual(built["user_mode"], "informed")
+        order = ("user_sim.py", "driver.py", "informed_driver.py")
+        self.assertEqual(built["user_sim_hash"], real_hash(*order))
+        self.assertNotEqual(built["user_sim_hash"], real_hash("informed_driver.py", "driver.py", "user_sim.py"))
+        self.assertNotEqual(built["user_sim_hash"], real_hash("user_sim.py", "driver.py"))
+
+    def test_o3_informed_differs_from_unassisted_only_in_user_mode_and_hash(self):
+        self.assertEqual(manifest.differences(self.build(), self.build(user_mode="informed")),
+                         {"user_mode", "user_sim_hash"})
+
+    def test_o3_fixture_id_differs_between_modes(self):
+        from selfcheck import fixture
+        plain = fixture.fixture_id(fixture.conditions(self.build()))
+        inf = fixture.fixture_id(fixture.conditions(self.build(user_mode="informed")))
+        self.assertNotEqual(plain, inf)
+        self.assertEqual(plain, fixture.fixture_id(fixture.conditions(self.build())))
+
+
 if __name__ == "__main__":
     unittest.main()
