@@ -468,6 +468,13 @@ def migrate_codex_unsupported(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_session_metrics(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "record per-session run metrics (session_metrics events) in telemetry",
+        "widen the Claude PostToolUse telemetry matcher to Read/Grep/Glob/LS/NotebookEdit and run telemetry on SessionEnd",
+    ]
+
+
 def migrate_missing_stale_records(target: Path, dry_run: bool) -> list[str]:
     docs_root = target / "agent-docs"
     if not docs_root.is_dir():
@@ -512,6 +519,7 @@ MIGRATIONS = (
     (parse_version("0.21.0"), "expand test-audit scanner rules to more languages, flags, and runners", migrate_test_audit_rules),
     (parse_version("0.22.0"), "split test-audit language guidance into per-language files", migrate_test_audit_language_files),
     (parse_version("0.23.0"), "mark Codex unsupported and drop ineffective Codex sandbox_mode", migrate_codex_unsupported),
+    (parse_version("0.24.0"), "record per-session run metrics in telemetry", migrate_session_metrics),
 )
 
 

@@ -7,8 +7,3 @@ File: ea9e5b18dd5975cb-dashboard-skill-partial-use.md
 Summary: From issue #7, dashboard partial-use classification should also count harness Skill invocations; not started
 Related Files: analytics/app.py, analytics/transcripts.py, analytics/usage.py
 Related Symbols: _classify_sessions, _has_harness_evidence, _collect_turn
----
-File: 3cb41f5d6d74d413-per-version-run-metrics.md
-Summary: From issue #10, record harness-version-tagged per-run metrics at run time for before/after comparison; not started
-Related Files: harness/hooks/telemetry_hook.py, analytics/usage.py, analytics/store.py
-Related Symbols: telemetry.emit

@@ -79,7 +79,7 @@ BRACE_LANGS = ["javascript", "typescript", "go", "rust", "java", "kotlin", "csha
 NEW_LANGS = ["kotlin", "csharp", "swift", "php", "ruby", "cpp"]
 
 
-def test_name(lang, ident):
+def expected_test_name(lang, ident):
     cap = ident[0].upper() + ident[1:]
     return {
         "python": f"test_{ident}", "javascript": ident, "typescript": ident,
@@ -1111,7 +1111,7 @@ class TestVO3BodyModel(RuleScanCase):
                         t = T("a", start=starts, body=[NEUTRAL[lang]])
                     found = self.flags(lang, [t])
                     self.assertEqual(len(found), 1)
-                    self.assertEqual(found[0]["name"], test_name(lang, "a"))
+                    self.assertEqual(found[0]["name"], expected_test_name(lang, "a"))
                     self.assertNotIn("duplicate_name", found[0]["flags"])
 
     def test_b3_csharp_two_testcase_attributes_one_test_named_a(self):
@@ -1145,7 +1145,7 @@ class TestVO3BodyModel(RuleScanCase):
                         if lang == "php" and text.startswith("@") and separated:
                             prefix = [text, CODE_LINE[lang]]
                         found = self.flags(lang, [T("a", prefix=prefix, body=[NEUTRAL[lang]])])
-                        named = [t for t in found if t["name"] == test_name(lang, "a")]
+                        named = [t for t in found if t["name"] == expected_test_name(lang, "a")]
                         self.assertEqual(len(named), 1, found)
                         if separated:
                             self.assertNotIn(flag, named[0]["flags"])
@@ -1606,14 +1606,14 @@ class TestVO10Robustness(ScanTestCase):
                 tests = [T("a", body=[NEUTRAL[lang]], unclosed=True), T("b", body=[NEUTRAL[lang]])]
                 data = self.scan_with_sibling(FILES[lang], render(lang, tests))
                 names = [t["name"] for t in self.entry_tests(data, FILES[lang])]
-                self.assertEqual(names, [test_name(lang, "a"), test_name(lang, "b")])
+                self.assertEqual(names, [expected_test_name(lang, "a"), expected_test_name(lang, "b")])
 
     def test_e1_unbalanced_brace_without_a_following_test(self):
         for lang in BRACE_LANGS:
             with self.subTest(lang=lang):
                 data = self.scan_with_sibling(FILES[lang], render(lang, [T("a", body=[NEUTRAL[lang], "{"], unclosed=True, balance=False)]))
                 names = [t["name"] for t in self.entry_tests(data, FILES[lang])]
-                self.assertEqual(names, [test_name(lang, "a")])
+                self.assertEqual(names, [expected_test_name(lang, "a")])
 
     def test_e1_ruby_missing_end(self):
         text = "RSpec.describe Foo do\n  it \"a\" do\n    expect(x).to eq(1)\n  it \"b\" do\n    expect(x).to eq(1)\n"
@@ -1632,7 +1632,7 @@ class TestVO10Robustness(ScanTestCase):
                     tests = [T("a", body=[sn, NEUTRAL[lang]], balance=False), T("b", body=[NEUTRAL[lang]])]
                     data = self.scan_with_sibling(FILES[lang], render(lang, tests))
                     names = [t["name"] for t in self.entry_tests(data, FILES[lang])]
-                    self.assertEqual(names, [test_name(lang, "a"), test_name(lang, "b")])
+                    self.assertEqual(names, [expected_test_name(lang, "a"), expected_test_name(lang, "b")])
         for label, literal in (("brace in string", "\"{\""), ("unterminated string", "\"unterminated")):
             with self.subTest(lang="ruby", case=label):
                 text = f"RSpec.describe Foo do\n  it \"a\" do\n    s = {literal}\n  end\n\n  it \"b\" do\n  end\nend\n"

@@ -86,3 +86,8 @@ File: 4e61454e6935d1cc-usage-analysis-workflow-continuation.md
 Summary: analytics.usage marks only the Skill-call turn as invoked; continuation turns of a workflow inflate "missed" — choose workflow_state option A or B
 Related Files: analytics/usage.py, analytics/tests/test_usage.py, agent-docs/spec-logs/cce0155b008eaf53-workflow-usage-analysis.md
 Related Symbols: extract_requests, apply_labels, mine_variants, build_report
+---
+File: 3cb41f5d6d74d413-per-version-run-metrics.md
+Summary: From issue #10, record harness-version-tagged per-run metrics at run time for before/after comparison; not started
+Related Files: harness/hooks/telemetry_hook.py, analytics/usage.py, analytics/store.py
+Related Symbols: telemetry.emit

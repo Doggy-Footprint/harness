@@ -109,6 +109,9 @@ class ProductionServerTests(unittest.TestCase):
                 self.assertNotEqual(process.returncode, 0)
                 self.assertTrue(process.stderr.strip())
 
+    # The package-relative default can only serve when analytics/frontend/dist
+    # exists; it is an untracked build output (npm run build), absent in fresh checkouts.
+    @unittest.skipUnless((ROOT / "analytics" / "frontend" / "dist").is_dir(), "analytics/frontend/dist not built")
     def test_v6_a3_package_relative_and_home_defaults_serve_with_only_port_override(self):
         """F8/A3: with no ANALYTICS_* overrides except ANALYTICS_PORT, the process must
         use home-based telemetry/transcript defaults and package-relative price/build defaults."""
