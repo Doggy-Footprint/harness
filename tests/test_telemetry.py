@@ -987,6 +987,42 @@ class TestEdge(TelemetryTestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(self.read_events(telemetry_dir, repo), [])
 
+    def test_c17_post_tool_use_failure_non_bash_tool_writes_nothing(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        self.write_spec(repo, name="sample", test_command="python3 -m unittest")
+        env = self.telemetry_env(telemetry_dir)
+        payload = {
+            "hook_event_name": "PostToolUseFailure",
+            "tool_name": "Write",
+            "tool_input": {"command": "python3 -m unittest"},
+            "error_code": "timeout",
+            "session_id": "s1",
+        }
+
+        result = self.run_hook_env(repo, "telemetry_hook.py", payload, env)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.read_events(telemetry_dir, repo), [])
+
+    def test_c21_post_tool_use_failure_normalizes_whitespace_before_matching(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        self.write_spec(repo, name="sample", test_command="python3 -m unittest")
+        env = self.telemetry_env(telemetry_dir)
+        payload = {
+            "hook_event_name": "PostToolUseFailure",
+            "tool_name": "Bash",
+            "tool_input": {"command": "python3  -m unittest"},
+            "error_code": "timeout",
+            "session_id": "s1",
+        }
+
+        result = self.run_hook_env(repo, "telemetry_hook.py", payload, env)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        events = self.read_events(telemetry_dir, repo)
+        self.assertEqual(len(events), 1, events)
+        self.assertEqual(events[0]["event"], "tool_failure")
+
     def test_c18_two_events_appended_with_v1_and_harness_version(self):
         repo, telemetry_dir = self.install_with_telemetry_dir()
         env = self.telemetry_env(telemetry_dir)
