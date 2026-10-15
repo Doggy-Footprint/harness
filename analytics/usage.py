@@ -149,12 +149,10 @@ def _event_token(item: dict) -> str:
     return f"end:{item.get('status')}"
 
 
-def _read_runs(telemetry_dir: Path) -> tuple[dict[str, list[dict]], int]:
-    runs: dict[str, list[dict]] = {}
+def _read_events(file: Path) -> tuple[list[dict], int] | None:
+    events: list[dict] = []
     skipped = 0
-    for file in sorted(telemetry_dir.glob("*.jsonl"), key=lambda item: item.name):
-        if not file.is_file():
-            continue
+    try:
         # Undecodable bytes must not abort the scan; they surface as skipped lines.
         with file.open(encoding="utf-8", errors="replace") as handle:
             for line in handle:
@@ -164,14 +162,34 @@ def _read_runs(telemetry_dir: Path) -> tuple[dict[str, list[dict]], int]:
                 if item is None:
                     skipped += 1
                     continue
-                run_id = item.get("workflow_run_id")
                 event = item.get("event")
+                run_id = item.get("workflow_run_id")
                 if not isinstance(event, str) or event not in _WORKFLOW_EVENTS:
                     continue
                 if not isinstance(run_id, str) or not run_id:
                     continue
-                runs.setdefault(run_id, []).append(item)
-    return runs, skipped
+                events.append(item)
+    except OSError:
+        return None
+    return events, skipped
+
+
+def _read_runs(telemetry_dir: Path) -> tuple[dict[str, list[dict]], int, int]:
+    runs: dict[str, list[dict]] = {}
+    skipped = 0
+    skipped_files = 0
+    for file in sorted(telemetry_dir.glob("*.jsonl"), key=lambda item: item.name):
+        if not file.is_file():
+            continue
+        read = _read_events(file)
+        if read is None:
+            skipped_files += 1
+            continue
+        events, file_skipped = read
+        skipped += file_skipped
+        for item in events:
+            runs.setdefault(item["workflow_run_id"], []).append(item)
+    return runs, skipped, skipped_files
 
 
 def _hashable_status(item: dict) -> dict:
@@ -182,8 +200,8 @@ def _hashable_status(item: dict) -> dict:
     return item
 
 
-def mine_variants(telemetry_dir: Path) -> tuple[list[dict], int]:
-    runs, skipped = _read_runs(telemetry_dir)
+def mine_variants(telemetry_dir: Path) -> tuple[list[dict], int, int]:
+    runs, skipped, skipped_files = _read_runs(telemetry_dir)
     groups: dict[str, dict] = {}
     for run_id, events in runs.items():
         variant = " > ".join(_event_token(item) for item in events)
@@ -214,7 +232,7 @@ def mine_variants(telemetry_dir: Path) -> tuple[list[dict], int]:
         group["run_ids"].sort()
         group["reasons"] = sorted(group["reasons"])
     variants.sort(key=lambda group: (-group["count"], group["variant"]))
-    return variants, skipped
+    return variants, skipped, skipped_files
 
 
 def _parse_label(line: str) -> tuple[tuple[str, int], bool] | None:
@@ -287,14 +305,14 @@ def build_report(transcripts_root: Path, telemetry_dir: Path, labels_path: Path 
         file_requests, skipped = extracted
         requests.extend(file_requests)
         skipped_lines += skipped
-    variants, telemetry_skipped = mine_variants(telemetry_dir)
+    variants, telemetry_skipped, telemetry_files = mine_variants(telemetry_dir)
     confusion = apply_labels(requests, labels_path) if labels_path is not None else None
     return {
         "requests": requests,
         "variants": variants,
         "confusion": confusion,
         "skipped_lines": skipped_lines + telemetry_skipped,
-        "skipped_files": skipped_files,
+        "skipped_files": skipped_files + telemetry_files,
     }
 
 
