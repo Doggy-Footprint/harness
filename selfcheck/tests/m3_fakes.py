@@ -266,7 +266,7 @@ def state(status="completed", *, results=None, elapsed_s=12.5, rate_limit=None, 
 
 
 def write_run(runs_dir, run_id, entries, *, halted=None, created_at=0, params=None):
-    """entries: dicts {instance_id, arm, status, repeat?, manifest?, state?, prediction?, extra?: kwargs for write_entry}.
+    """entries: dicts {instance_id, arm, status, repeat?, user_mode?, manifest?, state?, prediction?, extra?: kwargs for write_entry}.
 
     manifest/state/prediction default to None (file omitted) unless given. Returns the run directory.
     """

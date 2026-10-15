@@ -19,8 +19,6 @@ UUID_B = "bbbbbbbb-0000-4000-8000-000000000002"
 TOKEN = "tok-" + "cd34" * 12
 BAD_JSON_LINE = "this is { not json"
 
-# Spec challenge FR4: whether the model JSON is wrapped in a top-level "categories" key is not stated.
-# The tests assume the wrapped form (the same shape parse_review returns). Flip here if the spec says otherwise.
 WRAP_CATEGORIES = True
 
 INSTANCE = {
