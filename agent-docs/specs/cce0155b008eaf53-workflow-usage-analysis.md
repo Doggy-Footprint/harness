@@ -1,5 +1,5 @@
 ---
-version: 1
+version: 2
 run_id: cce0155b008eaf53
 status: active
 base_commit: 51459c5f6a83bc07a3f5f187785c9792e5813908
@@ -28,7 +28,7 @@ Mutation tool: mutmut 3.8.0 — 커밋하지 않는 임시 `setup.cfg`(`[mutmut]
 
 # Signatures
 usage.extract_requests(path: Path) -> tuple[list[dict], int] | None   # (요청 레코드들, skipped_lines); 읽을 수 없거나 UTF-8이 아니면 None
-usage.mine_variants(telemetry_dir: Path) -> tuple[list[dict], int]   # (variant 목록, skipped_lines)
+usage.mine_variants(telemetry_dir: Path) -> tuple[list[dict], int, int]   # (variant 목록, skipped_lines, skipped_files)  [v2: skipped_files 추가]
 usage.apply_labels(requests: list[dict], labels_path: Path) -> dict   # 각 request에 "warranted" 추가, confusion dict 반환; 읽기 실패 시 OSError/UnicodeDecodeError 전파
 usage.build_report(transcripts_root: Path, telemetry_dir: Path, labels_path: Path | None) -> dict
 usage.main(argv: list[str] | None = None) -> int
@@ -49,7 +49,7 @@ CLI: python3 -m analytics.usage [--transcripts DIR] [--telemetry DIR] [--labels 
 | FR10 | variant 항목: {variant, count, run_ids(오름차순), compliant, noncompliant, incomplete, reasons(오름차순 합집합)}; 각 run을 `analytics.compliance.evaluate`로 평가해 completed가 거짓이면 incomplete, compliant 참/거짓이면 각각 집계. 목록은 count 내림차순, 같으면 variant 오름차순 | must | UI2 |
 | FR11 | apply_labels: 라벨 파일 각 비어있지 않은 줄은 {session_id: str, request_index: bool 아닌 int ≥ 0, warranted: bool}인 JSON 객체여야 하며 아니면 invalid_labels. 같은 (session_id, request_index) 키가 다시 나오면 뒤의 값이 이기고 duplicate_labels 증가. 일치하는 요청이 없으면 unmatched_labels | must | UI3 |
 | FR12 | confusion = {used: warranted∧invoked, misfire: ¬warranted∧invoked, missed: warranted∧¬invoked, correct_skip: ¬warranted∧¬invoked, unlabeled, invalid_labels, duplicate_labels, unmatched_labels}. 라벨이 있는 요청에는 "warranted": bool, 없는 요청에는 "warranted": null이 추가됨 | must | UI3 |
-| FR13 | build_report 출력: {"requests": [...], "variants": [...], "confusion": dict 또는 labels 미지정 시 null, "skipped_lines": transcript+telemetry 합, "skipped_files": 읽지 못한 transcript 수}. requests는 파일 순서(FR1) 후 request_index 순 | must | UI1,UI2,UI3 |
+| FR13 | build_report 출력: {"requests": [...], "variants": [...], "confusion": dict 또는 labels 미지정 시 null, "skipped_lines": transcript+telemetry 합, "skipped_files": 읽지 못한(OSError/UnicodeDecodeError) transcript 파일과 telemetry 파일 수}. requests는 파일 순서(FR1) 후 request_index 순 | must | UI1,UI2,UI3 |
 | FR14 | CLI: 기본 --transcripts `~/.claude/projects`, --telemetry `~/.harness/telemetry`. 성공 시 stdout에 build_report 결과를 JSON 한 개(ensure_ascii=False)로 출력하고 0 반환. --labels 파일을 읽지 못하면 stderr에 경로를 포함한 한 줄 메시지, stdout 비움, 2 반환 | must | UI1 |
 
 # Errors
@@ -57,6 +57,7 @@ CLI: python3 -m analytics.usage [--transcripts DIR] [--telemetry DIR] [--labels 
 - 읽을 수 없거나 UTF-8이 아닌 transcript — extract_requests가 None, skipped_files 1 증가 — 다른 파일 정상
 - 깨진 JSON 줄/비-dict JSON 줄(비어있지 않은) — skipped_lines 1 증가 — 앞뒤 줄 정상 처리
 - content/input/origin 등 필드 타입이 기대와 다름 — 해당 필드 없는 것으로 취급, 예외 없음 — 레코드 나머지 처리 정상
+- 열 수 없는 telemetry 파일(OSError) — 그 파일 건너뜀, skipped_files 1 증가 — 다른 telemetry 파일과 transcript 결과 정상, exit 0. 비-UTF-8 바이트는 대체 문자로 읽혀 해당 줄이 깨진 줄로 처리될 수 있음
 - 라벨 줄 형식 오류 — invalid_labels 증가 — 다른 라벨 정상
 - --labels 파일 읽기 실패 — stderr 메시지, exit 2, stdout 비어있음 — 아무 출력 파일도 쓰지 않음
 
@@ -78,6 +79,7 @@ CLI: python3 -m analytics.usage [--transcripts DIR] [--telemetry DIR] [--labels 
 | C13 | boundary | 깊이 1(`root/x.jsonl`), 깊이 2, 깊이 3(`root/p/s/subagents/a.jsonl`) | 깊이 2만 대상 |
 | C14 | error | CLI --labels 없는 경로 | exit 2, stderr에 경로, stdout 빈 문자열 |
 | C15 | normal | CLI 정상 실행 | stdout JSON 파싱 가능, exit 0, 한글 텍스트 비이스케이프 |
+| C17 | error | telemetry 디렉터리 안 `*.jsonl` 파일 하나가 읽기 권한 없음(또는 open이 OSError), 다른 파일 정상 | 그 파일만 제외, skipped_files 1, CLI exit 0이고 stderr에 labels 메시지 없음 |
 | C16 | boundary | human 요청 0개 파일 / 요청이 파일 마지막 레코드 | 요청 0개 / 빈 턴(invoked=false, 빈 집계) |
 
 # Quality Applicability
@@ -112,7 +114,7 @@ CLI: python3 -m analytics.usage [--transcripts DIR] [--telemetry DIR] [--labels 
 | VO5 | FR9,FR10,C7 | mine_variants | unit | equivalence partitioning | 동일 variant 2 run, 다른 variant, run 없는 이벤트, 비 workflow 이벤트, noncompliant run, incomplete run, 동률 정렬 | 100% | 항목/정렬 기대값 | pytest |
 | VO6 | FR11,FR12,C8–C10 | apply_labels | unit | decision table + equivalence partitioning | 4개 cell, unlabeled, invalid 6종(C9), duplicate, unmatched | 100% | confusion 기대값과 warranted 필드 | pytest |
 | VO7 | FR14,C14,C15 | CLI main | integration(subprocess 또는 main 직접 호출+capsys) | equivalence partitioning | 정상, labels 읽기 실패 | 100% | exit code, stdout/stderr | pytest |
-| VO8 | Errors,C11,C12 | 오류 처리 | unit | equivalence partitioning | 깨진 줄, 비-dict 줄, 빈 줄, 루트 없음, 비-UTF-8, 잘못된 필드 타입(content=int, input=str, origin=str) | 100% | 카운터와 예외 없음 | pytest |
+| VO8 | Errors,C11,C12 | 오류 처리 | unit | equivalence partitioning | 깨진 줄, 비-dict 줄, 빈 줄, 루트 없음, 비-UTF-8, 잘못된 필드 타입(content=int, input=str, origin=str), 열 수 없는 telemetry 파일(C17) | 100% | 카운터와 예외 없음 | pytest |
 | VO9 | QR2 | build_report 성능 | integration | boundary value (2-value) | 20,000 레코드 입력 1개 | 100% | ≤ 3 s | pytest |
 | VO10 | QR3 | extract_requests, mine_variants | unit | random | hypothesis 300 examples × 2 surface, seed 0 | none — random | 예외 없음, skipped ≤ 비어있지 않은 줄 수 | pytest(hypothesis) |
 | VO11 | QR4 | usage.py 소스 | unit | syntax | 금지 import 6종, open(... 'w'/'a') 호출 | 100% | 0개 | pytest(ast) |
@@ -128,6 +130,7 @@ CLI: python3 -m analytics.usage [--transcripts DIR] [--telemetry DIR] [--labels 
 | A4 | human 판정은 origin.kind 우선, origin 없는 구형 기록은 FR2 휴리스틱 | 현재 세션 transcript에서 origin.kind 확인; 구형 포맷 확인 불가 | brief v1 — approved |
 | A5 | 요청 텍스트를 잘라내지 않고 전체 포함 | 분류기 입력으로 쓰기 위함; 출력이 커질 수 있음 | brief v1 — approved |
 | A6 | 플러그인 접두사(`x:workflow-approach`) Skill 이름은 호출로 보지 않음 | 현재 설치 형태는 접두사 없음 | brief v1 — approved |
+| A7 | 해석 기록: `isSidechain`/`isMeta`는 truthy 판정; dict가 아닌 origin은 "없음"으로 보고 FR2 휴리스틱 적용; content가 str/list가 아니면 text="" ; 누락·비문자열 phase/result/status는 `str()` 값으로 토큰화; run id가 유효하지 않은 workflow 이벤트와 라벨 파일 줄은 skipped_lines에 포함하지 않음; 깊이 2의 `*.jsonl` 디렉터리는 대상 아님; list/dict status는 compliance 평가 전 JSON 문자열화 | reconcile 단계 양 역할 질의; Errors의 "타입 다르면 없는 것으로 취급"과 FR13 문구에서 도출 | contract-only (brief 항목 아님) |
 
 # Traceability
 | requirement id | Case ids | obligation ids | evidence procedure |
@@ -139,7 +142,7 @@ CLI: python3 -m analytics.usage [--transcripts DIR] [--telemetry DIR] [--labels 
 | FR9,FR10 | C7 | VO5 | pytest |
 | FR11,FR12 | C8,C9,C10 | VO6 | pytest |
 | FR14 | C14,C15 | VO7 | pytest |
-| Errors | C11,C12 | VO8 | pytest |
+| Errors | C11,C12,C17 | VO8 | pytest |
 | QR2 | — | VO9 | pytest |
 | QR3 | — | VO10 | pytest(hypothesis) |
 | QR4 | — | VO11 | pytest |
@@ -149,19 +152,22 @@ CLI: python3 -m analytics.usage [--transcripts DIR] [--telemetry DIR] [--labels 
 # Workflow Control
 | item | value |
 | --- | --- |
-| correction batches used | 0 |
+| correction batches used | 1 |
 | verifier invocations | 0 |
-| open finding ids | none |
+| open finding ids | F1 |
 
 Audit state (one entry per obligation; retain prior decisions in the execution ledger):
 | obligation id | spec version | evidence references and revision | accepted / open / invalidated / pending | rationale and mutation outcome | dependencies and reopening evidence |
 | --- | --- | --- | --- | --- | --- |
-| VO1–VO13 | 1 | — | pending | — | — |
+| VO1–VO13 | 2 | test_usage.py (104 tests) | pending | v2에서 VO8에 C17 추가 | VO8 reopened by F1 |
 
 Execution ledger (append attempts; preserve failed approaches):
 | attempt | finding / failure signature | cause hypothesis | changed approach / new evidence | result / disposition |
 | --- | --- | --- | --- | --- |
+| 1 | F1: 열 수 없는 telemetry 파일의 OSError가 build_report 밖으로 전파되어 main이 'cannot read labels'로 오보, exit 2 | main의 except가 build_report 전체를 감쌈 (verified: usage.py main/_read_runs 코드) | spec v2 Errors/C17 추가; implementer에 telemetry 파일 단위 skip, main은 labels 오류만 보고; test-implementer에 C17 테스트 | pending |
 
 # Version Log
+## v2
+- Contract-only: 열 수 없는 telemetry 파일 처리(Errors, C17, FR13 skipped_files 정의) 추가 — implementer 보고 #4에서 labels 오류 오보 결함(F1) 발견. 양 역할의 해석 질의를 A7로 기록.
 ## v1
 - Initial draft.
