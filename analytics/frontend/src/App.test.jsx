@@ -2,7 +2,7 @@ import React from "react";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import App from "./App";
+import App, { ratio } from "./App";
 
 const emptySummary = { runs: 0, completed_runs: 0, compliant_runs: 0, handoff_runs: 0,
   verifier_rounds: 0, verifier_retries: 0, seeds_run: 0, seeds_detected: 0,
@@ -14,6 +14,14 @@ const detail = { run_id: "run-1", spec: "analytics", spec_version: 1, status: "c
   verifier_rounds: 1, verifier_retries: 0, seeds_run: 0, seeds_detected: 0,
   transcript_metadata: [{ client: "claude", session_id: "session-1", path: "session.jsonl", model: "model-a",
     input_tokens: 10, output_tokens: 5, cache_read_tokens: 0, cache_write_5m_tokens: 0, cache_write_1h_tokens: 0, linked_cost_usd: 1.25 }], linked_cost_usd: 1.25 };
+
+// Description-term/detail (dt/dd) pairs render the label and value as separate
+// sibling nodes, so each label's value is asserted on the label's next sibling
+// rather than matched together as one string.
+function expectLabelledValue(labelPattern, value) {
+  const label = screen.getByText(labelPattern, { selector: "dt" });
+  expect(label.nextElementSibling).toHaveTextContent(value);
+}
 
 function deferred() { let resolve; const promise = new Promise((done) => { resolve = done; }); return { promise, resolve }; }
 function response(body, ok = true) { return Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) }); }
@@ -77,13 +85,13 @@ describe("spec v2 U2/F7/Q3 summary and detail field coverage", () => {
     fetch.mockReturnValue(response(richSummary));
     render(<App apiBase="" />);
     await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/summary"));
-    expect(screen.getByText(/handoff runs\D*2/i)).toBeVisible();
-    expect(screen.getByText(/compliant runs\D*3/i)).toBeVisible();
-    expect(screen.getByText(/verifier rounds\D*5/i)).toBeVisible();
-    expect(screen.getByText(/verifier retries\D*4/i)).toBeVisible();
-    expect(screen.getByText(/seeds run\D*9/i)).toBeVisible();
-    expect(screen.getByText(/seeds detected\D*1/i)).toBeVisible();
-    expect(screen.getByText(/cost.*12\.34/i)).toBeVisible();
+    expectLabelledValue(/^handoff runs/i, "2");
+    expectLabelledValue(/^compliant runs/i, "3");
+    expectLabelledValue(/^verifier rounds/i, "5");
+    expectLabelledValue(/^verifier retries/i, "4");
+    expectLabelledValue(/^seeds run/i, "9");
+    expectLabelledValue(/^seeds detected/i, "1");
+    expectLabelledValue(/cost/i, "12.34");
   });
 
   it("summary view shows fuzz and mutation-tool counters", async () => {
@@ -91,29 +99,21 @@ describe("spec v2 U2/F7/Q3 summary and detail field coverage", () => {
       killed: 33, survived: 8, equivalent: 5, overturned: 1 }));
     render(<App apiBase="" />);
     await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/summary"));
-    expect(screen.getByText(/fuzz executions\D*700/i)).toBeVisible();
-    expect(screen.getByText(/fuzz violations\D*2/i)).toBeVisible();
-    expect(screen.getByText(/tool mutants\D*41/i)).toBeVisible();
-    expect(screen.getByText(/mutants killed\D*33/i)).toBeVisible();
-    expect(screen.getByText(/mutants survived\D*8/i)).toBeVisible();
-    expect(screen.getByText(/equivalent mutants\D*5/i)).toBeVisible();
-    expect(screen.getByText(/verdicts overturned\D*1/i)).toBeVisible();
+    expectLabelledValue(/^fuzz executions/i, "700");
+    expectLabelledValue(/^fuzz violations/i, "2");
+    expectLabelledValue(/^tool mutants/i, "41");
+    expectLabelledValue(/^mutants killed/i, "33");
+    expectLabelledValue(/^mutants survived/i, "8");
+    expectLabelledValue(/^equivalent mutants/i, "5");
+    expectLabelledValue(/verdicts overturned/i, "1");
   });
 
   it("summary view renders unknown cost when linked_cost_usd is null", async () => {
     fetch.mockReturnValue(response({ ...richSummary, linked_cost_usd: null }));
     render(<App apiBase="" />);
     await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/summary"));
-    expect(screen.getByText(/cost.*unknown cost/i)).toBeVisible();
+    expectLabelledValue(/cost/i, "unknown cost");
   });
-
-  // Description-term/detail (dt/dd) pairs render the label and value as separate
-  // sibling nodes, so each label's value is asserted on the label's next sibling
-  // rather than matched together as one string.
-  function expectLabelledValue(labelPattern, value) {
-    const label = screen.getByText(labelPattern, { selector: "dt" });
-    expect(label.nextElementSibling).toHaveTextContent(value);
-  }
 
   it("detail view labels spec_version, every compliance reason, run counters, and run cost", async () => {
     fetch.mockReturnValueOnce(response(richSummary)).mockReturnValueOnce(response(richDetail));
@@ -282,5 +282,32 @@ describe("spec v4 FR13/C13 workflow and other-sessions tabs", () => {
     expect(within(mysteryRow).getByText(/unknown/i)).toBeVisible();
     // It is also named a second time, in the separate unknown-models note.
     expect(screen.getAllByText(/mystery-model/i)).toHaveLength(2);
+  });
+});
+
+describe("dashboard ratio helper", () => {
+  it("divides numerator by denominator", () => { expect(ratio(3, 4)).toBe(0.75); });
+  it("returns null for a zero or missing denominator", () => {
+    expect(ratio(0, 0)).toBeNull();
+    expect(ratio(1, undefined)).toBeNull();
+  });
+  it("returns null for a missing numerator", () => { expect(ratio(undefined, 5)).toBeNull(); });
+});
+
+describe("hover hints follow the selected language", () => {
+  beforeEach(() => { cleanup(); global.fetch = vi.fn(); });
+  afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+  it("shows an English hint on hover and a Korean one after choosing KO", async () => {
+    fetch.mockReturnValue(response({ ...emptySummary, runs: 4, compliant_runs: 3 }));
+    render(<App apiBase="" />);
+    const label = await screen.findByText("Compliance rate");
+    fireEvent.mouseEnter(label);
+    expect(screen.getByRole("tooltip")).toHaveTextContent(/workflow rule/i);
+    fireEvent.mouseLeave(label);
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "KO" }));
+    fireEvent.mouseEnter(screen.getByText("Compliance rate"));
+    expect(screen.getByRole("tooltip")).toHaveTextContent("규칙");
   });
 });
