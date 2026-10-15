@@ -27,7 +27,7 @@
   "tests/test_workflow_markers.py": "89a6522d7c2a35c62ad760f25f464a8d80c6d408",
   "tests/test_test_scan_rules.py": "89a6522d7c2a35c62ad760f25f464a8d80c6d408",
   "agent-docs/handoff/stale.md": "254c41c7845809e45818414198dc31a3e913deea",
-  "agent-docs/adr/5c4c01bdc91769f7-selfcheck-swe-bench-baseline.md": "254c41c7845809e45818414198dc31a3e913deea",
+  "agent-docs/adr/stale/5c4c01bdc91769f7-selfcheck-swe-bench-baseline.md": "254c41c7845809e45818414198dc31a3e913deea",
   "selfcheck/__main__.py": "254c41c7845809e45818414198dc31a3e913deea",
   "selfcheck/review.py": "254c41c7845809e45818414198dc31a3e913deea",
   "selfcheck/bashparse.py": "254c41c7845809e45818414198dc31a3e913deea",

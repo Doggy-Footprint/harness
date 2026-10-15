@@ -10,7 +10,7 @@ Then: "SWE-bench 셋업 환경은 archived로 남겨놓고, 실제 설치한 건
 - `selfcheck/` code stays in place, archived: no further work on it, scorer bugs below left unfixed. Its runner (docker arms, rate-limit halt, resume) and process checks (`selfcheck/process.py`, PC1–PC12) are candidates for reuse in stage 2.
 - Deleted from the machine: all `selfcheck-*`, `sweb.*` and `ubuntu/squid` docker images, the `selfcheck-proxy` container, the `selfcheck-int` network, the docker build cache (`docker builder prune -af`, also removed other projects' unused build cache), `~/.harness/selfcheck/{cache,mut,scratch}`, and the SWE-bench Verified / SWT-bench datasets in `~/.cache/huggingface`. Rerunning selfcheck requires `pool`, `images`, `validate`, `mutants`, `calibrate`, `images --agent` again.
 - Kept: `~/.harness/selfcheck/runs/` (raw run records, 19 MB), `~/.harness/selfcheck/logs/`, `selfcheck/fixtures/` (baseline fixture `246588b0e19680ee`), `~/.config/selfcheck/oauth_token`.
-- `agent-docs/adr/5c4c01bdc91769f7-selfcheck-swe-bench-baseline.md` is still `Accepted`; superseding it is an open question below.
+- ADR `5c4c01bdc91769f7` (SWE-bench self-check) moved to `agent-docs/adr/stale/` at the user's request ("이제 SWE-Bench 안 쓰니까 stale로 보내야지 않을까?"). Its Alternatives section still holds the rejection of local-repository reconstruction that stage 2 answers.
 
 ## Failed Attempts
 | attempt | failure evidence | cause |
@@ -58,7 +58,7 @@ In parallel, at low cost: compare sessions with and without `workflow-approach` 
 ## Open Questions
 - Task source: which public repositories (language, test tooling) and is the user willing to run the H2 blind pairwise review on 5–8 tasks?
 - Priority among H1–H4. Recommendation: H2 and H4 decide whether to keep the harness; H1 and H3 explain why.
-- ADR `5c4c01bdc91769f7` superseded by a new ADR for the stage-2 design? Propose it to the user when stage 2 is designed; do not write it unilaterally.
+- A new ADR for the stage-2 design? Propose it to the user when stage 2 is designed; do not write it unilaterally.
 - Delete `selfcheck/` from the repository once stage 2 has taken what it needs, or keep it archived?
 - Docker Desktop's VM disk may not shrink after the deletions until compacted; check host free space if it matters.
 
