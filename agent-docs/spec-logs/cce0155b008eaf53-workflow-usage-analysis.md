@@ -1,7 +1,7 @@
 ---
 version: 2
 run_id: cce0155b008eaf53
-status: active
+status: complete
 base_commit: 51459c5f6a83bc07a3f5f187785c9792e5813908
 max_verifier_invocations: 2
 handoff: none
@@ -159,7 +159,7 @@ CLI: python3 -m analytics.usage [--transcripts DIR] [--telemetry DIR] [--labels 
 Audit state (one entry per obligation; retain prior decisions in the execution ledger):
 | obligation id | spec version | evidence references and revision | accepted / open / invalidated / pending | rationale and mutation outcome | dependencies and reopening evidence |
 | --- | --- | --- | --- | --- | --- |
-| VO1–VO12 | 2 | analytics/tests/test_usage.py (111 tests) | pending | F1 수정 후 VO5/VO8/VO10 증거 갱신(mine_variants 3-tuple) | VO8 reopened by F1, now re-evidenced |
+| VO1–VO12 | 2 | analytics/tests/test_usage.py (129 tests, branch 99.44%) | accepted | verifier #2 pass; mutmut 649/667 killed, 생존 18 전부 equivalent/undeclared; 손 mutation M1–M9 검출 | 테스트·구현·spec 변경 시 재검토 |
 | VO13 | 2 | RE1: 이 세션 transcript로 CLI 실행 — human 요청 6개, invoked는 '진행하자' 1개(skill); transcript 수기 확인과 일치 | accepted | main review | 실데이터 형식 변경 시 재검토 |
 
 Execution ledger (append attempts; preserve failed approaches):
@@ -169,6 +169,7 @@ Execution ledger (append attempts; preserve failed approaches):
 | 2 | verifier #1 retry: F2 skipped_lines/skipped_files 합산을 같은 값(2+2, 1+1)으로만 검증; F3 FR14 기본 경로 미검증; F4 telemetry 비-UTF-8 바이트 미검증; F5 list/dict status 경로 미실행. mutmut 667개 중 57 생존(8.5%) | 테스트 증거 공백 (verified: verifier 감사, 생존 mutant `+=`→`=`, 기본 경로 문자열 변이) | test-implementer에 F2–F5 + mutant-triager declared 판정 전달 | pending |
 | 3 | mutmut 생존 57 triage: declared 41(F2–F5와 동일 원인 + 카운터 ≥2 미검증, 블록 순서, 파일 사이 skip 후 계속, p/p-2 경로 문자열 정렬, 비문자열 sessionId), equivalent 10(UTF-8 locale 인코딩 별칭/기본값, 같은 디렉터리 Path 정렬, ensure_ascii=None, argparse 기본 None), undeclared 3(argparse prog 문구 → A7에 계약 아님으로 기록), insufficient context 3(status 문자열 내용) → main 판정 equivalent: compliance.evaluate는 status를 집합 검사에만 쓰고 reasons에 값을 노출하지 않음(analytics/compliance.py 확인) | 테스트 증거 공백 (verified: triager 판정 + compliance.py) | correction batch 2로 test-implementer에 전달 | fixed: 129 passed, branch 99.44%; mutmut 재실행 667 중 649 killed, 생존 18 = equivalent 15 + undeclared 3(전부 사전 판정과 동일), declared 41 전부 killed |
 | 4 | 손 mutation 10종(verifier 제안 강한 결함군): M1 합산 피연산자, M2 tool_result 요청 판정, M3 sidechain, M4 slash/skill 우선순위, M5 미지정 subagent 기본값, M6 깊이 선택, M7 variant 정렬, M8 bool index, M9 첫 중복 우선, M10 main이 모든 예외 포착 | — | seed.py backup/restore로 1개씩 주입 후 Test command | M1–M9 의도한 테스트가 실패로 검출. M10 생존: 선언된 어떤 입력도 labels 외 예외를 main까지 올리지 않으므로 관측 가능한 계약 위반 없음(Errors 전 행이 내부 처리) — 공백 아님 |
+| 5 | verifier #2 | — | — | pass, open findings none |
 
 # Version Log
 ## v2
