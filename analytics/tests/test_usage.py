@@ -1,4 +1,4 @@
-"""Independent oracle for spec cce0155b008eaf53 v1 (workflow usage analysis).
+"""Independent oracle for spec cce0155b008eaf53 v2 (workflow usage analysis).
 
 Expected values are derived by hand from the spec; nothing here calls the
 module under test to compute an expectation.
@@ -794,18 +794,19 @@ def test_vo8_message_not_dict_on_legacy_user_is_not_request(tmp_path):
     assert [r["text"] for r in requests] == ["ok"]
 
 
-def _deny_open(monkeypatch, denied):
+def _deny_open(monkeypatch, *denied_paths):
     import builtins
+    denied_set = {Path(d) for d in denied_paths}
     real_path_open = Path.open
     real_open = builtins.open
 
     def path_open(self, *args, **kwargs):
-        if self == denied:
+        if self in denied_set:
             raise PermissionError(13, "denied", str(self))
         return real_path_open(self, *args, **kwargs)
 
     def builtin_open(file, *args, **kwargs):
-        if isinstance(file, (str, Path)) and Path(file) == denied:
+        if isinstance(file, (str, Path)) and Path(file) in denied_set:
             raise PermissionError(13, "denied", str(file))
         return real_open(file, *args, **kwargs)
 
@@ -888,6 +889,222 @@ def test_vo8_a7_depth_two_directory_named_jsonl_not_selected(tmp_path):
     report = usage.build_report(root, tmp_path / "none", None)
     assert [r["text"] for r in report["requests"]] == ["r"]
     assert report["skipped_files"] == 0
+
+
+# ------------------------------------------------- correction batch 2 evidence
+
+def bad_lines(n):
+    return ["{broken"] * n
+
+
+def test_f2_skipped_lines_unequal_sum_over_multiple_files(tmp_path):
+    root = tmp_path / "projects"
+    write_jsonl(root / "p" / "a.jsonl", [human("a")] + bad_lines(2))
+    write_jsonl(root / "p" / "b.jsonl", [human("b")] + bad_lines(1))
+    tdir = tmp_path / "tel"
+    write_jsonl(tdir / "t.jsonl", good_run("A") + bad_lines(1))
+    report = usage.build_report(root, tdir, None)
+    assert report["skipped_lines"] == 4
+    assert report["skipped_files"] == 0
+
+
+def test_f2_skipped_lines_three_transcript_lines_two_telemetry_files(tmp_path):
+    root = tmp_path / "projects"
+    write_jsonl(root / "p" / "a.jsonl", [human("a")] + bad_lines(3))
+    tdir = tmp_path / "tel"
+    write_jsonl(tdir / "t1.jsonl", good_run("A") + bad_lines(1))
+    write_jsonl(tdir / "t2.jsonl", good_run("B") + bad_lines(1))
+    assert usage.build_report(root, tdir, None)["skipped_lines"] == 5
+    assert usage.mine_variants(tdir)[1] == 2
+
+
+def test_f2_skipped_files_two_transcripts_one_telemetry(tmp_path, monkeypatch):
+    root = tmp_path / "projects"
+    (root / "p").mkdir(parents=True)
+    (root / "p" / "a.jsonl").write_bytes(b"\xff\xfe\x80")
+    (root / "p" / "b.jsonl").write_bytes(b"\xff\xfe\x80")
+    write_jsonl(root / "p" / "c.jsonl", [human("ok")])
+    tdir = tmp_path / "tel"
+    denied = write_jsonl(tdir / "t.jsonl", good_run("A"))
+    _deny_open(monkeypatch, denied)
+    report = usage.build_report(root, tdir, None)
+    assert report["skipped_files"] == 3
+    assert report["skipped_lines"] == 0
+
+
+def test_f2_skipped_files_one_transcript_two_telemetry(tmp_path, monkeypatch):
+    root = tmp_path / "projects"
+    (root / "p").mkdir(parents=True)
+    (root / "p" / "a.jsonl").write_bytes(b"\xff\xfe\x80")
+    tdir = tmp_path / "tel"
+    d1 = write_jsonl(tdir / "t1.jsonl", good_run("A"))
+    d2 = write_jsonl(tdir / "t2.jsonl", good_run("B"))
+    write_jsonl(tdir / "t3.jsonl", good_run("C"))
+    _deny_open(monkeypatch, d1, d2)
+    assert usage.build_report(root, tdir, None)["skipped_files"] == 3
+    variants, skipped, files = usage.mine_variants(tdir)
+    assert files == 2 and skipped == 0
+    assert variants[0]["run_ids"] == ["C"]
+
+
+def test_f3_cli_defaults_read_home_locations(tmp_path, monkeypatch, capsys):
+    home = tmp_path / "home"
+    write_jsonl(home / ".claude" / "projects" / "p" / "s.jsonl", [human("from home")])
+    write_jsonl(home / ".harness" / "telemetry" / "t.jsonl", good_run("HOMERUN"))
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    code = usage.main([])
+    payload = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert [r["text"] for r in payload["requests"]] == ["from home"]
+    assert payload["variants"][0]["run_ids"] == ["HOMERUN"]
+
+
+def test_f4_invalid_utf8_telemetry_line_between_valid_events(tmp_path):
+    tdir = tmp_path / "tel"
+    tdir.mkdir()
+    lines = [json.dumps(e).encode() for e in good_run("A")]
+    data = b"\n".join(lines[:2]) + b"\n\xff\xfe\n" + b"\n".join(lines[2:]) + b"\n"
+    (tdir / "t.jsonl").write_bytes(data)
+    variants, skipped, files = usage.mine_variants(tdir)
+    assert files == 0
+    assert len(variants) == 1 and variants[0]["run_ids"] == ["A"]
+    assert variants[0]["compliant"] == 1
+
+
+def test_f5_list_and_dict_status_do_not_crash_and_are_noncompliant(tmp_path):
+    tdir = tmp_path / "tel"
+    events = []
+    for run, status in (("L", ["x"]), ("M", {"k": 1})):
+        events += [telemetry("workflow_start", run),
+                   telemetry("workflow_phase", run, phase="implement_test"),
+                   telemetry("workflow_phase", run, phase="verify"),
+                   telemetry("verifier_result", run, result="pass"),
+                   telemetry("workflow_end", run, status=status)]
+    write_jsonl(tdir / "t.jsonl", events)
+    variants, skipped, files = usage.mine_variants(tdir)
+    assert (skipped, files) == (0, 0)
+    by_run = {tuple(v["run_ids"]): v for v in variants}
+    assert set(by_run) == {("L",), ("M",)}
+    for v in by_run.values():
+        assert v["count"] == 1 and v["noncompliant"] == 1
+        assert v["compliant"] == 0 and v["incomplete"] == 0
+        assert "invalid_terminal_status" in v["reasons"]
+
+
+def test_f6_non_str_session_timestamp_cwd_fall_back(tmp_path):
+    records = [human("a", sid=5, ts=7, cwd=None), human("b", sid=None, ts=None)]
+    records[0]["cwd"] = 9
+    records[1]["cwd"] = ["x"]
+    requests, _ = extract(tmp_path, records, name="stem-x.jsonl")
+    for r in requests:
+        assert r["session_id"] == "stem-x"
+        assert r["timestamp"] is None and r["cwd"] is None
+
+
+def test_f7_within_message_ordering_text_before_skill(tmp_path):
+    req = one_turn(tmp_path, assistant({"type": "text", "text": "hi"}, skill_call()))
+    assert req["invocation"] == "skill"
+
+
+def test_f7_write_without_path_then_write_to_spec(tmp_path):
+    req = one_turn(tmp_path, assistant(
+        tool_use("Write", content="x"),
+        tool_use("Write", file_path="/r/agent-docs/specs/a.md")))
+    assert req["spec_writes"] == ["/r/agent-docs/specs/a.md"]
+    assert req["handoff_writes"] == []
+
+
+def test_f7_non_tool_use_block_then_typed_agent(tmp_path):
+    req = one_turn(tmp_path, assistant({"type": "text", "text": "x"},
+                                       tool_use("Agent", subagent_type="reviewer")))
+    assert req["subagents"] == {"reviewer": 1}
+
+
+def test_f8_noise_between_events_of_same_run_keeps_all_events(tmp_path):
+    tdir = tmp_path / "tel"
+    run = good_run("A")
+    noise = [
+        [""],
+        ["{broken"],
+        [{"v": 1, "event": "verification", "workflow_run_id": "A", "result": "pass"}],
+        [{"v": 1, "event": "workflow_phase", "phase": "verify"}],
+    ]
+    lines = []
+    for event, filler in zip(run, noise + [[]]):
+        lines.append(event)
+        lines.extend(filler)
+    write_jsonl(tdir / "t.jsonl", lines)
+    variants, skipped, files = usage.mine_variants(tdir)
+    assert len(variants) == 1
+    assert variants[0]["variant"] == (
+        "start > implement_test > verify > verifier:pass > end:complete")
+    assert variants[0]["compliant"] == 1
+    assert skipped == 1 and files == 0
+
+
+def test_f9_unopenable_first_file_does_not_stop_later_files(tmp_path, monkeypatch):
+    tdir = tmp_path / "tel"
+    denied = write_jsonl(tdir / "a.jsonl", good_run("A"))
+    write_jsonl(tdir / "b.jsonl", good_run("B") + good_run("C"))
+    _deny_open(monkeypatch, denied)
+    variants, _, files = usage.mine_variants(tdir)
+    assert files == 1
+    assert variants[0]["run_ids"] == ["B", "C"]
+
+
+def test_f9_directory_named_jsonl_in_telemetry_silently_skipped(tmp_path):
+    tdir = tmp_path / "tel"
+    write_jsonl(tdir / "t.jsonl", good_run("A"))
+    (tdir / "dir.jsonl").mkdir()
+    variants, skipped, files = usage.mine_variants(tdir)
+    assert (skipped, files) == (0, 0)
+    assert variants[0]["run_ids"] == ["A"]
+
+
+def test_f10_two_incomplete_runs_same_variant(tmp_path):
+    tdir = tmp_path / "tel"
+    events = []
+    for run in ("I1", "I2"):
+        events += [telemetry("workflow_start", run),
+                   telemetry("workflow_phase", run, phase="implement_test")]
+    write_jsonl(tdir / "t.jsonl", events)
+    variants, _, _ = usage.mine_variants(tdir)
+    assert len(variants) == 1
+    assert (variants[0]["count"], variants[0]["incomplete"]) == (2, 2)
+    assert (variants[0]["compliant"], variants[0]["noncompliant"]) == (0, 0)
+
+
+def test_f11_three_same_key_labels_two_duplicates(tmp_path):
+    requests = [req("s", 0, True)]
+    confusion = usage.apply_labels(requests, labels_file(
+        tmp_path, [label("s", 0, False), label("s", 0, False), label("s", 0, True)]))
+    assert confusion["duplicate_labels"] == 2
+    assert confusion["used"] == 1 and requests[0]["warranted"] is True
+
+
+def test_f12_two_per_cell_and_two_unlabeled(tmp_path):
+    requests = ([req("s", i, True) for i in range(0, 2)]
+                + [req("s", i, True) for i in range(2, 4)]
+                + [req("s", i, False) for i in range(4, 6)]
+                + [req("s", i, False) for i in range(6, 8)]
+                + [req("s", i, True) for i in range(8, 10)])
+    lines = ([label("s", 0, True), label("s", 1, True)]
+             + [label("s", 2, False), label("s", 3, False)]
+             + [label("s", 4, True), label("s", 5, True)]
+             + [label("s", 6, False), label("s", 7, False)])
+    confusion = usage.apply_labels(requests, labels_file(tmp_path, lines))
+    assert confusion == {"used": 2, "misfire": 2, "missed": 2, "correct_skip": 2,
+                         "unlabeled": 2, "invalid_labels": 0, "duplicate_labels": 0,
+                         "unmatched_labels": 0}
+
+
+def test_f13_path_string_order_dash_before_slash(tmp_path):
+    root = tmp_path / "projects"
+    write_jsonl(root / "p" / "s.jsonl", [human("in-p")])
+    write_jsonl(root / "p-2" / "s.jsonl", [human("in-p-2")])
+    report = usage.build_report(root, tmp_path / "none", None)
+    assert [r["text"] for r in report["requests"]] == ["in-p-2", "in-p"]
 
 
 # --------------------------------------------------------------------- VO9
