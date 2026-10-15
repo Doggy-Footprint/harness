@@ -1,0 +1,1433 @@
+{
+ "baseline": "compared",
+ "false_claims": [],
+ "fixture_id": "246588b0e19680ee",
+ "harness_commit": "254c41c7845809e45818414198dc31a3e913deea",
+ "harness_ref": "HEAD",
+ "informed": [
+  {
+   "instance_id": "sphinx-doc__sphinx-9602",
+   "metrics": {
+    "f2p_frac": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": [
+      1.0,
+      0.0
+     ],
+     "harness_summary": {
+      "max": 1.0,
+      "median": 0.5,
+      "min": 0.0
+     },
+     "range": [
+      0.0,
+      0.0
+     ],
+     "repeat_verdicts": {
+      "above": 1,
+      "below": 0,
+      "n/a": 0,
+      "within": 1
+     },
+     "verdict": "above"
+    },
+    "incompatible_frac": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      0.2,
+      0.0
+     ],
+     "harness_summary": {
+      "max": 0.2,
+      "median": 0.1,
+      "min": 0.0
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 2,
+      "n/a": 0,
+      "within": 0
+     },
+     "verdict": "below"
+    },
+    "kill_primary": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": [
+      0.9444444444444444,
+      0.8888888888888888
+     ],
+     "harness_summary": {
+      "max": 0.9444444444444444,
+      "median": 0.9166666666666666,
+      "min": 0.8888888888888888
+     },
+     "range": [
+      0.0,
+      0.0
+     ],
+     "repeat_verdicts": {
+      "above": 2,
+      "below": 0,
+      "n/a": 0,
+      "within": 0
+     },
+     "verdict": "above"
+    },
+    "kill_secondary": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": [
+      1.0,
+      0.9411764705882353
+     ],
+     "harness_summary": {
+      "max": 1.0,
+      "median": 0.9705882352941176,
+      "min": 0.9411764705882353
+     },
+     "range": [
+      0.0,
+      0.0
+     ],
+     "repeat_verdicts": {
+      "above": 2,
+      "below": 0,
+      "n/a": 0,
+      "within": 0
+     },
+     "verdict": "above"
+    },
+    "resolved": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": [
+      1.0,
+      0.0
+     ],
+     "harness_summary": {
+      "k": 1,
+      "n": 2
+     },
+     "range": [
+      0.0,
+      0.0
+     ],
+     "repeat_verdicts": {
+      "above": 1,
+      "below": 0,
+      "n/a": 0,
+      "within": 1
+     },
+     "verdict": "above"
+    },
+    "swt_success": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": [
+      0.0,
+      1.0
+     ],
+     "harness_summary": {
+      "k": 1,
+      "n": 2
+     },
+     "range": [
+      0.0,
+      0.0
+     ],
+     "repeat_verdicts": {
+      "above": 1,
+      "below": 0,
+      "n/a": 0,
+      "within": 1
+     },
+     "verdict": "above"
+    }
+   },
+   "process_fails": {
+    "PC1": 0,
+    "PC10": 0,
+    "PC11": 2,
+    "PC12": 0,
+    "PC2": 0,
+    "PC3": 0,
+    "PC4": 1,
+    "PC5": 2,
+    "PC6": 0,
+    "PC7": 0,
+    "PC8": 0,
+    "PC9": 1
+   },
+   "repeats": [
+    {
+     "cost_usd": 5.396417800000001,
+     "elapsed_s": 346.147,
+     "metrics": {
+      "f2p_frac": 1.0,
+      "incompatible_frac": 0.2,
+      "kill_primary": 0.9444444444444444,
+      "kill_secondary": 1.0,
+      "resolved": 1.0,
+      "swt_success": 0.0
+     },
+     "process": {
+      "PC1": "pass",
+      "PC10": "pass",
+      "PC11": "fail",
+      "PC12": "pass",
+      "PC2": "pass",
+      "PC3": "pass",
+      "PC4": "pass",
+      "PC5": "fail",
+      "PC6": "pass",
+      "PC7": "pass",
+      "PC8": "pass",
+      "PC9": "fail"
+     },
+     "repeat": 1,
+     "review": "not run",
+     "review_findings": {},
+     "status": "completed"
+    },
+    {
+     "cost_usd": 2.062539,
+     "elapsed_s": 235.227,
+     "metrics": {
+      "f2p_frac": 0.0,
+      "incompatible_frac": 0.0,
+      "kill_primary": 0.8888888888888888,
+      "kill_secondary": 0.9411764705882353,
+      "resolved": 0.0,
+      "swt_success": 1.0
+     },
+     "process": {
+      "PC1": "pass",
+      "PC10": "pass",
+      "PC11": "fail",
+      "PC12": "pass",
+      "PC2": "pass",
+      "PC3": "pass",
+      "PC4": "fail",
+      "PC5": "fail",
+      "PC6": "pass",
+      "PC7": "pass",
+      "PC8": "pass",
+      "PC9": "pass"
+     },
+     "repeat": 2,
+     "review": "not run",
+     "review_findings": {},
+     "status": "completed"
+    }
+   ],
+   "small_sample": false
+  },
+  {
+   "instance_id": "mwaskom__seaborn-3187",
+   "metrics": {
+    "f2p_frac": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0,
+      1.0
+     ],
+     "harness_summary": {
+      "max": 1.0,
+      "median": 1.0,
+      "min": 1.0
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "incompatible_frac": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": [
+      null,
+      0.14414414414414414
+     ],
+     "harness_summary": {
+      "max": 0.14414414414414414,
+      "median": 0.14414414414414414,
+      "min": 0.14414414414414414
+     },
+     "range": [
+      0.0,
+      0.0
+     ],
+     "repeat_verdicts": {
+      "above": 1,
+      "below": 0,
+      "n/a": 1,
+      "within": 0
+     },
+     "verdict": "above"
+    },
+    "kill_primary": {
+     "baseline": [
+      0.5,
+      0.5
+     ],
+     "harness": [
+      0.0,
+      1.0
+     ],
+     "harness_summary": {
+      "max": 1.0,
+      "median": 0.5,
+      "min": 0.0
+     },
+     "range": [
+      0.5,
+      0.5
+     ],
+     "repeat_verdicts": {
+      "above": 1,
+      "below": 1,
+      "n/a": 0,
+      "within": 0
+     },
+     "verdict": "within"
+    },
+    "kill_secondary": {
+     "baseline": [
+      0.5,
+      0.5
+     ],
+     "harness": [
+      0.0,
+      1.0
+     ],
+     "harness_summary": {
+      "max": 1.0,
+      "median": 0.5,
+      "min": 0.0
+     },
+     "range": [
+      0.5,
+      0.5
+     ],
+     "repeat_verdicts": {
+      "above": 1,
+      "below": 1,
+      "n/a": 0,
+      "within": 0
+     },
+     "verdict": "within"
+    },
+    "resolved": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0,
+      1.0
+     ],
+     "harness_summary": {
+      "k": 2,
+      "n": 2
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "swt_success": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      0.0,
+      0.0
+     ],
+     "harness_summary": {
+      "k": 0,
+      "n": 2
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 2,
+      "n/a": 0,
+      "within": 0
+     },
+     "verdict": "below"
+    }
+   },
+   "process_fails": {
+    "PC1": 0,
+    "PC10": 0,
+    "PC11": 1,
+    "PC12": 0,
+    "PC2": 1,
+    "PC3": 0,
+    "PC4": 0,
+    "PC5": 2,
+    "PC6": 0,
+    "PC7": 0,
+    "PC8": 0,
+    "PC9": 0
+   },
+   "repeats": [
+    {
+     "cost_usd": 12.8758418,
+     "elapsed_s": 933.68,
+     "metrics": {
+      "f2p_frac": 1.0,
+      "incompatible_frac": null,
+      "kill_primary": 0.0,
+      "kill_secondary": 0.0,
+      "resolved": 1.0,
+      "swt_success": 0.0
+     },
+     "process": {
+      "PC1": "pass",
+      "PC10": "pass",
+      "PC11": "fail",
+      "PC12": "pass",
+      "PC2": "pass",
+      "PC3": "pass",
+      "PC4": "pass",
+      "PC5": "fail",
+      "PC6": "pass",
+      "PC7": "pass",
+      "PC8": "pass",
+      "PC9": "pass"
+     },
+     "repeat": 1,
+     "review": "not run",
+     "review_findings": {},
+     "status": "completed"
+    },
+    {
+     "cost_usd": 10.638223799999999,
+     "elapsed_s": 915.733,
+     "metrics": {
+      "f2p_frac": 1.0,
+      "incompatible_frac": 0.14414414414414414,
+      "kill_primary": 1.0,
+      "kill_secondary": 1.0,
+      "resolved": 1.0,
+      "swt_success": 0.0
+     },
+     "process": {
+      "PC1": "pass",
+      "PC10": "n/a",
+      "PC11": "n/a",
+      "PC12": "pass",
+      "PC2": "fail",
+      "PC3": "pass",
+      "PC4": "n/a",
+      "PC5": "fail",
+      "PC6": "pass",
+      "PC7": "pass",
+      "PC8": "pass",
+      "PC9": "pass"
+     },
+     "repeat": 2,
+     "review": "not run",
+     "review_findings": {},
+     "status": "completed"
+    }
+   ],
+   "small_sample": false
+  },
+  {
+   "instance_id": "astropy__astropy-14365",
+   "metrics": {
+    "f2p_frac": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0,
+      1.0
+     ],
+     "harness_summary": {
+      "max": 1.0,
+      "median": 1.0,
+      "min": 1.0
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "incompatible_frac": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": [
+      0.0,
+      0.0
+     ],
+     "harness_summary": {
+      "max": 0.0,
+      "median": 0.0,
+      "min": 0.0
+     },
+     "range": [
+      0.0,
+      0.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "kill_primary": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0,
+      1.0
+     ],
+     "harness_summary": {
+      "max": 1.0,
+      "median": 1.0,
+      "min": 1.0
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "kill_secondary": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0,
+      1.0
+     ],
+     "harness_summary": {
+      "max": 1.0,
+      "median": 1.0,
+      "min": 1.0
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "resolved": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0,
+      1.0
+     ],
+     "harness_summary": {
+      "k": 2,
+      "n": 2
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "swt_success": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0,
+      1.0
+     ],
+     "harness_summary": {
+      "k": 2,
+      "n": 2
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    }
+   },
+   "process_fails": {
+    "PC1": 1,
+    "PC10": 0,
+    "PC11": 0,
+    "PC12": 0,
+    "PC2": 1,
+    "PC3": 0,
+    "PC4": 1,
+    "PC5": 1,
+    "PC6": 0,
+    "PC7": 0,
+    "PC8": 0,
+    "PC9": 0
+   },
+   "repeats": [
+    {
+     "cost_usd": 5.1732732,
+     "elapsed_s": 281.061,
+     "metrics": {
+      "f2p_frac": 1.0,
+      "incompatible_frac": 0.0,
+      "kill_primary": 1.0,
+      "kill_secondary": 1.0,
+      "resolved": 1.0,
+      "swt_success": 1.0
+     },
+     "process": {
+      "PC1": "pass",
+      "PC10": "pass",
+      "PC11": "pass",
+      "PC12": "pass",
+      "PC2": "pass",
+      "PC3": "pass",
+      "PC4": "fail",
+      "PC5": "fail",
+      "PC6": "pass",
+      "PC7": "pass",
+      "PC8": "pass",
+      "PC9": "pass"
+     },
+     "repeat": 1,
+     "review": "not run",
+     "review_findings": {},
+     "status": "completed"
+    },
+    {
+     "cost_usd": 0.7034368,
+     "elapsed_s": 68.703,
+     "metrics": {
+      "f2p_frac": 1.0,
+      "incompatible_frac": 0.0,
+      "kill_primary": 1.0,
+      "kill_secondary": 1.0,
+      "resolved": 1.0,
+      "swt_success": 1.0
+     },
+     "process": {
+      "PC1": "fail",
+      "PC10": "n/a",
+      "PC11": "n/a",
+      "PC12": "n/a",
+      "PC2": "fail",
+      "PC3": "n/a",
+      "PC4": "n/a",
+      "PC5": "n/a",
+      "PC6": "pass",
+      "PC7": "n/a",
+      "PC8": "n/a",
+      "PC9": "n/a"
+     },
+     "repeat": 2,
+     "review": "not run",
+     "review_findings": {},
+     "status": "completed"
+    }
+   ],
+   "small_sample": true
+  },
+  {
+   "instance_id": "sympy__sympy-14531",
+   "metrics": {
+    "f2p_frac": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0,
+      1.0
+     ],
+     "harness_summary": {
+      "max": 1.0,
+      "median": 1.0,
+      "min": 1.0
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "incompatible_frac": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": [
+      0.0,
+      0.0
+     ],
+     "harness_summary": {
+      "max": 0.0,
+      "median": 0.0,
+      "min": 0.0
+     },
+     "range": [
+      0.0,
+      0.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "kill_primary": {
+     "baseline": [
+      0.1,
+      0.1
+     ],
+     "harness": [
+      0.1,
+      0.1
+     ],
+     "harness_summary": {
+      "max": 0.1,
+      "median": 0.1,
+      "min": 0.1
+     },
+     "range": [
+      0.1,
+      0.1
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "kill_secondary": {
+     "baseline": [
+      0.19047619047619047,
+      0.19047619047619047
+     ],
+     "harness": [
+      0.19047619047619047,
+      0.19047619047619047
+     ],
+     "harness_summary": {
+      "max": 0.19047619047619047,
+      "median": 0.19047619047619047,
+      "min": 0.19047619047619047
+     },
+     "range": [
+      0.19047619047619047,
+      0.19047619047619047
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "resolved": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0,
+      1.0
+     ],
+     "harness_summary": {
+      "k": 2,
+      "n": 2
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "swt_success": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": [
+      0.0,
+      0.0
+     ],
+     "harness_summary": {
+      "k": 0,
+      "n": 2
+     },
+     "range": [
+      0.0,
+      0.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    }
+   },
+   "process_fails": {
+    "PC1": 0,
+    "PC10": 0,
+    "PC11": 1,
+    "PC12": 0,
+    "PC2": 0,
+    "PC3": 0,
+    "PC4": 0,
+    "PC5": 2,
+    "PC6": 0,
+    "PC7": 1,
+    "PC8": 2,
+    "PC9": 0
+   },
+   "repeats": [
+    {
+     "cost_usd": 3.4546064,
+     "elapsed_s": 446.851,
+     "metrics": {
+      "f2p_frac": 1.0,
+      "incompatible_frac": 0.0,
+      "kill_primary": 0.1,
+      "kill_secondary": 0.19047619047619047,
+      "resolved": 1.0,
+      "swt_success": 0.0
+     },
+     "process": {
+      "PC1": "pass",
+      "PC10": "pass",
+      "PC11": "fail",
+      "PC12": "pass",
+      "PC2": "pass",
+      "PC3": "pass",
+      "PC4": "pass",
+      "PC5": "fail",
+      "PC6": "pass",
+      "PC7": "pass",
+      "PC8": "fail",
+      "PC9": "pass"
+     },
+     "repeat": 1,
+     "review": "not run",
+     "review_findings": {},
+     "status": "completed"
+    },
+    {
+     "cost_usd": 3.0892758000000002,
+     "elapsed_s": 249.841,
+     "metrics": {
+      "f2p_frac": 1.0,
+      "incompatible_frac": 0.0,
+      "kill_primary": 0.1,
+      "kill_secondary": 0.19047619047619047,
+      "resolved": 1.0,
+      "swt_success": 0.0
+     },
+     "process": {
+      "PC1": "pass",
+      "PC10": "n/a",
+      "PC11": "n/a",
+      "PC12": "pass",
+      "PC2": "pass",
+      "PC3": "pass",
+      "PC4": "n/a",
+      "PC5": "fail",
+      "PC6": "pass",
+      "PC7": "fail",
+      "PC8": "fail",
+      "PC9": "pass"
+     },
+     "repeat": 2,
+     "review": "not run",
+     "review_findings": {},
+     "status": "completed"
+    }
+   ],
+   "small_sample": false
+  },
+  {
+   "instance_id": "django__django-15731",
+   "metrics": {
+    "f2p_frac": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0,
+      1.0
+     ],
+     "harness_summary": {
+      "max": 1.0,
+      "median": 1.0,
+      "min": 1.0
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "incompatible_frac": {
+     "baseline": [
+      0.5,
+      0.3333333333333333
+     ],
+     "harness": [
+      0.3333333333333333,
+      0.4
+     ],
+     "harness_summary": {
+      "max": 0.4,
+      "median": 0.3666666666666667,
+      "min": 0.3333333333333333
+     },
+     "range": [
+      0.3333333333333333,
+      0.5
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "kill_primary": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0,
+      1.0
+     ],
+     "harness_summary": {
+      "max": 1.0,
+      "median": 1.0,
+      "min": 1.0
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "kill_secondary": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0,
+      1.0
+     ],
+     "harness_summary": {
+      "max": 1.0,
+      "median": 1.0,
+      "min": 1.0
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "resolved": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0,
+      1.0
+     ],
+     "harness_summary": {
+      "k": 2,
+      "n": 2
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "swt_success": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": [
+      0.0,
+      0.0
+     ],
+     "harness_summary": {
+      "k": 0,
+      "n": 2
+     },
+     "range": [
+      0.0,
+      0.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    }
+   },
+   "process_fails": {
+    "PC1": 0,
+    "PC10": 0,
+    "PC11": 2,
+    "PC12": 0,
+    "PC2": 0,
+    "PC3": 0,
+    "PC4": 2,
+    "PC5": 2,
+    "PC6": 0,
+    "PC7": 0,
+    "PC8": 0,
+    "PC9": 0
+   },
+   "repeats": [
+    {
+     "cost_usd": 2.3216505999999995,
+     "elapsed_s": 197.431,
+     "metrics": {
+      "f2p_frac": 1.0,
+      "incompatible_frac": 0.3333333333333333,
+      "kill_primary": 1.0,
+      "kill_secondary": 1.0,
+      "resolved": 1.0,
+      "swt_success": 0.0
+     },
+     "process": {
+      "PC1": "pass",
+      "PC10": "pass",
+      "PC11": "fail",
+      "PC12": "pass",
+      "PC2": "pass",
+      "PC3": "pass",
+      "PC4": "fail",
+      "PC5": "fail",
+      "PC6": "pass",
+      "PC7": "pass",
+      "PC8": "pass",
+      "PC9": "pass"
+     },
+     "repeat": 1,
+     "review": "not run",
+     "review_findings": {},
+     "status": "completed"
+    },
+    {
+     "cost_usd": 1.3717300000000001,
+     "elapsed_s": 141.768,
+     "metrics": {
+      "f2p_frac": 1.0,
+      "incompatible_frac": 0.4,
+      "kill_primary": 1.0,
+      "kill_secondary": 1.0,
+      "resolved": 1.0,
+      "swt_success": 0.0
+     },
+     "process": {
+      "PC1": "pass",
+      "PC10": "pass",
+      "PC11": "fail",
+      "PC12": "pass",
+      "PC2": "pass",
+      "PC3": "pass",
+      "PC4": "fail",
+      "PC5": "fail",
+      "PC6": "pass",
+      "PC7": "pass",
+      "PC8": "pass",
+      "PC9": "pass"
+     },
+     "repeat": 2,
+     "review": "not run",
+     "review_findings": {},
+     "status": "completed"
+    }
+   ],
+   "small_sample": true
+  },
+  {
+   "instance_id": "matplotlib__matplotlib-14623",
+   "metrics": {
+    "f2p_frac": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0,
+      1.0
+     ],
+     "harness_summary": {
+      "max": 1.0,
+      "median": 1.0,
+      "min": 1.0
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "incompatible_frac": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": [
+      0.14285714285714285,
+      0.125
+     ],
+     "harness_summary": {
+      "max": 0.14285714285714285,
+      "median": 0.13392857142857142,
+      "min": 0.125
+     },
+     "range": [
+      0.0,
+      0.0
+     ],
+     "repeat_verdicts": {
+      "above": 2,
+      "below": 0,
+      "n/a": 0,
+      "within": 0
+     },
+     "verdict": "above"
+    },
+    "kill_primary": {
+     "baseline": [
+      0.2222222222222222,
+      0.2222222222222222
+     ],
+     "harness": [
+      0.2222222222222222,
+      0.2222222222222222
+     ],
+     "harness_summary": {
+      "max": 0.2222222222222222,
+      "median": 0.2222222222222222,
+      "min": 0.2222222222222222
+     },
+     "range": [
+      0.2222222222222222,
+      0.2222222222222222
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "kill_secondary": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0,
+      1.0
+     ],
+     "harness_summary": {
+      "max": 1.0,
+      "median": 1.0,
+      "min": 1.0
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "resolved": {
+     "baseline": [
+      1.0,
+      1.0
+     ],
+     "harness": [
+      1.0,
+      1.0
+     ],
+     "harness_summary": {
+      "k": 2,
+      "n": 2
+     },
+     "range": [
+      1.0,
+      1.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    },
+    "swt_success": {
+     "baseline": [
+      0.0,
+      0.0
+     ],
+     "harness": [
+      0.0,
+      0.0
+     ],
+     "harness_summary": {
+      "k": 0,
+      "n": 2
+     },
+     "range": [
+      0.0,
+      0.0
+     ],
+     "repeat_verdicts": {
+      "above": 0,
+      "below": 0,
+      "n/a": 0,
+      "within": 2
+     },
+     "verdict": "within"
+    }
+   },
+   "process_fails": {
+    "PC1": 0,
+    "PC10": 1,
+    "PC11": 2,
+    "PC12": 0,
+    "PC2": 1,
+    "PC3": 0,
+    "PC4": 1,
+    "PC5": 2,
+    "PC6": 0,
+    "PC7": 0,
+    "PC8": 1,
+    "PC9": 0
+   },
+   "repeats": [
+    {
+     "cost_usd": 4.275964800000001,
+     "elapsed_s": 589.17,
+     "metrics": {
+      "f2p_frac": 1.0,
+      "incompatible_frac": 0.14285714285714285,
+      "kill_primary": 0.2222222222222222,
+      "kill_secondary": 1.0,
+      "resolved": 1.0,
+      "swt_success": 0.0
+     },
+     "process": {
+      "PC1": "pass",
+      "PC10": "pass",
+      "PC11": "fail",
+      "PC12": "pass",
+      "PC2": "pass",
+      "PC3": "pass",
+      "PC4": "fail",
+      "PC5": "fail",
+      "PC6": "pass",
+      "PC7": "pass",
+      "PC8": "pass",
+      "PC9": "pass"
+     },
+     "repeat": 1,
+     "review": "not run",
+     "review_findings": {},
+     "status": "completed"
+    },
+    {
+     "cost_usd": 5.924066800000002,
+     "elapsed_s": 497.59,
+     "metrics": {
+      "f2p_frac": 1.0,
+      "incompatible_frac": 0.125,
+      "kill_primary": 0.2222222222222222,
+      "kill_secondary": 1.0,
+      "resolved": 1.0,
+      "swt_success": 0.0
+     },
+     "process": {
+      "PC1": "pass",
+      "PC10": "fail",
+      "PC11": "fail",
+      "PC12": "pass",
+      "PC2": "fail",
+      "PC3": "pass",
+      "PC4": "pass",
+      "PC5": "fail",
+      "PC6": "pass",
+      "PC7": "pass",
+      "PC8": "fail",
+      "PC9": "pass"
+     },
+     "repeat": 2,
+     "review": "not run",
+     "review_findings": {},
+     "status": "completed"
+    }
+   ],
+   "small_sample": false
+  }
+ ],
+ "informed_effect": {},
+ "instances": [],
+ "notes": [
+  "\ud1b5\uacc4\uc801 \uc720\uc758\uc131\uc740 \uac80\uc815\ud558\uc9c0 \uc54a\uc558\ub2e4. \ubc94\uc704\ub294 \uae30\uc900\uc120 \ubc18\ubcf5 \uc2e4\ud589\uc758 \ucd5c\uc19f\uac12\uacfc \ucd5c\ub313\uac12\uc774\uba70 above/within/below\ub294 \uadf8 \ubc94\uc704\uc640\uc758 \uc704\uce58 \uad00\uacc4\uc77c \ubfd0\uc774\ub2e4.",
+  "\uc2dc\ubbac\ub808\uc774\uc158\ub41c \uc0ac\uc6a9\uc790\ub294 \ubaa8\ub4e0 \ucd94\ucc9c\uc744 \uadf8\ub300\ub85c \uc218\ub77d\ud558\ubbc0\ub85c Ask \ud488\uc9c8\uc740 \uce21\uc815\ub418\uc9c0 \uc54a\ub294\ub2e4.",
+  "PC5\ub294 \uc624\ud0d0\uc77c \uc218 \uc788\ub2e4. \ud558\ub124\uc2a4 \ud154\ub808\uba54\ud2b8\ub9ac\uac00 \ud55c Bash \uba85\ub839 \uc548\uc758 \uccab \ubc88\uc9f8 `seed.py` \ud638\ucd9c\ub9cc \uae30\ub85d\ud558\uae30 \ub54c\ubb38\uc774\ub2e4."
+ ],
+ "run_id": "8b28b1b5525cc30e"
+}
