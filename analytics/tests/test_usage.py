@@ -20,6 +20,18 @@ REQUEST_FIELDS = {
     "session_id", "request_index", "timestamp", "cwd", "text", "invoked",
     "invocation", "subagents", "spec_writes", "handoff_writes",
 }
+# v1 of spec cdafbce69a2c5906 (FR16/FR17) adds two request fields.
+CONTINUATION_FIELDS = {"workflow_state", "run_id", "closes_run"}
+EMPTY_CONTINUE = {"left": 0, "stayed": 0, "unlabeled": 0}
+
+
+def full_confusion(**overrides):
+    """Hand-written FR12a confusion shape; every count defaults to 0."""
+    base = {"used": 0, "misfire": 0, "missed": 0, "correct_skip": 0, "unlabeled": 0,
+            "invalid_labels": 0, "duplicate_labels": 0, "unmatched_labels": 0,
+            "continue": dict(EMPTY_CONTINUE), "ignored_labels": 0}
+    base.update(overrides)
+    return base
 
 
 # ---------------------------------------------------------------- builders
@@ -256,6 +268,7 @@ def test_vo3_c1_full_scenario(tmp_path):
         "invoked": True, "invocation": "skill",
         "subagents": {"implementer": 1, "general-purpose": 1},
         "spec_writes": [SPEC_PATH], "handoff_writes": [],
+        "workflow_state": "start", "run_id": None, "closes_run": False,  # amended by spec cdafbce69a2c5906 FR16/FR17
     }
     for other in (requests[0], requests[2]):
         assert other["subagents"] == {} and other["spec_writes"] == []
@@ -366,13 +379,13 @@ def test_vo4_record_fields_and_session_id_falls_back_to_file_stem(tmp_path):
 
 def test_vo4_extract_requests_field_set_is_exact(tmp_path):
     requests, _ = extract(tmp_path, [human("x")])
-    assert set(requests[0]) == REQUEST_FIELDS
+    assert set(requests[0]) == REQUEST_FIELDS | CONTINUATION_FIELDS
 
 
 def test_vo4_report_shape_without_labels(tmp_path):
     report = usage.build_report(tmp_path / "none", tmp_path / "none2", None)
     assert report == {"requests": [], "variants": [], "confusion": None,
-                      "skipped_lines": 0, "skipped_files": 0}
+                      "skipped_lines": 0, "skipped_files": 0, "runs": []}
 
 
 def test_vo4_file_order_is_path_ascending_then_request_index(tmp_path):
@@ -546,8 +559,13 @@ def test_vo5_verifier_result_token_uses_result_value(tmp_path):
 
 # --------------------------------------------------------------------- VO6
 
-def req(sid, idx, invoked):
-    return {"session_id": sid, "request_index": idx, "invoked": invoked, "text": "t"}
+def req(sid, idx, invoked, state=None):
+    # Pre-existing tests build requests without workflow_state; FR16 implies
+    # invoked requests are start and the rest none when no run is open.
+    if state is None:
+        state = "start" if invoked else "none"
+    return {"session_id": sid, "request_index": idx, "invoked": invoked, "text": "t",
+            "workflow_state": state}
 
 
 def label(sid, idx, warranted):
@@ -564,9 +582,7 @@ def test_vo6_four_cells_and_unlabeled(tmp_path):
     path = labels_file(tmp_path, [label("s", 0, True), label("s", 1, False),
                                   label("s", 2, True), label("s", 3, False)])
     confusion = usage.apply_labels(requests, path)
-    assert confusion == {"used": 1, "misfire": 1, "missed": 1, "correct_skip": 1,
-                         "unlabeled": 1, "invalid_labels": 0, "duplicate_labels": 0,
-                         "unmatched_labels": 0}
+    assert confusion == full_confusion(used=1, misfire=1, missed=1, correct_skip=1, unlabeled=1)
     assert [r["warranted"] for r in requests] == [True, False, True, False, None]
 
 
@@ -615,9 +631,7 @@ def test_vo6_duplicate_last_wins_and_unmatched(tmp_path):
     path = labels_file(tmp_path, [label("s", 0, False), label("s", 0, True),
                                   label("ghost", 0, True)])
     confusion = usage.apply_labels(requests, path)
-    assert confusion == {"used": 1, "misfire": 0, "missed": 0, "correct_skip": 0,
-                         "unlabeled": 0, "invalid_labels": 0, "duplicate_labels": 1,
-                         "unmatched_labels": 1}
+    assert confusion == full_confusion(used=1, duplicate_labels=1, unmatched_labels=1)
     assert requests[0]["warranted"] is True
 
 
@@ -640,14 +654,15 @@ def test_vo6_label_read_failures_propagate(tmp_path):
 
 def test_vo6_build_report_with_labels_end_to_end(tmp_path):
     root = tmp_path / "projects"
+    # The closing command keeps b and c outside the run (spec cdafbce69a2c5906
+    # FR16); without it b and c would be continue requests.
     write_jsonl(root / "p" / "s1.jsonl", [
-        human("a", sid="s1"), assistant(skill_call()),
+        human("a", sid="s1"),
+        assistant(skill_call(), tool_use("Bash", command="python3 workflow_marker.py end")),
         human("b", sid="s1"), human("c", sid="s1")])
     labels = labels_file(tmp_path, [label("s1", 0, True), label("s1", 1, True), "oops"])
     report = usage.build_report(root, tmp_path / "none", labels)
-    assert report["confusion"] == {
-        "used": 1, "misfire": 0, "missed": 1, "correct_skip": 0, "unlabeled": 1,
-        "invalid_labels": 1, "duplicate_labels": 0, "unmatched_labels": 0}
+    assert report["confusion"] == full_confusion(used=1, missed=1, unlabeled=1, invalid_labels=1)
     assert [r["warranted"] for r in report["requests"]] == [True, True, None]
     assert report["skipped_lines"] == 0
 
@@ -1094,9 +1109,7 @@ def test_f12_two_per_cell_and_two_unlabeled(tmp_path):
              + [label("s", 4, True), label("s", 5, True)]
              + [label("s", 6, False), label("s", 7, False)])
     confusion = usage.apply_labels(requests, labels_file(tmp_path, lines))
-    assert confusion == {"used": 2, "misfire": 2, "missed": 2, "correct_skip": 2,
-                         "unlabeled": 2, "invalid_labels": 0, "duplicate_labels": 0,
-                         "unmatched_labels": 0}
+    assert confusion == full_confusion(used=2, misfire=2, missed=2, correct_skip=2, unlabeled=2)
 
 
 def test_f13_path_string_order_dash_before_slash(tmp_path):
@@ -1273,3 +1286,628 @@ def test_vo11_checker_accepts_read_only_constructs(snippet):
 
 def test_vo11_usage_source_has_no_network_import_or_file_write():
     assert find_violations(USAGE_SOURCE.read_text(encoding="utf-8")) == []
+
+
+# ===========================================================================
+# Spec cdafbce69a2c5906 v1 (workflow continuation). Expected values are
+# hand-derived from FR15-FR19, FR11a, FR12a and Cases C20-C32.
+# ===========================================================================
+
+END_CMD = "python3 .harness/hooks/workflow_marker.py end"
+ARCHIVE_CMD = "python3 spec_lifecycle.py archive --spec X --status complete"
+
+
+def bash(command):
+    return tool_use("Bash", command=command)
+
+
+def convo(*turns, sid="s1"):
+    """turns: (prompt, [assistant blocks]) -> human record + one assistant record."""
+    records = []
+    for prompt, blocks in turns:
+        records.append(human(prompt, sid=sid))
+        if blocks:
+            records.append(assistant(*blocks))
+    return records
+
+
+def states_of(requests):
+    return [r["workflow_state"] for r in requests]
+
+
+def run_ids_of(requests):
+    return [r["run_id"] for r in requests]
+
+
+def run_row(run_id, start, cont, closed, sid="s1"):
+    return {"session_id": sid, "run_id": run_id, "start_request_index": start,
+            "continue_turns": cont, "closed_by_command": closed}
+
+
+# -------------------------------------------------------------------- VO20
+
+def test_vo20_c20_full_flow_none_start_continue_continue_close_none(tmp_path):
+    requests, _ = extract(tmp_path, convo(
+        ("plain", []),
+        ("go", [skill_call()]),
+        ("understood: yes", []),
+        ("approved", [bash(END_CMD + " --run-id abc")]),
+        ("after", [])))
+    assert states_of(requests) == ["none", "start", "continue", "continue", "none"]
+    assert run_ids_of(requests) == [None, "abc", "abc", "abc", None]
+    assert usage.extract_runs(requests) == [run_row("abc", 1, 2, True)]
+
+
+def test_vo20_none_to_none(tmp_path):
+    requests, _ = extract(tmp_path, convo(("a", []), ("b", [assistant_text()])))
+    assert states_of(requests) == ["none", "none"]
+    assert run_ids_of(requests) == [None, None]
+    assert usage.extract_runs(requests) == []
+
+
+def assistant_text():
+    return {"type": "text", "text": "hello"}
+
+
+def test_vo20_slash_invocation_is_start_too(tmp_path):
+    requests, _ = extract(tmp_path, convo(
+        ("<command-name>/workflow-approach</command-name> do", []), ("reply", [])))
+    assert states_of(requests) == ["start", "continue"]
+
+
+def test_vo20_c21_file_end_leaves_run_open_without_command(tmp_path):
+    requests, _ = extract(tmp_path, convo(
+        ("go", [skill_call()]), ("a", []), ("b", [])))
+    assert states_of(requests) == ["start", "continue", "continue"]
+    assert usage.extract_runs(requests) == [run_row(None, 0, 2, False)]
+
+
+def test_vo20_c22_reinvocation_while_open_restarts_without_command(tmp_path):
+    requests, _ = extract(tmp_path, convo(
+        ("go", [skill_call(), bash("python3 workflow_marker.py start --run-id r1")]),
+        ("answer", []),
+        ("again", [skill_call(), bash("python3 workflow_marker.py start --run-id r2")]),
+        ("answer2", [])))
+    assert states_of(requests) == ["start", "continue", "start", "continue"]
+    assert run_ids_of(requests) == ["r1", "r1", "r2", "r2"]
+    assert usage.extract_runs(requests) == [run_row("r1", 0, 1, False),
+                                            run_row("r2", 2, 1, False)]
+
+
+def test_vo20_slash_reinvocation_while_open(tmp_path):
+    requests, _ = extract(tmp_path, convo(
+        ("go", [skill_call()]),
+        ("<command-name>/workflow-approach</command-name>", [])))
+    assert states_of(requests) == ["start", "start"]
+
+
+def test_vo20_c23_close_in_start_turn_next_request_is_none(tmp_path):
+    requests, _ = extract(tmp_path, convo(
+        ("go", [skill_call(), bash(END_CMD + " --run-id q")]),
+        ("after", [])))
+    assert states_of(requests) == ["start", "none"]
+    assert run_ids_of(requests) == ["q", None]
+    assert usage.extract_runs(requests) == [run_row("q", 0, 0, True)]
+
+
+def test_vo20_after_close_new_invocation_starts_fresh_run(tmp_path):
+    requests, _ = extract(tmp_path, convo(
+        ("go", [skill_call(), bash(END_CMD + " --run-id r1")]),
+        ("plain", []),
+        ("again", [skill_call(), bash("python3 workflow_marker.py start --run-id r2")]),
+        ("answer", [])))
+    assert states_of(requests) == ["start", "none", "start", "continue"]
+    assert run_ids_of(requests) == ["r1", None, "r2", "r2"]
+    assert usage.extract_runs(requests) == [run_row("r1", 0, 0, True),
+                                            run_row("r2", 2, 1, False)]
+
+
+def test_vo20_c26_run_does_not_continue_across_files(tmp_path):
+    root = tmp_path / "projects"
+    write_jsonl(root / "p" / "a.jsonl", convo(
+        ("go", [skill_call(), bash("python3 workflow_marker.py start --run-id ra")]),
+        ("answer", []), sid="a1"))
+    write_jsonl(root / "p" / "b.jsonl", convo(
+        ("first", []), ("go", [skill_call()]), ("answer", []), sid="b1"))
+    report = usage.build_report(root, tmp_path / "none", None)
+    assert states_of(report["requests"]) == ["start", "continue", "none", "start", "continue"]
+    assert run_ids_of(report["requests"]) == ["ra", "ra", None, None, None]
+    assert report["runs"] == [run_row("ra", 0, 1, False, sid="a1"),
+                              run_row(None, 1, 1, False, sid="b1")]
+
+
+# -------------------------------------------------------------------- VO21
+
+def _single_run_expectations(closed, run_id):
+    states = ["start", "continue", "none" if closed else "continue"]
+    ids = [run_id, run_id, None if closed else run_id]
+    return states, ids, (1 if closed else 2)
+
+
+RUNID_CASES = {
+    "sep_workflow_marker": ([bash("python3 workflow_marker.py start --run-id x")], "x", False),
+    "eq_spec_lifecycle": ([bash("python3 spec_lifecycle.py start --run-id=x")], "x", False),
+    "extra_args_and_path": ([bash("python3 /r/.harness/workflow_marker.py phase verify "
+                                  "--run-id wr-1 --other 2")], "wr-1", False),
+    "non_target_command": ([bash("echo --run-id y")], None, False),
+    "no_value_at_end": ([bash("python3 workflow_marker.py start --run-id")], None, False),
+    "no_value_after_eq": ([bash("python3 workflow_marker.py start --run-id=")], None, False),
+    "no_value_then_later_command_found": (
+        [bash("python3 workflow_marker.py start --run-id"),
+         bash("python3 spec_lifecycle.py x --run-id z")], "z", False),
+    "first_target_occurrence_wins": (
+        [bash("python3 workflow_marker.py a --run-id one"),
+         bash("python3 spec_lifecycle.py b --run-id two")], "one", False),
+    "non_target_before_target_ignored": (
+        [bash("tool.py --run-id bad"), bash("python3 workflow_marker.py s --run-id good")],
+        "good", False),
+    "archive_closes_without_run_id": ([bash(ARCHIVE_CMD)], None, True),
+    "end_closes_without_run_id": ([bash(END_CMD)], None, True),
+    "end_closes_with_run_id": ([bash(END_CMD + " --run-id e1")], "e1", True),
+    "other_marker_subcommand_does_not_close": ([bash("python3 workflow_marker.py status")],
+                                               None, False),
+    "other_lifecycle_subcommand_does_not_close": (
+        [bash("python3 spec_lifecycle.py start --spec X")], None, False),
+    "non_str_command_list": (
+        [tool_use("Bash", command=["python3 workflow_marker.py end --run-id q"])], None, False),
+    "non_str_command_int": ([tool_use("Bash", command=5)], None, False),
+    "non_str_command_none": ([tool_use("Bash", command=None)], None, False),
+    "non_str_then_valid_command_still_found": (
+        [tool_use("Bash", command=["x"]), bash(END_CMD + " --run-id ok")], "ok", True),
+    "input_is_str": ([{"type": "tool_use", "name": "Bash",
+                       "input": "python3 workflow_marker.py end --run-id q"}], None, False),
+    "input_is_list": ([{"type": "tool_use", "name": "Bash",
+                        "input": ["workflow_marker.py end --run-id q"]}], None, False),
+    "non_bash_tool_write": ([tool_use("Write", command=END_CMD + " --run-id q")], None, False),
+    "non_bash_tool_agent": ([tool_use("Agent", command=END_CMD + " --run-id q")], None, False),
+    "text_block_not_a_command": (
+        [{"type": "text", "text": END_CMD + " --run-id q"}], None, False),
+    # correction batch 1, F1: quotes adjacent to the value
+    "quote_inside_eq_value": ([bash('python3 workflow_marker.py s --run-id=abc"def')],
+                              "abc", False),
+    "trailing_quote_after_sep_value": ([bash('python3 workflow_marker.py s --run-id abc"')],
+                                       "abc", False),
+    # correction batch 1, F2: partial matches of the closing substrings
+    "partial_echo_end": ([bash("echo end")], None, False),
+    "partial_git_archive": ([bash("git archive HEAD")], None, False),
+    "partial_marker_archive": ([bash("python3 workflow_marker.py archive --run-id r")],
+                               "r", False),
+    "partial_lifecycle_end": ([bash("python3 spec_lifecycle.py end --run-id r")], "r", False),
+    "partial_noncontiguous_phase_end": ([bash("python3 workflow_marker.py phase --phase end")],
+                                        None, False),
+}
+
+
+@pytest.mark.parametrize("case", sorted(RUNID_CASES))
+def test_vo21_run_id_and_close_classification(tmp_path, case):
+    blocks, run_id, closed = RUNID_CASES[case]
+    requests, _ = extract(tmp_path, convo(
+        ("go", [skill_call()]), ("middle", blocks), ("last", [])))
+    states, ids, conts = _single_run_expectations(closed, run_id)
+    assert states_of(requests) == states
+    assert run_ids_of(requests) == ids
+    assert [r["closes_run"] for r in requests] == [False, closed, False]
+    assert usage.extract_runs(requests) == [run_row(run_id, 0, conts, closed)]
+
+
+def test_vo21_c24_archive_closes_and_run_id_from_earlier_start_command(tmp_path):
+    requests, _ = extract(tmp_path, convo(
+        ("go", [skill_call(), bash("python3 spec_lifecycle.py start --run-id=r1")]),
+        ("done", [bash(ARCHIVE_CMD)]),
+        ("after", [])))
+    assert states_of(requests) == ["start", "continue", "none"]
+    assert run_ids_of(requests) == ["r1", "r1", None]
+    assert usage.extract_runs(requests) == [run_row("r1", 0, 1, True)]
+
+
+def test_vo21_run_id_found_in_later_turn_applies_to_start_request(tmp_path):
+    requests, _ = extract(tmp_path, convo(
+        ("go", [skill_call()]),
+        ("c1", [bash("python3 workflow_marker.py x --run-id first")]),
+        ("c2", [bash("python3 workflow_marker.py x --run-id second")])))
+    assert run_ids_of(requests) == ["first", "first", "first"]
+
+
+def test_vo21_command_in_none_request_neither_closes_nor_leaks_run_id(tmp_path):
+    requests, _ = extract(tmp_path, convo(
+        ("plain", [bash(END_CMD + " --run-id stray")]),
+        ("go", [skill_call()]),
+        ("answer", [])))
+    assert states_of(requests) == ["none", "start", "continue"]
+    assert run_ids_of(requests) == [None, None, None]
+    assert usage.extract_runs(requests) == [run_row(None, 1, 1, False)]
+
+
+def test_vo21_sidechain_commands_are_ignored(tmp_path):
+    side = assistant(bash(END_CMD + " --run-id side"), sidechain=True)
+    requests, _ = extract(tmp_path, [human("go"), assistant(skill_call()), side,
+                                     human("answer")])
+    assert states_of(requests) == ["start", "continue"]
+    assert run_ids_of(requests) == [None, None]
+
+
+# -------------------------------------------------------------------- VO22
+
+def test_vo22_extract_runs_empty_list(tmp_path):
+    assert usage.extract_runs([]) == []
+
+
+def test_vo22_closed_unclosed_and_split_runs_in_request_order(tmp_path):
+    requests, _ = extract(tmp_path, convo(
+        ("p0", []),
+        ("s1", [skill_call(), bash("python3 workflow_marker.py start --run-id r1")]),
+        ("c1", []),
+        ("s2", [skill_call(), bash("python3 workflow_marker.py start --run-id r2")]),
+        ("c2", []),
+        ("c3", [bash(END_CMD + " --run-id r2")]),
+        ("p1", []),
+        ("s3", [skill_call()]),
+        ("c4", [])))
+    assert states_of(requests) == ["none", "start", "continue", "start", "continue",
+                                   "continue", "none", "start", "continue"]
+    assert usage.extract_runs(requests) == [
+        run_row("r1", 1, 1, False),
+        run_row("r2", 3, 2, True),
+        run_row(None, 7, 1, False)]
+
+
+def test_vo22_run_record_has_exactly_the_declared_keys(tmp_path):
+    requests, _ = extract(tmp_path, convo(("go", [skill_call()])))
+    (row,) = usage.extract_runs(requests)
+    assert set(row) == {"session_id", "run_id", "start_request_index", "continue_turns",
+                        "closed_by_command"}
+    assert row["closed_by_command"] is False
+
+
+def test_vo22_build_report_runs_follow_file_order_then_run_order(tmp_path):
+    root = tmp_path / "projects"
+    write_jsonl(root / "p" / "b.jsonl", convo(
+        ("go", [skill_call(), bash(END_CMD + " --run-id rb")]), sid="sb"))
+    write_jsonl(root / "p" / "a.jsonl", convo(
+        ("go", [skill_call(), bash("python3 workflow_marker.py x --run-id ra1")]),
+        ("again", [skill_call(), bash("python3 workflow_marker.py x --run-id ra2")]),
+        ("answer", []), sid="sa"))
+    write_jsonl(root / "p" / "c.jsonl", convo(("plain", []), sid="sc"))
+    report = usage.build_report(root, tmp_path / "none", None)
+    assert report["runs"] == [run_row("ra1", 0, 0, False, sid="sa"),
+                              run_row("ra2", 1, 1, False, sid="sa"),
+                              run_row("rb", 0, 0, True, sid="sb")]
+    assert set(report) == {"requests", "variants", "confusion", "skipped_lines",
+                           "skipped_files", "runs"}
+
+
+# -------------------------------------------------------------------- VO23
+
+def lab(sid, idx, **fields):
+    return {"session_id": sid, "request_index": idx, **fields}
+
+
+_ABSENT = object()
+# (warranted, left_workflow, valid); "yes"/1 are the non-bool representatives.
+LABEL_TABLE = {
+    "w_absent_l_absent": (_ABSENT, _ABSENT, False),
+    "w_absent_l_bool": (_ABSENT, True, True),
+    "w_absent_l_nonbool": (_ABSENT, 1, False),
+    "w_bool_l_absent": (False, _ABSENT, True),
+    "w_bool_l_bool": (True, False, True),
+    "w_bool_l_nonbool": (True, 1, False),
+    "w_nonbool_l_absent": ("yes", _ABSENT, False),
+    "w_nonbool_l_bool": ("yes", True, False),
+    "w_nonbool_l_nonbool": ("yes", 1, False),
+    # correction batch 1, F3: null and 0/1 are not bool
+    "w_null_l_true": (None, True, False),
+    "w_true_l_null": (True, None, False),
+    "w_zero_l_absent": (0, _ABSENT, False),
+    "w_one_l_absent": (1, _ABSENT, False),
+    "w_absent_l_zero": (_ABSENT, 0, False),
+}
+
+
+@pytest.mark.parametrize("cell", sorted(LABEL_TABLE))
+def test_vo23_label_validity_decision_table(tmp_path, cell):
+    warranted, left, valid = LABEL_TABLE[cell]
+    fields = {}
+    if warranted is not _ABSENT:
+        fields["warranted"] = warranted
+    if left is not _ABSENT:
+        fields["left_workflow"] = left
+    requests = [req("s", 0, True)]
+    confusion = usage.apply_labels(requests, labels_file(tmp_path, [lab("s", 0, **fields)]))
+    assert confusion["unmatched_labels"] == 0 and confusion["duplicate_labels"] == 0
+    if valid:
+        assert confusion["invalid_labels"] == 0
+        assert requests[0]["warranted"] == (None if warranted is _ABSENT else warranted)
+        assert requests[0]["left_workflow"] == (None if left is _ABSENT else left)
+        if warranted is not _ABSENT:
+            assert requests[0]["warranted"] is warranted
+        if left is not _ABSENT:
+            assert requests[0]["left_workflow"] is left
+    else:
+        assert confusion["invalid_labels"] == 1
+        assert requests[0]["warranted"] is None and requests[0]["left_workflow"] is None
+        assert confusion["unlabeled"] == 1
+
+
+def test_vo23_c29_invalid_kinds_counted_together_valid_ones_survive(tmp_path):
+    lines = [lab("s", 0), lab("s", 0, left_workflow="yes"),
+             lab("s", 0, warranted=True, left_workflow=1), lab("s", 1, left_workflow=True)]
+    requests = [req("s", 0, True), req("s", 1, False, state="continue")]
+    confusion = usage.apply_labels(requests, labels_file(tmp_path, lines))
+    assert confusion["invalid_labels"] == 3
+    assert confusion["continue"] == {"left": 1, "stayed": 0, "unlabeled": 0}
+    assert confusion["unlabeled"] == 1
+
+
+def test_vo23_c31_duplicate_replaces_whole_earlier_line(tmp_path):
+    requests = [req("s", 0, False, state="continue")]
+    confusion = usage.apply_labels(requests, labels_file(
+        tmp_path, [lab("s", 0, warranted=True), lab("s", 0, left_workflow=True)]))
+    assert requests[0]["warranted"] is None
+    assert requests[0]["left_workflow"] is True
+    assert confusion["duplicate_labels"] == 1
+    assert confusion["continue"] == {"left": 1, "stayed": 0, "unlabeled": 0}
+    assert confusion["ignored_labels"] == 0
+
+
+def test_vo23_duplicate_replacement_other_direction(tmp_path):
+    requests = [req("s", 0, True)]
+    confusion = usage.apply_labels(requests, labels_file(
+        tmp_path, [lab("s", 0, left_workflow=False), lab("s", 0, warranted=True)]))
+    assert requests[0]["warranted"] is True
+    assert requests[0]["left_workflow"] is None
+    assert confusion["duplicate_labels"] == 1
+    assert confusion["used"] == 1 and confusion["ignored_labels"] == 0
+
+
+# -------------------------------------------------------------------- VO24
+
+C_ZERO = dict(EMPTY_CONTINUE)
+# id: (state, invoked, label fields or None, confusion overrides, warranted, left)
+AGG_TABLE = {
+    "start_w_only": ("start", True, {"warranted": True}, dict(used=1), True, None),
+    "start_left_only": ("start", True, {"left_workflow": True},
+                        dict(unlabeled=1, ignored_labels=1), None, True),
+    "start_both": ("start", True, {"warranted": False, "left_workflow": True},
+                   dict(misfire=1), False, True),
+    "start_no_label": ("start", True, None, dict(unlabeled=1), None, None),
+    "none_w_only": ("none", False, {"warranted": True}, dict(missed=1), True, None),
+    "none_left_only": ("none", False, {"left_workflow": False},
+                       dict(unlabeled=1, ignored_labels=1), None, False),
+    "none_both": ("none", False, {"warranted": False, "left_workflow": False},
+                  dict(correct_skip=1), False, False),
+    "none_no_label": ("none", False, None, dict(unlabeled=1), None, None),
+    "continue_w_only": ("continue", False, {"warranted": True},
+                        dict(ignored_labels=1, **{"continue": {"left": 0, "stayed": 0,
+                                                               "unlabeled": 1}}), True, None),
+    "continue_left_only": ("continue", False, {"left_workflow": True},
+                           {"continue": {"left": 1, "stayed": 0, "unlabeled": 0}}, None, True),
+    "continue_both": ("continue", False, {"warranted": True, "left_workflow": False},
+                      {"continue": {"left": 0, "stayed": 1, "unlabeled": 0}}, True, False),
+    "continue_no_label": ("continue", False, None,
+                          {"continue": {"left": 0, "stayed": 0, "unlabeled": 1}}, None, None),
+}
+
+
+@pytest.mark.parametrize("cell", sorted(AGG_TABLE))
+def test_vo24_state_by_label_decision_table(tmp_path, cell):
+    state, invoked, fields, overrides, warranted, left = AGG_TABLE[cell]
+    requests = [req("s", 0, invoked, state=state)]
+    lines = [] if fields is None else [lab("s", 0, **fields)]
+    confusion = usage.apply_labels(requests, labels_file(tmp_path, lines))
+    assert confusion == full_confusion(**overrides)
+    assert requests[0]["warranted"] is warranted
+    assert requests[0]["left_workflow"] is left
+
+
+def test_vo24_c27_mixed_states_aggregate(tmp_path):
+    requests = [req("s", 0, True), req("s", 1, False, "continue"),
+                req("s", 2, False, "continue"), req("s", 3, False, "continue"),
+                req("s", 4, False)]
+    lines = [lab("s", 0, warranted=True), lab("s", 1, left_workflow=True),
+             lab("s", 2, left_workflow=False), lab("s", 4, warranted=False)]
+    confusion = usage.apply_labels(requests, labels_file(tmp_path, lines))
+    assert confusion == full_confusion(
+        used=1, correct_skip=1, **{"continue": {"left": 1, "stayed": 1, "unlabeled": 1}})
+
+
+def test_vo24_c28_ignored_labels(tmp_path):
+    requests = [req("s", 0, False, "continue"), req("s", 1, False)]
+    lines = [lab("s", 0, warranted=True), lab("s", 1, left_workflow=True)]
+    confusion = usage.apply_labels(requests, labels_file(tmp_path, lines))
+    assert confusion == full_confusion(
+        unlabeled=1, ignored_labels=2, **{"continue": {"left": 0, "stayed": 0, "unlabeled": 1}})
+    assert (requests[0]["warranted"], requests[0]["left_workflow"]) == (True, None)
+    assert (requests[1]["warranted"], requests[1]["left_workflow"]) == (None, True)
+
+
+def test_vo24_end_to_end_with_transcript_states(tmp_path):
+    root = tmp_path / "projects"
+    write_jsonl(root / "p" / "s1.jsonl", convo(
+        ("plain", []), ("go", [skill_call()]), ("answer", []), ("approve", [bash(END_CMD)]),
+        ("after", [])))
+    labels = labels_file(tmp_path, [
+        lab("s1", 0, warranted=False), lab("s1", 1, warranted=True),
+        lab("s1", 2, left_workflow=False), lab("s1", 3, left_workflow=True)])
+    report = usage.build_report(root, tmp_path / "none", labels)
+    assert states_of(report["requests"]) == ["none", "start", "continue", "continue", "none"]
+    assert report["confusion"] == full_confusion(
+        used=1, correct_skip=1, unlabeled=1,
+        **{"continue": {"left": 1, "stayed": 1, "unlabeled": 0}})
+
+
+# -------------------------------------------------------------------- VO25
+
+def test_vo25_c30_old_format_labels_keep_old_counts(tmp_path):
+    root = tmp_path / "projects"
+    write_jsonl(root / "p" / "s1.jsonl", convo(
+        ("a", []), ("b", [skill_call(), bash(END_CMD)]), ("c", []), ("d", [])))
+    labels = labels_file(tmp_path, [label("s1", 0, True), label("s1", 1, False),
+                                    label("s1", 2, False), "bad"])
+    confusion = usage.build_report(root, tmp_path / "none", labels)["confusion"]
+    old_keys = {k: confusion[k] for k in
+                ("used", "misfire", "missed", "correct_skip", "unlabeled",
+                 "invalid_labels", "duplicate_labels", "unmatched_labels")}
+    assert old_keys == {"used": 0, "misfire": 1, "missed": 1, "correct_skip": 1,
+                        "unlabeled": 1, "invalid_labels": 1, "duplicate_labels": 0,
+                        "unmatched_labels": 0}
+    assert confusion["continue"] == EMPTY_CONTINUE and confusion["ignored_labels"] == 0
+
+
+# -------------------------------------------------------------------- VO26
+
+_CMD_FRAGMENTS = ["workflow_marker.py", "spec_lifecycle.py", "end", "archive", "--run-id",
+                  "--run-id=", "abc", "'q'", '"', "x y", " ", "=", "start", "\n"]
+_CMD = st.one_of(
+    st.text(max_size=30),
+    st.lists(st.sampled_from(_CMD_FRAGMENTS), max_size=8).map(" ".join))
+_BLOCK = st.one_of(
+    _CMD.map(lambda c: tool_use("Bash", command=c)),
+    st.just(skill_call()),
+    st.builds(lambda v: tool_use("Bash", command=v), _JSON_VALUES),
+    st.builds(lambda v: {"type": "tool_use", "name": "Bash", "input": v}, _JSON_VALUES),
+    _CMD.map(lambda c: tool_use("Write", command=c)),
+    _JSON_VALUES)
+_RECORD = st.one_of(
+    st.builds(lambda t: human(t), st.sampled_from(
+        ["a", "<command-name>/workflow-approach</command-name>", "ok"])),
+    st.builds(lambda bs, side: assistant(*bs, sidechain=side),
+              st.lists(_BLOCK, max_size=4), st.booleans()))
+_TRANSCRIPT_LINES = st.lists(
+    st.one_of(_RECORD.map(json.dumps), _TEXT_LINE, _JSON_VALUES.map(json.dumps)), max_size=14)
+
+
+@settings(max_examples=300, derandomize=True, deadline=None, database=None)
+@given(lines=_TRANSCRIPT_LINES)
+def test_vo26_fuzz_extract_requests_continuation(lines):
+    with tempfile.TemporaryDirectory() as directory:
+        path, non_empty = _fuzz_file(directory, lines)
+        result = usage.extract_requests(path)
+    assert result is not None
+    requests, skipped = result
+    assert 0 <= skipped <= non_empty
+    for request in requests:
+        assert request["workflow_state"] in {"start", "continue", "none"}
+        if request["workflow_state"] == "none":
+            assert request["run_id"] is None
+        assert request["run_id"] is None or (
+            isinstance(request["run_id"], str) and request["run_id"] != "")
+    seen_start = False
+    for request in requests:
+        seen_start = seen_start or request["workflow_state"] == "start"
+        assert request["workflow_state"] != "continue" or seen_start
+    runs = usage.extract_runs(requests)
+    assert len(runs) == states_of(requests).count("start")
+    assert sum(r["continue_turns"] for r in runs) == states_of(requests).count("continue")
+
+
+_FUZZ_STATES = ["start", "none", "continue", "start", "continue", "none"]
+_LABEL_SCALAR = st.one_of(st.none(), st.booleans(), st.integers(-2, 8),
+                          st.sampled_from(["s", "t", "yes", ""]), st.text(max_size=4))
+_LABEL_DICT = st.fixed_dictionaries(
+    {}, optional={"session_id": st.sampled_from(["s", "t", 5]),
+                  "request_index": st.one_of(st.integers(-1, 7), st.booleans(), st.text(max_size=2)),
+                  "warranted": _LABEL_SCALAR, "left_workflow": _LABEL_SCALAR})
+_LABEL_LINES = st.lists(
+    st.one_of(_LABEL_DICT.map(json.dumps), _TEXT_LINE, _JSON_VALUES.map(json.dumps)),
+    max_size=14)
+
+
+@settings(max_examples=300, derandomize=True, deadline=None, database=None)
+@given(lines=_LABEL_LINES)
+def test_vo26_fuzz_apply_labels(lines):
+    requests = [req("s", i, state == "start", state=state)
+                for i, state in enumerate(_FUZZ_STATES)]
+    with tempfile.TemporaryDirectory() as directory:
+        path = Path(directory) / "labels.jsonl"
+        path.write_text("".join(line + "\n" for line in lines), encoding="utf-8")
+        confusion = usage.apply_labels(requests, path)
+    assert (confusion["used"] + confusion["misfire"] + confusion["missed"]
+            + confusion["correct_skip"] + confusion["unlabeled"]) == 4
+    cont = confusion["continue"]
+    assert cont["left"] + cont["stayed"] + cont["unlabeled"] == 2
+    for request in requests:
+        assert request["warranted"] in (True, False, None)
+        assert request["left_workflow"] in (True, False, None)
+
+
+# ------------------------------------------------- FR15a (spec v2) closes_run
+
+def test_vo21_closes_run_true_only_on_closing_turn(tmp_path):
+    requests, _ = extract(tmp_path, convo(
+        ("go", [skill_call()]), ("mid", [bash("python3 workflow_marker.py status")]),
+        ("done", [bash(ARCHIVE_CMD)]), ("after", [])))
+    assert [r["closes_run"] for r in requests] == [False, False, True, False]
+    assert all(type(r["closes_run"]) is bool for r in requests)
+
+
+def test_vo21_closes_run_true_on_none_request_but_closes_nothing(tmp_path):
+    requests, _ = extract(tmp_path, convo(
+        ("plain", [bash(END_CMD)]), ("go", [skill_call()]), ("answer", [])))
+    assert [r["closes_run"] for r in requests] == [True, False, False]
+    assert states_of(requests) == ["none", "start", "continue"]
+    assert usage.extract_runs(requests) == [run_row(None, 1, 1, False)]
+
+
+def test_vo21_closes_run_on_start_request_own_turn(tmp_path):
+    requests, _ = extract(tmp_path, convo(("go", [skill_call(), bash(END_CMD)])))
+    assert [r["closes_run"] for r in requests] == [True]
+
+
+def plain_req(idx, state, run_id=None, closes=False, sid="d"):
+    return {"session_id": sid, "request_index": idx, "workflow_state": state,
+            "run_id": run_id, "closes_run": closes}
+
+
+def test_vo22_extract_runs_on_hand_built_plain_dicts():
+    requests = [
+        plain_req(0, "none", closes=True),
+        plain_req(1, "start", "r1"), plain_req(2, "continue", "r1", closes=True),
+        plain_req(3, "none"),
+        plain_req(4, "start", None), plain_req(5, "continue"),
+        plain_req(6, "start", "r3", closes=True),
+        plain_req(7, "start", "r4"), plain_req(8, "continue", "r4"),
+        plain_req(9, "continue", "r4", closes=True),
+    ]
+    assert usage.extract_runs(requests) == [
+        run_row("r1", 1, 1, True, sid="d"),
+        run_row(None, 4, 1, False, sid="d"),
+        run_row("r3", 6, 0, True, sid="d"),
+        run_row("r4", 7, 2, True, sid="d")]
+
+
+def test_vo22_closed_by_command_reads_last_request_only():
+    requests = [plain_req(0, "start", "r", closes=True), plain_req(1, "continue", "r")]
+    assert usage.extract_runs(requests) == [run_row("r", 0, 1, False, sid="d")]
+
+
+# ---------------------------------- correction batch 2: counter accumulation
+
+def test_vo24_ignored_labels_accumulates_across_two_continue_requests(tmp_path):
+    requests = [req("s", 0, False, "continue"), req("s", 1, False, "continue")]
+    confusion = usage.apply_labels(requests, labels_file(
+        tmp_path, [lab("s", 0, warranted=True), lab("s", 1, warranted=False)]))
+    assert confusion == full_confusion(
+        ignored_labels=2, **{"continue": {"left": 0, "stayed": 0, "unlabeled": 2}})
+
+
+def test_vo24_ignored_labels_accumulates_none_left_only_then_continue_warranted_only(tmp_path):
+    requests = [req("s", 0, False), req("s", 1, False, "continue")]
+    confusion = usage.apply_labels(requests, labels_file(
+        tmp_path, [lab("s", 0, left_workflow=True), lab("s", 1, warranted=True)]))
+    assert confusion == full_confusion(
+        unlabeled=1, ignored_labels=2,
+        **{"continue": {"left": 0, "stayed": 0, "unlabeled": 1}})
+
+
+def test_vo24_continue_left_accumulates(tmp_path):
+    requests = [req("s", 0, False, "continue"), req("s", 1, False, "continue")]
+    confusion = usage.apply_labels(requests, labels_file(
+        tmp_path, [lab("s", 0, left_workflow=True), lab("s", 1, left_workflow=True)]))
+    assert confusion == full_confusion(**{"continue": {"left": 2, "stayed": 0, "unlabeled": 0}})
+
+
+def test_vo24_continue_stayed_accumulates(tmp_path):
+    requests = [req("s", 0, False, "continue"), req("s", 1, False, "continue")]
+    confusion = usage.apply_labels(requests, labels_file(
+        tmp_path, [lab("s", 0, left_workflow=False), lab("s", 1, left_workflow=False)]))
+    assert confusion == full_confusion(**{"continue": {"left": 0, "stayed": 2, "unlabeled": 0}})

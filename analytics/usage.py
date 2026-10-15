@@ -1,5 +1,6 @@
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -10,6 +11,9 @@ _NON_HUMAN_PREFIXES = ("<task-notification>", "<local-command-", "Another Claude
 _SLASH_MARKER = "<command-name>/workflow-approach</command-name>"
 _WRITE_TOOLS = ("Write", "Edit", "MultiEdit", "NotebookEdit")
 _AGENT_TOOLS = ("Agent", "Task")
+_CLOSING_COMMANDS = ("workflow_marker.py end", "spec_lifecycle.py archive")
+_RUN_ID_SOURCES = ("workflow_marker.py", "spec_lifecycle.py")
+_RUN_ID_PATTERN = re.compile(r"--run-id(?:=|\s+)([^\s'\"]+)")
 
 
 def _load_object(line: str) -> dict | None:
@@ -69,7 +73,36 @@ def _new_request(record: dict, stem: str, index: int, text: str) -> dict:
         "subagents": {},
         "spec_writes": [],
         "handoff_writes": [],
+        "workflow_state": "none",
+        "run_id": None,
+        "closes_run": False,
     }
+
+
+def _assign_runs(requests: list[dict], found: list[dict]) -> None:
+    members: list[int] = []
+
+    def close() -> None:
+        run_id = next((found[i]["run_id"] for i in members if found[i]["run_id"] is not None), None)
+        for i in members:
+            requests[i]["run_id"] = run_id
+        members.clear()
+
+    for index, request in enumerate(requests):
+        request["closes_run"] = found[index]["closing"]
+        if request["invocation"] is not None:
+            if members:
+                close()
+            request["workflow_state"] = "start"
+        elif members:
+            request["workflow_state"] = "continue"
+        else:
+            continue
+        members.append(index)
+        if request["closes_run"]:
+            close()
+    if members:
+        close()
 
 
 def _written_path(tool_input: dict) -> str | None:
@@ -82,7 +115,18 @@ def _add_unique(items: list[str], value: str) -> None:
         items.append(value)
 
 
-def _collect_turn(request: dict, content) -> None:
+def _scan_command(command, found: dict) -> None:
+    if not isinstance(command, str):
+        return
+    if any(marker in command for marker in _CLOSING_COMMANDS):
+        found["closing"] = True
+    if found["run_id"] is None and any(source in command for source in _RUN_ID_SOURCES):
+        match = _RUN_ID_PATTERN.search(command)
+        if match:
+            found["run_id"] = match.group(1)
+
+
+def _collect_turn(request: dict, content, found: dict) -> None:
     for block in _blocks(content):
         if block.get("type") != "tool_use":
             continue
@@ -90,7 +134,9 @@ def _collect_turn(request: dict, content) -> None:
         tool_input = block.get("input")
         if not isinstance(tool_input, dict):
             tool_input = {}
-        if name == "Skill":
+        if name == "Bash":
+            _scan_command(tool_input.get("command"), found)
+        elif name == "Skill":
             if tool_input.get("skill") == "workflow-approach" and request["invocation"] is None:
                 request["invocation"] = "skill"
                 request["invoked"] = True
@@ -112,6 +158,7 @@ def _collect_turn(request: dict, content) -> None:
 def extract_requests(path: Path) -> tuple[list[dict], int] | None:
     requests: list[dict] = []
     skipped = 0
+    found: list[dict] = []
     current = None
     try:
         with path.open(encoding="utf-8") as handle:
@@ -131,11 +178,36 @@ def extract_requests(path: Path) -> tuple[list[dict], int] | None:
                     if _is_human(record, content, text):
                         current = _new_request(record, path.stem, len(requests), text)
                         requests.append(current)
+                        found.append({"closing": False, "run_id": None})
                 elif kind == "assistant" and current is not None:
-                    _collect_turn(current, content)
+                    _collect_turn(current, content, found[-1])
     except (OSError, UnicodeDecodeError):
         return None
+    _assign_runs(requests, found)
     return requests, skipped
+
+
+def extract_runs(requests: list[dict]) -> list[dict]:
+    runs: list[dict] = []
+    current = None
+    for request in requests:
+        state = request.get("workflow_state")
+        if state == "start":
+            current = {
+                "session_id": request["session_id"],
+                "run_id": request.get("run_id"),
+                "start_request_index": request["request_index"],
+                "continue_turns": 0,
+                "closed_by_command": False,
+            }
+            runs.append(current)
+        elif state == "continue" and current is not None:
+            current["continue_turns"] += 1
+        else:
+            current = None
+            continue
+        current["closed_by_command"] = bool(request.get("closes_run", False))
+    return runs
 
 
 def _event_token(item: dict) -> str:
@@ -235,22 +307,27 @@ def mine_variants(telemetry_dir: Path) -> tuple[list[dict], int, int]:
     return variants, skipped, skipped_files
 
 
-def _parse_label(line: str) -> tuple[tuple[str, int], bool] | None:
+_LABEL_FIELDS = ("warranted", "left_workflow")
+
+
+def _parse_label(line: str) -> tuple[tuple[str, int], dict] | None:
     label = _load_object(line)
     if label is None:
         return None
     session_id = label.get("session_id")
     index = label.get("request_index")
-    warranted = label.get("warranted")
-    if not isinstance(session_id, str) or not isinstance(warranted, bool):
+    if not isinstance(session_id, str):
         return None
     if not isinstance(index, int) or isinstance(index, bool) or index < 0:
         return None
-    return (session_id, index), warranted
+    fields = {name: label[name] for name in _LABEL_FIELDS if name in label}
+    if not fields or not all(isinstance(value, bool) for value in fields.values()):
+        return None
+    return (session_id, index), fields
 
 
 def apply_labels(requests: list[dict], labels_path: Path) -> dict:
-    labels: dict[tuple[str, int], bool] = {}
+    labels: dict[tuple[str, int], dict] = {}
     invalid = 0
     duplicate = 0
     for line in labels_path.read_text(encoding="utf-8").splitlines():
@@ -260,10 +337,10 @@ def apply_labels(requests: list[dict], labels_path: Path) -> dict:
         if parsed is None:
             invalid += 1
             continue
-        key, warranted = parsed
+        key, fields = parsed
         if key in labels:
             duplicate += 1
-        labels[key] = warranted
+        labels[key] = fields
 
     confusion = {
         "used": 0,
@@ -272,20 +349,36 @@ def apply_labels(requests: list[dict], labels_path: Path) -> dict:
         "correct_skip": 0,
         "unlabeled": 0,
     }
+    follow = {"left": 0, "stayed": 0, "unlabeled": 0}
+    ignored = 0
     matched = set()
     for request in requests:
         key = (request["session_id"], request["request_index"])
-        warranted = labels.get(key)
+        fields = labels.get(key, {})
+        warranted = fields.get("warranted")
+        left = fields.get("left_workflow")
         request["warranted"] = warranted
+        request["left_workflow"] = left
+        if fields:
+            matched.add(key)
+        if request.get("workflow_state") == "continue":
+            if left is None:
+                follow["unlabeled"] += 1
+                ignored += warranted is not None
+            else:
+                follow["left" if left else "stayed"] += 1
+            continue
         if warranted is None:
             confusion["unlabeled"] += 1
+            ignored += left is not None
             continue
-        matched.add(key)
         invoked = request["invoked"]
         if warranted:
             confusion["used" if invoked else "missed"] += 1
         else:
             confusion["misfire" if invoked else "correct_skip"] += 1
+    confusion["continue"] = follow
+    confusion["ignored_labels"] = ignored
     confusion["invalid_labels"] = invalid
     confusion["duplicate_labels"] = duplicate
     confusion["unmatched_labels"] = len(labels.keys() - matched)
@@ -294,6 +387,7 @@ def apply_labels(requests: list[dict], labels_path: Path) -> dict:
 
 def build_report(transcripts_root: Path, telemetry_dir: Path, labels_path: Path | None) -> dict:
     requests: list[dict] = []
+    runs: list[dict] = []
     skipped_lines = 0
     skipped_files = 0
     files = [path for path in transcripts_root.glob("*/*.jsonl") if path.is_file()]
@@ -304,11 +398,13 @@ def build_report(transcripts_root: Path, telemetry_dir: Path, labels_path: Path 
             continue
         file_requests, skipped = extracted
         requests.extend(file_requests)
+        runs.extend(extract_runs(file_requests))
         skipped_lines += skipped
     variants, telemetry_skipped, telemetry_files = mine_variants(telemetry_dir)
     confusion = apply_labels(requests, labels_path) if labels_path is not None else None
     return {
         "requests": requests,
+        "runs": runs,
         "variants": variants,
         "confusion": confusion,
         "skipped_lines": skipped_lines + telemetry_skipped,
