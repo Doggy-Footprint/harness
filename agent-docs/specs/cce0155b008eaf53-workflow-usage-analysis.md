@@ -1,7 +1,7 @@
 ---
 version: 1
 run_id: cce0155b008eaf53
-status: draft
+status: active
 base_commit: 51459c5f6a83bc07a3f5f187785c9792e5813908
 max_verifier_invocations: 2
 handoff: none
@@ -123,11 +123,11 @@ CLI: python3 -m analytics.usage [--transcripts DIR] [--telemetry DIR] [--labels 
 | id | decision | evidence and uncertainty | brief v<n> — approved / vetoed → <answer> / user answer |
 | --- | --- | --- | --- |
 | A1 | Codex 제외 | 사용자 지시 "코덱스는 제외한다." | user answer |
-| A2 | 출력은 CLI JSON까지; 대시보드 연결은 후속 | 결과 형태를 먼저 보고 결정하는 편이 되돌리기 쉬움 | pending |
-| A3 | 라벨 형식 JSONL {session_id, request_index, warranted} | 분류기 연동 인터페이스가 됨(되돌리기 비용 있음) | pending |
-| A4 | human 판정은 origin.kind 우선, origin 없는 구형 기록은 FR2 휴리스틱 | 현재 세션 transcript에서 origin.kind 확인; 구형 포맷 확인 불가 | pending |
-| A5 | 요청 텍스트를 잘라내지 않고 전체 포함 | 분류기 입력으로 쓰기 위함; 출력이 커질 수 있음 | pending |
-| A6 | 플러그인 접두사(`x:workflow-approach`) Skill 이름은 호출로 보지 않음 | 현재 설치 형태는 접두사 없음 | pending |
+| A2 | 출력은 CLI JSON까지; 대시보드 연결은 후속 | 결과 형태를 먼저 보고 결정하는 편이 되돌리기 쉬움 | brief v1 — approved |
+| A3 | 라벨 형식 JSONL {session_id, request_index, warranted} | 분류기 연동 인터페이스가 됨(되돌리기 비용 있음) | brief v1 — approved |
+| A4 | human 판정은 origin.kind 우선, origin 없는 구형 기록은 FR2 휴리스틱 | 현재 세션 transcript에서 origin.kind 확인; 구형 포맷 확인 불가 | brief v1 — approved |
+| A5 | 요청 텍스트를 잘라내지 않고 전체 포함 | 분류기 입력으로 쓰기 위함; 출력이 커질 수 있음 | brief v1 — approved |
+| A6 | 플러그인 접두사(`x:workflow-approach`) Skill 이름은 호출로 보지 않음 | 현재 설치 형태는 접두사 없음 | brief v1 — approved |
 
 # Traceability
 | requirement id | Case ids | obligation ids | evidence procedure |
