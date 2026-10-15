@@ -153,18 +153,19 @@ CLI: python3 -m analytics.usage [--transcripts DIR] [--telemetry DIR] [--labels 
 | item | value |
 | --- | --- |
 | correction batches used | 1 |
-| verifier invocations | 0 |
-| open finding ids | F1 |
+| verifier invocations | 1 |
+| open finding ids | none |
 
 Audit state (one entry per obligation; retain prior decisions in the execution ledger):
 | obligation id | spec version | evidence references and revision | accepted / open / invalidated / pending | rationale and mutation outcome | dependencies and reopening evidence |
 | --- | --- | --- | --- | --- | --- |
-| VO1–VO13 | 2 | test_usage.py (104 tests) | pending | v2에서 VO8에 C17 추가 | VO8 reopened by F1 |
+| VO1–VO12 | 2 | analytics/tests/test_usage.py (111 tests) | pending | F1 수정 후 VO5/VO8/VO10 증거 갱신(mine_variants 3-tuple) | VO8 reopened by F1, now re-evidenced |
+| VO13 | 2 | RE1: 이 세션 transcript로 CLI 실행 — human 요청 6개, invoked는 '진행하자' 1개(skill); transcript 수기 확인과 일치 | accepted | main review | 실데이터 형식 변경 시 재검토 |
 
 Execution ledger (append attempts; preserve failed approaches):
 | attempt | finding / failure signature | cause hypothesis | changed approach / new evidence | result / disposition |
 | --- | --- | --- | --- | --- |
-| 1 | F1: 열 수 없는 telemetry 파일의 OSError가 build_report 밖으로 전파되어 main이 'cannot read labels'로 오보, exit 2 | main의 except가 build_report 전체를 감쌈 (verified: usage.py main/_read_runs 코드) | spec v2 Errors/C17 추가; implementer에 telemetry 파일 단위 skip, main은 labels 오류만 보고; test-implementer에 C17 테스트 | pending |
+| 1 | F1: 열 수 없는 telemetry 파일의 OSError가 build_report 밖으로 전파되어 main이 'cannot read labels'로 오보, exit 2 | main의 except가 build_report 전체를 감쌈 (verified: usage.py main/_read_runs 코드) | spec v2 Errors/C17 추가; implementer에 telemetry 파일 단위 skip, main은 labels 오류만 보고; test-implementer에 C17 테스트 | fixed: Test command 111 passed, branch coverage 98.33% (미커버: telemetry 디렉터리형 *.jsonl skip, list status 문자열화, __main__ 가드) |
 
 # Version Log
 ## v2
