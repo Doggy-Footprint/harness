@@ -460,6 +460,14 @@ def migrate_test_audit_language_files(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_codex_unsupported(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "Codex is no longer a supported runtime; generated .codex/ files remain best-effort",
+        "drop sandbox_mode from .codex/agents/*.toml because Codex ignores it in custom agent files; "
+        "subagents inherit the parent session's sandbox",
+    ]
+
+
 def migrate_missing_stale_records(target: Path, dry_run: bool) -> list[str]:
     docs_root = target / "agent-docs"
     if not docs_root.is_dir():
@@ -503,6 +511,7 @@ MIGRATIONS = (
     (parse_version("0.20.0"), "approve specs through chat briefs with default-and-veto decisions", migrate_spec_briefs),
     (parse_version("0.21.0"), "expand test-audit scanner rules to more languages, flags, and runners", migrate_test_audit_rules),
     (parse_version("0.22.0"), "split test-audit language guidance into per-language files", migrate_test_audit_language_files),
+    (parse_version("0.23.0"), "mark Codex unsupported and drop ineffective Codex sandbox_mode", migrate_codex_unsupported),
 )
 
 

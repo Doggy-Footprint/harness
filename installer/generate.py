@@ -46,7 +46,6 @@ def render_codex_agent_toml(fields: dict, body: str) -> str:
     for out_key, in_key in CODEX_FIELD_ORDER:
         if in_key in fields:
             lines.append(f'{out_key} = "{fields[in_key]}"')
-    lines.append(f'sandbox_mode = "{fields["codex.sandbox_mode"]}"')
     lines.append(f'developer_instructions = """\n{body}"""\n')
     return "\n".join(lines[:-1]) + "\n" + lines[-1]
 
