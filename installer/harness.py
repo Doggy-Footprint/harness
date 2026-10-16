@@ -475,6 +475,15 @@ def migrate_session_metrics(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_comment_approval(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "pre-commit now warns about newly added comments without blocking the commit",
+        "the PR comment check now fails on new comments unless the PR carries the `comments-approved` label; "
+        "a new push removes the label",
+        "create the `comments-approved` label and mark the check required in branch protection yourself",
+    ]
+
+
 def migrate_missing_stale_records(target: Path, dry_run: bool) -> list[str]:
     docs_root = target / "agent-docs"
     if not docs_root.is_dir():
@@ -520,6 +529,7 @@ MIGRATIONS = (
     (parse_version("0.22.0"), "split test-audit language guidance into per-language files", migrate_test_audit_language_files),
     (parse_version("0.23.0"), "mark Codex unsupported and drop ineffective Codex sandbox_mode", migrate_codex_unsupported),
     (parse_version("0.24.0"), "record per-session run metrics in telemetry", migrate_session_metrics),
+    (parse_version("0.25.0"), "warn on new comments at commit; require comments-approved label on PRs", migrate_comment_approval),
 )
 
 

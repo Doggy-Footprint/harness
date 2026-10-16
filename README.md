@@ -30,11 +30,11 @@ python3 installer/harness.py doctor <target-a> <target-b>
 | `.claude/settings.json`, `.codex/hooks.json` | 세션·서브에이전트·도구 훅 |
 | `.harness/git/` | 커밋 전 문서 규칙 검증과 기존 Git hook 연결 |
 | `agent-docs/` | ADR, 거절 기록, handoff, spec 및 실행 기록의 위치 |
-| `.github/workflows/harness-comment-warning.yml` | PR에서 새 주석과 docstring을 알리는 선택적 GitHub Actions 워크플로우 |
+| `.github/workflows/harness-comment-warning.yml` | PR에서 새 주석과 docstring이 있으면 `comments-approved` 라벨이 없을 때 실패하는 승인 게이트 GitHub Actions 워크플로우(선택, 새 push 시 라벨 제거) |
 
 설치 시 기존 Claude/Codex hook 설정에는 하네스 항목을 병합합니다. 새로 설치하는 저장소에 기존 `AGENTS.md`가 있으면 프로젝트 정의만 남기고 원문을 `agent-docs/logs/`에 보관합니다. 기존 `CLAUDE.md`에는 필요하면 `@AGENTS.md`를 추가합니다. 파일이나 스킬 이름이 충돌하면 설치를 중단하고 경로를 보고합니다.
 
-Git hook 관리자가 없는 경우 `core.hooksPath`를 `.harness/git`으로 설정합니다. Husky 등 기존 관리자가 있으면 설정을 바꾸지 않고 수동 연결 방법을 출력합니다. 커밋 전 검사는 문서 파일명, index/stale 구조, 동기화된 주석의 메타데이터와 필수 제목처럼 기계적으로 판단할 수 있는 규칙을 검사합니다. PR의 주석 검사는 경고만 출력합니다.
+Git hook 관리자가 없는 경우 `core.hooksPath`를 `.harness/git`으로 설정합니다. Husky 등 기존 관리자가 있으면 설정을 바꾸지 않고 수동 연결 방법을 출력합니다. 커밋 전 검사는 문서 파일명, index/stale 구조, 동기화된 주석의 메타데이터와 필수 제목처럼 기계적으로 판단할 수 있는 규칙을 검사합니다. 새 주석은 커밋 시 경고만 출력하고 막지 않으며, PR 검사는 `comments-approved` 라벨이 없으면 실패합니다.
 
 ## 작업 흐름
 
