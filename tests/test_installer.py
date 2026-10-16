@@ -7,11 +7,14 @@ import subprocess
 import sys
 import tempfile
 import tomllib
+import os
 import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = REPO_ROOT / "installer" / "harness.py"
+_TARGETS_DIR = tempfile.TemporaryDirectory()
+os.environ["HARNESS_TARGETS_FILE"] = str(Path(_TARGETS_DIR.name) / "targets.json")
 SKILLS = sorted(d.name for d in (REPO_ROOT / "harness" / "skills").iterdir() if d.is_dir())
 
 
@@ -237,7 +240,7 @@ class TestNormal(InstallerTestCase):
         workflow = repo / ".agents" / "skills" / "workflow-approach" / "SKILL.md"
         before[workflow] = workflow.read_text()
 
-        result = run_installer("upgrade", str(repo))
+        result = run_installer("update", str(repo))
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         for path, content in before.items():
@@ -290,7 +293,7 @@ class TestNormal(InstallerTestCase):
         ]
         self.assertEqual(len(harness_bash), 1)
 
-        result = run_installer("upgrade", str(repo))
+        result = run_installer("update", str(repo))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
         settings = json.loads((repo / ".claude" / "settings.json").read_text())
@@ -310,7 +313,7 @@ class TestNormal(InstallerTestCase):
         run_git(repo, "add", "-A")
         run_git(repo, "commit", "-q", "-m", "install harness")
 
-        result = run_installer("upgrade", str(repo))
+        result = run_installer("update", str(repo))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
         status = run_git(repo, "status", "--porcelain").stdout
@@ -759,15 +762,39 @@ class TestNormal(InstallerTestCase):
 
 
 class TestBoundary(InstallerTestCase):
-    def test_c2_upgrade_is_a_compatible_alias_and_readme_introduces_update(self):
+    def test_c2_upgrade_is_rejected_and_readme_introduces_update(self):
         repo = self.install()
 
         result = run_installer("upgrade", str(repo))
 
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotEqual(result.returncode, 0)
         readme = (REPO_ROOT / "README.md").read_text()
         self.assertIn("installer/harness.py update", readme)
         self.assertNotIn("installer/harness.py upgrade", readme)
+
+    def test_update_all_updates_recorded_installs_and_skips_missing(self):
+        targets_file = Path(os.environ["HARNESS_TARGETS_FILE"])
+        targets_file.unlink(missing_ok=True)
+        self.addCleanup(targets_file.unlink, missing_ok=True)
+        first, second = self.install(), self.install()
+        gone = self.install()
+        recorded = json.loads(targets_file.read_text())
+        self.assertEqual(recorded, [str(r.resolve()) for r in (first, second, gone)])
+        shutil.rmtree(gone)
+
+        result = run_installer("update", "--all")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(f"skip: {gone.resolve()}", result.stdout)
+        self.assertIn(f"success: {first.resolve()}", result.stdout)
+        self.assertIn(f"success: {second.resolve()}", result.stdout)
+        self.assertEqual(json.loads(targets_file.read_text()), recorded)
+
+    def test_all_flag_rejects_targets_and_other_commands(self):
+        repo = self.install()
+        self.assertNotEqual(run_installer("update", "--all", str(repo)).returncode, 0)
+        self.assertNotEqual(run_installer("doctor", "--all").returncode, 0)
+        self.assertNotEqual(run_installer("update").returncode, 0)
 
     def test_update_and_doctor_accept_multiple_directories_and_report_any_failure(self):
         first, second = self.install(), self.install()
@@ -1068,7 +1095,7 @@ class TestBoundary(InstallerTestCase):
         gate.write_bytes(gate.read_bytes() + b"\n")
         gate.write_bytes(new_content)
 
-        result = run_installer("upgrade", str(repo))
+        result = run_installer("update", str(repo))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertNotIn(f"{relpath} (user-modified)", result.stdout)
 
@@ -1212,7 +1239,7 @@ class TestError(InstallerTestCase):
         original = gate.read_text()
         gate.write_text(original + "\n# local edit\n")
 
-        result = run_installer("upgrade", str(repo))
+        result = run_installer("update", str(repo))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertTrue(gate.read_text().endswith("# local edit\n"))
         self.assertIn(".harness/hooks/spec_gate.py (user-modified)", result.stdout)
@@ -1230,7 +1257,7 @@ class TestError(InstallerTestCase):
         gate = repo / ".harness" / "hooks" / "spec_gate.py"
         gate.write_text(gate.read_text() + "\n# local edit\n")
 
-        result = run_installer("upgrade", str(repo))
+        result = run_installer("update", str(repo))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
         post_manifest = json.loads(manifest_path.read_text())
@@ -1684,7 +1711,7 @@ class TestEdge(InstallerTestCase):
         self.assertIn("한글 테스트", text_after_install)
         self.assertNotIn("\\u", text_after_install)
 
-        result = run_installer("upgrade", str(repo))
+        result = run_installer("update", str(repo))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         after_second_upgrade = settings_path.read_bytes()
         self.assertEqual(after_install, after_second_upgrade)

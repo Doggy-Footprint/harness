@@ -16,6 +16,9 @@ import generate  # noqa: E402
 
 SOURCE_HARNESS = Path(__file__).resolve().parents[1] / "harness"
 VERSION = (SOURCE_HARNESS / "VERSION").read_text(encoding="utf-8").strip()
+TARGETS_FILE = Path(
+    os.environ.get("HARNESS_TARGETS_FILE") or Path(__file__).resolve().parents[1] / ".harness-targets.json"
+)
 
 REPORT_SECTIONS = ["write", "merge", "skip", "conflict", "manual review", "info"]
 
@@ -1445,22 +1448,59 @@ def cmd_import(target: Path, as_json: bool) -> int:
     return 0
 
 
+def load_targets() -> list[str]:
+    try:
+        targets = json.loads(TARGETS_FILE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+    return [t for t in targets if isinstance(t, str)] if isinstance(targets, list) else []
+
+
+def remember_target(target: Path) -> None:
+    targets = load_targets()
+    if str(target) in targets:
+        return
+    TARGETS_FILE.write_text(json.dumps(targets + [str(target)], indent=2) + "\n", encoding="utf-8")
+
+
 def main(argv) -> int:
     parser = argparse.ArgumentParser(prog="harness.py")
-    parser.add_argument("command", choices=["install", "update", "upgrade", "doctor", "import"])
-    parser.add_argument("target", nargs="+", help="repository directory (update and doctor accept several)")
+    parser.add_argument("command", choices=["install", "update", "doctor", "import"])
+    parser.add_argument("target", nargs="*", help="repository directory (update and doctor accept several)")
+    parser.add_argument("--all", action="store_true", help=f"update every repository recorded in {TARGETS_FILE.name}")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--no-ci", action="store_true")
     parser.add_argument("--json", action="store_true", help="machine-readable output (import only)")
     args = parser.parse_args(argv)
-    multi = args.command in ("update", "upgrade", "doctor")
+    if args.all and args.command != "update":
+        parser.error("--all is only valid with update")
+    if args.all and args.target:
+        parser.error("--all does not take target directories")
+    if not args.all and not args.target:
+        parser.error("a target directory is required")
+    multi = args.command in ("update", "doctor")
     if len(args.target) > 1 and not multi:
         parser.error(f"{args.command} accepts exactly one directory")
 
+    if args.all:
+        args.target = []
+        for recorded in load_targets():
+            if (Path(recorded) / ".harness" / "manifest.json").is_file():
+                args.target.append(recorded)
+            else:
+                print(f"skip: {recorded} (missing or not installed)")
+        if not args.target:
+            print(f"no installed repositories recorded in {TARGETS_FILE}")
+            return 1
+
+    def update(directory: Path) -> int:
+        code = cmd_update(directory, args.dry_run, args.no_ci)
+        if code == 0 and not args.dry_run:
+            remember_target(directory)
+        return code
+
     if multi:
-        run = cmd_doctor if args.command == "doctor" else (
-            lambda directory: cmd_update(directory, args.dry_run, args.no_ci)
-        )
+        run = cmd_doctor if args.command == "doctor" else update
         status = 0
         results = []
         for index, directory in enumerate(args.target):
@@ -1477,7 +1517,10 @@ def main(argv) -> int:
 
     target = Path(args.target[0]).resolve()
     if args.command == "install":
-        return cmd_install(target, args.dry_run, args.no_ci)
+        code = cmd_install(target, args.dry_run, args.no_ci)
+        if code == 0 and not args.dry_run:
+            remember_target(target)
+        return code
     if args.command == "import":
         return cmd_import(target, args.json)
     raise AssertionError(args.command)
