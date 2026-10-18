@@ -34,7 +34,7 @@ python3 installer/harness.py doctor <target-a> <target-b>
 
 설치 시 기존 Claude/Codex hook 설정에는 하네스 항목을 병합합니다. 새로 설치하는 저장소에 기존 `AGENTS.md`가 있으면 프로젝트 정의만 남기고 원문을 `agent-docs/logs/`에 보관합니다. 기존 `CLAUDE.md`에는 필요하면 `@AGENTS.md`를 추가합니다. 파일이나 스킬 이름이 충돌하면 설치를 중단하고 경로를 보고합니다.
 
-Git hook 관리자가 없는 경우 `core.hooksPath`를 `.harness/git`으로 설정합니다. Husky 등 기존 관리자가 있으면 설정을 바꾸지 않고 수동 연결 방법을 출력합니다. 커밋 전 검사는 문서 파일명, index/stale 구조, 동기화된 주석의 메타데이터와 필수 제목처럼 기계적으로 판단할 수 있는 규칙을 검사합니다. 새 주석은 커밋 시 경고만 출력하고 막지 않으며, PR 검사는 `comments-approved` 라벨이 없으면 실패합니다.
+Git hook 관리자가 없는 경우 `core.hooksPath`를 `.harness/git`으로 설정합니다. Husky 등 기존 관리자가 있으면 설정을 바꾸지 않고 수동 연결 방법을 출력합니다. 커밋 전 검사는 문서 파일명, index/stale 구조, 동기화된 주석의 메타데이터와 필수 제목처럼 기계적으로 판단할 수 있는 규칙을 검사합니다. 새 주석은 커밋 시 경고만 출력하고 막지 않으며, PR 검사는 `comments-approved` 라벨이 없으면 실패합니다. 실패 메시지에는 필요한 라벨 이름이 표시됩니다. `--no-ci`가 아니면 설치·갱신 시 `gh`로 GitHub 저장소에 `comments-approved` 라벨을 만들고(이미 있으면 건너뜀), `gh`·git remote·권한이 없어 실패하면 수동 생성 명령을 `manual review`에 출력합니다.
 
 ## 작업 흐름
 

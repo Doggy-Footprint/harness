@@ -1,5 +1,7 @@
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -214,6 +216,22 @@ class GateTests(RepoTestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertNotIn("::warning", r.stdout)
 
+    def test_unapproved_failure_names_required_label(self):
+        repo, b, h = self.pair(True)
+        r = self.run_warn(repo, b, h, "--approved", "no")
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        errors = [l for l in r.stdout.splitlines() if l.startswith("::error")]
+        self.assertEqual(len(errors), 1, r.stdout)
+        self.assertIn("`comments-approved` label", errors[0])
+
+    def test_approved_or_ungated_run_prints_no_label_error(self):
+        repo, b, h = self.pair(True)
+        for args in ((b, h, "--approved", "yes"), (b, h)):
+            with self.subTest(args=args):
+                r = self.run_warn(repo, *args)
+                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+                self.assertNotIn("::error", r.stdout)
+
     # O3 D5
     def test_d5_invalid_approved_value_exits_two(self):
         repo, b, h = self.pair(True)
@@ -308,12 +326,138 @@ class MigrationTests(RepoTestCase):
         r = subprocess.run([sys.executable, str(INSTALLER), "update", str(repo)], input="y\n" * 10, capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("migration 0.25.0", r.stdout)  # M1
-        self.assertEqual(json.loads(mp.read_text())["version"], "0.25.0")  # M2
+        self.assertEqual(json.loads(mp.read_text())["version"], (REPO_ROOT / "harness" / "VERSION").read_text().strip())  # M2
         # O5 M3
         after = r.stdout.split("migration 0.25.0", 1)[1]
         section = re.split(r"^migration ", after, maxsplit=1, flags=re.MULTILINE)[0]
         self.assertIn("comments-approved", section)
         self.assertIn("branch protection", section)
+
+
+FAKE_GH = """#!/bin/sh
+echo "$(pwd -P)|$GH_PROMPT_DISABLED|$*" >> "$FAKE_GH_LOG"
+case "$1" in
+  api) exit "${FAKE_GH_API_EXIT:-1}" ;;
+  label)
+    [ -n "$FAKE_GH_CREATE_ERR" ] && echo "$FAKE_GH_CREATE_ERR" >&2
+    exit "${FAKE_GH_CREATE_EXIT:-0}" ;;
+esac
+exit 3
+"""
+LABEL_COMMAND = 'gh label create comments-approved --color 0E8A16 --description "New comments and docstrings reviewed"'
+
+
+class LabelSetupTests(RepoTestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.bindir = Path(tmp.name)
+        self.log = self.bindir / "gh.log"
+        gh = self.bindir / "gh"
+        gh.write_text(FAKE_GH)
+        gh.chmod(0o755)
+
+    def run_installer(self, *args, path=None, input="", **fake_env):
+        env = dict(os.environ, FAKE_GH_LOG=str(self.log), **fake_env)
+        env["PATH"] = path if path is not None else f"{self.bindir}{os.pathsep}{os.environ['PATH']}"
+        return subprocess.run(
+            [sys.executable, str(INSTALLER), *args], env=env, input=input, capture_output=True, text=True
+        )
+
+    def remote_repo(self):
+        repo = self.make_repo()
+        git(repo, "remote", "add", "origin", "https://github.com/example/project.git")
+        return repo
+
+    def gh_calls(self):
+        return self.log.read_text().splitlines() if self.log.exists() else []
+
+    def section(self, stdout, name):
+        if f"== {name} ==\n" not in stdout:
+            return ""
+        return stdout.split(f"== {name} ==\n", 1)[1].split("\n== ", 1)[0]
+
+    def test_install_creates_missing_label_in_target_repo(self):
+        repo = self.remote_repo()
+        r = self.run_installer("install", str(repo))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        calls = self.gh_calls()
+        self.assertEqual(len(calls), 2, calls)
+        for call in calls:
+            cwd, prompt_disabled, _ = call.split("|", 2)
+            self.assertEqual(cwd, str(repo.resolve()))
+            self.assertEqual(prompt_disabled, "1")
+        self.assertEqual(calls[0].split("|", 2)[2], "api repos/{owner}/{repo}/labels/comments-approved")
+        self.assertEqual(
+            calls[1].split("|", 2)[2],
+            "label create comments-approved --color 0E8A16 --description New comments and docstrings reviewed",
+        )
+        self.assertIn("- GitHub label comments-approved\n", self.section(r.stdout, "write") + "\n")
+        self.assertNotIn("comments-approved", self.section(r.stdout, "manual review"))
+
+    def test_existing_label_is_not_recreated(self):
+        repo = self.remote_repo()
+        r = self.run_installer("install", str(repo), FAKE_GH_API_EXIT="0")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual([c.split("|", 2)[2].split()[0] for c in self.gh_calls()], ["api"])
+        self.assertIn("GitHub label comments-approved already exists", self.section(r.stdout, "skip"))
+        self.assertNotIn("comments-approved", self.section(r.stdout, "write"))
+
+    def test_create_failure_reports_reason_and_command_without_failing(self):
+        repo = self.remote_repo()
+        r = self.run_installer(
+            "install", str(repo), FAKE_GH_CREATE_EXIT="1", FAKE_GH_CREATE_ERR="HTTP 403: Resource not accessible"
+        )
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        manual = self.section(r.stdout, "manual review")
+        self.assertIn("HTTP 403: Resource not accessible", manual)
+        self.assertIn(LABEL_COMMAND, manual)
+        self.assertTrue((repo / ".harness" / "manifest.json").exists())
+
+    def test_no_remote_skips_gh_and_reports_command(self):
+        repo = self.make_repo()
+        r = self.run_installer("install", str(repo))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(self.gh_calls(), [])
+        manual = self.section(r.stdout, "manual review")
+        self.assertIn("no git remote configured", manual)
+        self.assertIn(LABEL_COMMAND, manual)
+
+    def test_missing_gh_reports_command(self):
+        repo = self.remote_repo()
+        only_git = self.bindir / "only-git"
+        only_git.mkdir()
+        os.symlink(shutil.which("git"), only_git / "git")
+        r = self.run_installer("install", str(repo), path=str(only_git))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        manual = self.section(r.stdout, "manual review")
+        self.assertIn("gh CLI not found", manual)
+        self.assertIn(LABEL_COMMAND, manual)
+
+    def test_no_ci_and_dry_run_never_call_gh(self):
+        no_ci = self.run_installer("install", str(self.remote_repo()), "--no-ci")
+        self.assertEqual(no_ci.returncode, 0, no_ci.stdout + no_ci.stderr)
+        self.assertNotIn("comments-approved", no_ci.stdout)
+        dry = self.run_installer("install", str(self.remote_repo()), "--dry-run")
+        self.assertEqual(dry.returncode, 0, dry.stdout + dry.stderr)
+        self.assertIn("GitHub label comments-approved (if missing)", self.section(dry.stdout, "write"))
+        self.assertEqual(self.gh_calls(), [])
+
+    def test_update_from_0250_announces_and_creates_label(self):
+        repo = self.remote_repo()
+        r = self.run_installer("install", str(repo), "--no-ci")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        mp = repo / ".harness" / "manifest.json"
+        manifest = json.loads(mp.read_text())
+        manifest["version"] = "0.25.0"
+        mp.write_text(json.dumps(manifest, indent=2) + "\n")
+        r = self.run_installer("update", str(repo), input="y\n")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(re.findall(r"^migration (\S+):", r.stdout, re.MULTILINE), ["0.26.0"])
+        section = r.stdout.split("migration 0.26.0", 1)[1].split("Apply migration", 1)[0]
+        self.assertIn("comments-approved", section)
+        self.assertEqual([c.split("|", 2)[2].split()[:2] for c in self.gh_calls()], [["api", "repos/{owner}/{repo}/labels/comments-approved"], ["label", "create"]])
+        self.assertIn("- GitHub label comments-approved\n", self.section(r.stdout, "write") + "\n")
 
 
 if __name__ == "__main__":

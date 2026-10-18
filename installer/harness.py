@@ -54,6 +54,15 @@ INFO_PATHS = [
 ]
 
 
+COMMENT_APPROVAL_LABEL = "comments-approved"
+COMMENT_APPROVAL_LABEL_COLOR = "0E8A16"
+COMMENT_APPROVAL_LABEL_DESCRIPTION = "New comments and docstrings reviewed"
+COMMENT_APPROVAL_LABEL_COMMAND = (
+    f"gh label create {COMMENT_APPROVAL_LABEL} --color {COMMENT_APPROVAL_LABEL_COLOR} "
+    f'--description "{COMMENT_APPROVAL_LABEL_DESCRIPTION}"'
+)
+
+
 class MigrationConflict(Exception):
     def __init__(self, conflicts: list[str]):
         self.conflicts = conflicts
@@ -487,6 +496,14 @@ def migrate_comment_approval(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_comment_label_setup(target: Path, dry_run: bool) -> list[str]:
+    return [
+        f"install and update now create the `{COMMENT_APPROVAL_LABEL}` GitHub label with gh unless --no-ci is given; "
+        "when gh, a git remote, or GitHub access is unavailable, the report lists the command under manual review",
+        f"a failing PR comment check now names the `{COMMENT_APPROVAL_LABEL}` label it requires",
+    ]
+
+
 def migrate_missing_stale_records(target: Path, dry_run: bool) -> list[str]:
     docs_root = target / "agent-docs"
     if not docs_root.is_dir():
@@ -533,6 +550,7 @@ MIGRATIONS = (
     (parse_version("0.23.0"), "mark Codex unsupported and drop ineffective Codex sandbox_mode", migrate_codex_unsupported),
     (parse_version("0.24.0"), "record per-session run metrics in telemetry", migrate_session_metrics),
     (parse_version("0.25.0"), "warn on new comments at commit; require comments-approved label on PRs", migrate_comment_approval),
+    (parse_version("0.26.0"), "create the comments-approved label on install and update", migrate_comment_label_setup),
 )
 
 
@@ -1084,6 +1102,45 @@ def ensure_git_hooks(target: Path, dry_run: bool, report: dict):
     report["write"].append("git config core.hooksPath=.harness/git")
 
 
+def ensure_comment_approval_label(target: Path, dry_run: bool, report: dict):
+    manual = f"create the `{COMMENT_APPROVAL_LABEL}` GitHub label: `{COMMENT_APPROVAL_LABEL_COMMAND}`"
+    if dry_run:
+        report["write"].append(f"GitHub label {COMMENT_APPROVAL_LABEL} (if missing)")
+        return
+    gh = shutil.which("gh")
+    if gh is None:
+        report["manual review"].append(f"gh CLI not found; {manual}")
+        return
+    if not run_git(target, ["remote"]).stdout.strip():
+        report["manual review"].append(f"no git remote configured; {manual}")
+        return
+    # gh may prompt (e.g. to pick a default repo) when it has a terminal; never block install on it.
+    env = dict(os.environ, GH_PROMPT_DISABLED="1")
+
+    def run_gh(args):
+        return subprocess.run(
+            [gh, *args], cwd=target, env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60
+        )
+
+    try:
+        if run_gh(["api", f"repos/{{owner}}/{{repo}}/labels/{COMMENT_APPROVAL_LABEL}"]).returncode == 0:
+            report["skip"].append(f"GitHub label {COMMENT_APPROVAL_LABEL} already exists")
+            return
+        created = run_gh([
+            "label", "create", COMMENT_APPROVAL_LABEL,
+            "--color", COMMENT_APPROVAL_LABEL_COLOR,
+            "--description", COMMENT_APPROVAL_LABEL_DESCRIPTION,
+        ])
+    except (OSError, subprocess.TimeoutExpired) as error:
+        report["manual review"].append(f"gh failed ({error}); {manual}")
+        return
+    if created.returncode != 0:
+        reason = (created.stderr.strip() or created.stdout.strip() or f"exit {created.returncode}").splitlines()[0]
+        report["manual review"].append(f"gh label create failed ({reason}); {manual}")
+        return
+    report["write"].append(f"GitHub label {COMMENT_APPROVAL_LABEL}")
+
+
 def collect_info_items(target: Path, report: dict):
     for candidate in INFO_PATHS:
         if (target / candidate).exists():
@@ -1167,6 +1224,8 @@ def cmd_install(target: Path, dry_run: bool, no_ci: bool) -> int:
     dry_run_ignored = dry_run and bool(ignored)
     new_manifest_files = apply_owned_files(target, owned, {}, dry_run, report)
     finish_common(target, dry_run, report, fresh_install=True)
+    if not no_ci:
+        ensure_comment_approval_label(target, dry_run, report)
 
     if not dry_run:
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1248,6 +1307,8 @@ def cmd_update(target: Path, dry_run: bool, no_ci: bool) -> int:
 
     new_manifest_files = apply_owned_files(target, owned, old_files, dry_run, report)
     finish_common(target, dry_run, report)
+    if not no_ci:
+        ensure_comment_approval_label(target, dry_run, report)
 
     if not dry_run:
         manifest_path.parent.mkdir(parents=True, exist_ok=True)

@@ -605,8 +605,8 @@ class TestO11Packaging(MetricsCase):
     def hooks(self):
         return json.loads((self.repo / ".claude" / "settings.json").read_text())["hooks"]
 
-    def test_version_is_0_25_0(self):
-        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.25.0")
+    def test_version_is_0_26_0(self):
+        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.26.0")
 
     def test_installed_post_tool_use_matcher(self):
         groups = [g for g in self.hooks()["PostToolUse"] if "telemetry_hook.py" in self.commands([g])[0]]
