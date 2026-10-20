@@ -504,6 +504,13 @@ def migrate_comment_label_setup(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_handoff_user_query(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "new handoffs record the user's original words under `## User Query` instead of `## Goal`",
+        "existing handoffs keep `## Goal`; the rule check accepts either heading",
+    ]
+
+
 def migrate_missing_stale_records(target: Path, dry_run: bool) -> list[str]:
     docs_root = target / "agent-docs"
     if not docs_root.is_dir():
@@ -551,6 +558,7 @@ MIGRATIONS = (
     (parse_version("0.24.0"), "record per-session run metrics in telemetry", migrate_session_metrics),
     (parse_version("0.25.0"), "warn on new comments at commit; require comments-approved label on PRs", migrate_comment_approval),
     (parse_version("0.26.0"), "create the comments-approved label on install and update", migrate_comment_label_setup),
+    (parse_version("0.27.0"), "rename the handoff Goal heading to User Query", migrate_handoff_user_query),
 )
 
 

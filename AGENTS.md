@@ -6,7 +6,7 @@ It ships documentation rules (the managed block below), the workflow-approach sk
 Source: `harness/` (payload), `installer/harness.py` (install / update / doctor), `tests/`, `selfcheck/` (self-check tool, not installed). This repo installs itself into `.harness/` for dogfooding.
 Edit `harness/`, never `.harness/` or the generated `.claude/`, `.codex/`, `.agents/` files; then run `python3 installer/harness.py update .`. `update` MUST provide version-by-version migration steps.
 
-<!-- harness:begin 0.26.0 -->
+<!-- harness:begin 0.27.0 -->
 # Documentation Guide
 
 "Documentation" refers to standalone docs, inline comments, and docstrings.
@@ -121,7 +121,7 @@ Write when a workflow-approach task exhausts its verifier budget, cannot make pr
 Required file structure:
 
 - `#` Title
-- `## Goal` (user's original words)
+- `## User Query` (user's original words)
 - `## State` (branch, commit, changed files)
 - `## Failed Attempts` (table `| attempt | failure evidence | cause |`, cause marked `verified` or `hypothesis`)
 - `## Next Step`
@@ -136,6 +136,7 @@ failed attempts without requiring telemetry to reconstruct them.
 Handoffs created before harness 0.7.0 may retain `## Contract Snapshot` instead
 of `## Spec` and `## Execution Ledger`; do not rewrite historical records solely
 to change their format.
+Handoffs created before harness 0.27.0 may retain `## Goal` instead of `## User Query`.
 
 When resuming, never delete or edit existing Failed Attempts rows; only append.
 
