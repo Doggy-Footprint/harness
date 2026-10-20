@@ -1545,11 +1545,18 @@ def main(argv) -> int:
 
     if args.all:
         args.target = []
-        for recorded in load_targets():
-            if (Path(recorded) / ".harness" / "manifest.json").is_file():
+        recorded_targets = load_targets()
+        missing = [recorded for recorded in recorded_targets if not Path(recorded).exists()]
+        for recorded in recorded_targets:
+            if recorded in missing:
+                print(f"{'would remove' if args.dry_run else 'remove'}: {recorded} (missing)")
+            elif (Path(recorded) / ".harness" / "manifest.json").is_file():
                 args.target.append(recorded)
             else:
-                print(f"skip: {recorded} (missing or not installed)")
+                print(f"skip: {recorded} (not installed)")
+        if missing and not args.dry_run:
+            kept = [recorded for recorded in recorded_targets if recorded not in missing]
+            TARGETS_FILE.write_text(json.dumps(kept, indent=2) + "\n", encoding="utf-8")
         if not args.target:
             print(f"no installed repositories recorded in {TARGETS_FILE}")
             return 1

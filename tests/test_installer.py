@@ -772,23 +772,31 @@ class TestBoundary(InstallerTestCase):
         self.assertIn("installer/harness.py update", readme)
         self.assertNotIn("installer/harness.py upgrade", readme)
 
-    def test_update_all_updates_recorded_installs_and_skips_missing(self):
+    def test_update_all_updates_recorded_installs_and_prunes_missing(self):
         targets_file = Path(os.environ["HARNESS_TARGETS_FILE"])
         targets_file.unlink(missing_ok=True)
         self.addCleanup(targets_file.unlink, missing_ok=True)
         first, second = self.install(), self.install()
-        gone = self.install()
+        gone, uninstalled = self.install(), self.install()
         recorded = json.loads(targets_file.read_text())
-        self.assertEqual(recorded, [str(r.resolve()) for r in (first, second, gone)])
+        self.assertEqual(recorded, [str(r.resolve()) for r in (first, second, gone, uninstalled)])
         shutil.rmtree(gone)
+        shutil.rmtree(uninstalled / ".harness")
+
+        dry = run_installer("update", "--all", "--dry-run")
+
+        self.assertEqual(dry.returncode, 0, dry.stdout + dry.stderr)
+        self.assertIn(f"would remove: {gone.resolve()} (missing)", dry.stdout)
+        self.assertEqual(json.loads(targets_file.read_text()), recorded)
 
         result = run_installer("update", "--all")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn(f"skip: {gone.resolve()}", result.stdout)
+        self.assertIn(f"remove: {gone.resolve()} (missing)", result.stdout)
+        self.assertIn(f"skip: {uninstalled.resolve()} (not installed)", result.stdout)
         self.assertIn(f"success: {first.resolve()}", result.stdout)
         self.assertIn(f"success: {second.resolve()}", result.stdout)
-        self.assertEqual(json.loads(targets_file.read_text()), recorded)
+        self.assertEqual(json.loads(targets_file.read_text()), [str(r.resolve()) for r in (first, second, uninstalled)])
 
     def test_all_flag_rejects_targets_and_other_commands(self):
         repo = self.install()

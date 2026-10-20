@@ -13,6 +13,8 @@ WARN = REPO_ROOT / "harness" / "git" / "warn_new_comments.py"
 INSTALLER = REPO_ROOT / "installer" / "harness.py"
 WORKFLOW = REPO_ROOT / "harness" / "ci" / "harness-comment-warning.yml"
 AGENT_SENTENCE = "If you are an AI agent, report every added comment above to the user."
+_TARGETS_DIR = tempfile.TemporaryDirectory()
+os.environ["HARNESS_TARGETS_FILE"] = str(Path(_TARGETS_DIR.name) / "targets.json")
 
 
 def git(cwd, *args, check=True):
