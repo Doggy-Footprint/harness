@@ -1278,7 +1278,7 @@ class TestError(InstallerTestCase):
         handoff_dir = repo / "agent-docs" / "handoff"
         target_file = handoff_dir / "1234567890abcdef-x.md"
         target_file.write_text(
-            "# X\n\n## Goal\ng\n\n## State\ns\n\n## Next Step\nn\n\n"
+            "# X\n\n## User Query\ng\n\n## State\ns\n\n## Next Step\nn\n\n"
             "## Open Questions\nq\n\n## Spec Snapshot\nnone\n"
         )
         (handoff_dir / "index.md").write_text(
@@ -1293,7 +1293,7 @@ class TestError(InstallerTestCase):
         self.assertEqual(verify.returncode, 1, verify.stdout + verify.stderr)
 
         target_file.write_text(
-            "# X\n\n## Goal\ng\n\n## State\ns\n\n## Failed Attemptsx\nbad\n\n## Next Step\nn\n\n"
+            "# X\n\n## User Query\ng\n\n## State\ns\n\n## Failed Attemptsx\nbad\n\n## Next Step\nn\n\n"
             "## Open Questions\nq\n\n## Spec Snapshot\nnone\n"
         )
         verify = self.run_verify_rules(repo)
