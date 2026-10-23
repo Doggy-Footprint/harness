@@ -19,6 +19,8 @@ python3 installer/harness.py doctor <target-a> <target-b>
 
 `--dry-run`은 변경 예정 항목만 보여줍니다. 대상에 이미 `.harness/manifest.json`이 있으면 `install` 대신 `update`를 사용하세요. GitHub Actions를 사용하지 않는 저장소에는 설치·갱신 명령에 `--no-ci`를 붙일 수 있습니다.
 
+설치·갱신 때 저장소 루트의 `pyproject.toml`, `package.json`, `go.mod`, `Cargo.toml`로 언어(Python, JS/TS, Go, Rust)를 감지하고, fuzzing/mutation 도구가 없으면 언어별로 실행할 전체 명령을 보여주며 `[y/N/never]`로 설치 여부를 묻습니다. `y`/`yes`면 그 명령을 실행하고, 그 외 답은 건너뜁니다. `never`는 사용자별·저장소별로 `~/.harness/preferences.json`에 저장되어 이후 같은 저장소의 `install`/`update`에서 묻지 않으며, `install`/`update`에 `--ask-tools`를 붙이면 저장된 `never`를 지우고 다시 묻습니다(`update --all`도 각 저장소에 적용, `--dry-run`은 묻지 않고 예정 명령만 표시). 설치에 실패하면 종료 코드는 그대로이고 `manual review`에 수동 명령을 출력합니다. 도구를 설치하지 않았다면 spec의 `Mutation tool:`은 `none`으로 선언합니다.
+
 ## 설치되는 것
 
 | 위치 | 역할 |
