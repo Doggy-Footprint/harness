@@ -13,6 +13,7 @@ from typing import Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import generate  # noqa: E402
+import verification_tools  # noqa: E402
 
 SOURCE_HARNESS = Path(__file__).resolve().parents[1] / "harness"
 VERSION = (SOURCE_HARNESS / "VERSION").read_text(encoding="utf-8").strip()
@@ -511,6 +512,15 @@ def migrate_handoff_user_query(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_verification_tool_install(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "install and update now ask `[y/N/never]` per detected language (Python, JS/TS, Go, Rust) before installing "
+        "missing fuzzing and mutation tools; `never` is stored per user and repository in ~/.harness/preferences.json "
+        "and `--ask-tools` asks again",
+        "workflow-approach specs may declare `Mutation tool: none` when no mutation tool is installed",
+    ]
+
+
 def migrate_missing_stale_records(target: Path, dry_run: bool) -> list[str]:
     docs_root = target / "agent-docs"
     if not docs_root.is_dir():
@@ -559,6 +569,7 @@ MIGRATIONS = (
     (parse_version("0.25.0"), "warn on new comments at commit; require comments-approved label on PRs", migrate_comment_approval),
     (parse_version("0.26.0"), "create the comments-approved label on install and update", migrate_comment_label_setup),
     (parse_version("0.27.0"), "rename the handoff Goal heading to User Query", migrate_handoff_user_query),
+    (parse_version("0.28.0"), "offer to install verification tools; allow Mutation tool: none", migrate_verification_tool_install),
 )
 
 
@@ -1186,7 +1197,7 @@ def check_settings_json_validity(target: Path, report: dict) -> bool:
     return ok
 
 
-def cmd_install(target: Path, dry_run: bool, no_ci: bool) -> int:
+def cmd_install(target: Path, dry_run: bool, no_ci: bool, ask_tools: bool = False) -> int:
     report = new_report()
 
     if not is_git_worktree(target):
@@ -1234,6 +1245,7 @@ def cmd_install(target: Path, dry_run: bool, no_ci: bool) -> int:
     finish_common(target, dry_run, report, fresh_install=True)
     if not no_ci:
         ensure_comment_approval_label(target, dry_run, report)
+    verification_tools.offer(target, dry_run, ask_tools, report)
 
     if not dry_run:
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1247,7 +1259,7 @@ def cmd_install(target: Path, dry_run: bool, no_ci: bool) -> int:
     return 1 if dry_run_ignored else 0
 
 
-def cmd_update(target: Path, dry_run: bool, no_ci: bool) -> int:
+def cmd_update(target: Path, dry_run: bool, no_ci: bool, ask_tools: bool = False) -> int:
     report = new_report()
 
     if not is_git_worktree(target):
@@ -1317,6 +1329,7 @@ def cmd_update(target: Path, dry_run: bool, no_ci: bool) -> int:
     finish_common(target, dry_run, report)
     if not no_ci:
         ensure_comment_approval_label(target, dry_run, report)
+    verification_tools.offer(target, dry_run, ask_tools, report)
 
     if not dry_run:
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1539,6 +1552,9 @@ def main(argv) -> int:
     parser.add_argument("--all", action="store_true", help=f"update every repository recorded in {TARGETS_FILE.name}")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--no-ci", action="store_true")
+    parser.add_argument(
+        "--ask-tools", action="store_true", help="ask again about installing verification tools after answering never"
+    )
     parser.add_argument("--json", action="store_true", help="machine-readable output (import only)")
     args = parser.parse_args(argv)
     if args.all and args.command != "update":
@@ -1547,6 +1563,8 @@ def main(argv) -> int:
         parser.error("--all does not take target directories")
     if not args.all and not args.target:
         parser.error("a target directory is required")
+    if args.ask_tools and args.command not in ("install", "update"):
+        parser.error("--ask-tools is only valid with install or update")
     multi = args.command in ("update", "doctor")
     if len(args.target) > 1 and not multi:
         parser.error(f"{args.command} accepts exactly one directory")
@@ -1570,7 +1588,7 @@ def main(argv) -> int:
             return 1
 
     def update(directory: Path) -> int:
-        code = cmd_update(directory, args.dry_run, args.no_ci)
+        code = cmd_update(directory, args.dry_run, args.no_ci, args.ask_tools)
         if code == 0 and not args.dry_run:
             remember_target(directory)
         return code
@@ -1593,7 +1611,7 @@ def main(argv) -> int:
 
     target = Path(args.target[0]).resolve()
     if args.command == "install":
-        code = cmd_install(target, args.dry_run, args.no_ci)
+        code = cmd_install(target, args.dry_run, args.no_ci, args.ask_tools)
         if code == 0 and not args.dry_run:
             remember_target(target)
         return code
