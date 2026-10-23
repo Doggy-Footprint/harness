@@ -1,5 +1,3 @@
-"""Offers to install fuzzing and mutation tools that workflow-approach specs can declare."""
-
 import json
 import os
 import re
@@ -10,9 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-# Every per-language definition lives here; adding a language means adding one entry.
-# "managers": (lockfiles, command prefix) in priority order; "fallback" applies when no lockfile matches
-# (None means the language is blocked without one). "fixed": per-package complete commands.
+# managers are tried in order and the first lockfile present wins;
+# fallback None blocks the language when no lockfile matches.
 LANGUAGES = (
     {
         "language": "python",
@@ -95,7 +92,6 @@ def _python_names(node, found: set[str]) -> None:
 
 
 def _present_packages(spec: dict, target: Path) -> set[str] | str:
-    """Return the installed package names, or a blocker message when the manifest is unusable."""
     manifest = target / spec["manifest"]
     try:
         text = manifest.read_text(encoding="utf-8")

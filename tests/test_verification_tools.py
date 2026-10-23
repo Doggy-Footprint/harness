@@ -1,7 +1,3 @@
-"""Spec 610c47c1cee69d7f v1 evidence for VO1-VO8, VO10, VO12 (VO13 is measured by the Test command).
-
-Expected command tuples come from the spec tables (FR2/FR4/FR6/FR7), not from the implementation.
-"""
 import json
 import os
 import subprocess
