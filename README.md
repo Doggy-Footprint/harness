@@ -153,9 +153,11 @@ python3 -m evaluation.reference_mutation gce down
 
 **정리.** `gce down`은 VM만 지우고 데이터 디스크는 남깁니다. `gce down --purge --yes`는 디스크와 비밀까지 지웁니다.
 
-## 세션 로그 분석 (개발 중)
+## 세션 로그 분석 (analytics)
 
-`analytics/`의 목표는 [trace](https://opentelemetry.io/docs/concepts/signals/traces/)를 통해 하네스의 성과를 정량적으로 파악하는 것입니다. 여기서 말하는 trace는 개념상 OpenTelemetry의 trace에서 아이디어를 얻었습니다. 별도의 로컬 분석 화면이며, 설치 payload에는 포함되지 않습니다. 실행하려면 Python 의존성과 프런트엔드를 빌드한 뒤 서버를 시작합니다.
+> **하네스 성과 측정은 이제 evaluation으로 시도합니다.** trace 기반 추적은 대부분 정리됐고, 다양한 케이스를 다루기 위한 모델링만 남았습니다. 하네스가 실제로 도움이 되는지는 trace 대신 하네스 arm과 기준선을 비교하는 evaluation으로 확인하려 합니다. 앞의 두 시도(`evaluation/selfcheck`, `evaluation/reference_mutation`)는 보관했고, 다음 설계를 찾는 중입니다.
+
+`analytics/`는 [trace](https://opentelemetry.io/docs/concepts/signals/traces/)로 하네스 실행을 추적해 보여주는 로컬 분석 화면입니다. 여기서 말하는 trace는 개념상 OpenTelemetry의 trace에서 아이디어를 얻었습니다. 설치 payload에는 포함되지 않습니다. 실행하려면 Python 의존성과 프런트엔드를 빌드한 뒤 서버를 시작합니다.
 
 ```bash
 python3 -m pip install -r analytics/requirements.txt
