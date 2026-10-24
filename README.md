@@ -77,7 +77,16 @@ python3 -m unittest discover -s tests
 
 버전을 올릴 때는 [`installer/harness.py`](installer/harness.py)의 버전별 migration 단계를 추가해야 합니다. 에이전트 정의와 hook 설정은 각각 `harness/agents/`와 `harness/hooks/hooks.spec.json`에서 관리하고, [`installer/generate.py`](installer/generate.py)가 Claude/Codex 형식으로 생성합니다.
 
-## 자체 점검 (evaluation/selfcheck)
+## 하네스 평가 (진행 중)
+
+현재 개발 초점입니다. 하네스가 실제로 도움이 되는지를 trace 대신, 하네스 arm과 하네스 없는 기준선(baseline)을 같은 과제에서 비교하는 evaluation으로 확인하려 합니다. 코드는 `evaluation/`에 있으며 설치 payload에는 포함되지 않습니다. 지금까지의 두 시도는 아래와 같이 보관했고, 다음 설계를 찾는 중입니다.
+
+| 시도 | 상태 | 끝낸 이유 |
+| --- | --- | --- |
+| `evaluation/selfcheck` | 보관됨 | SWE-bench Verified 기반 점검이 하네스 효과를 측정하지 못함 |
+| `evaluation/reference_mutation` | pilot 후 중단 | 테스트 품질 대신 참조 구현과의 설계 일치를 잼 |
+
+### 자체 점검 (evaluation/selfcheck)
 
 > **보관됨(archived).** SWE-bench Verified 기반 점검은 하네스 효과를 측정하지 못한다고 판단해 더 이상 개발·실행하지 않습니다. 코드는 기록으로만 `evaluation/selfcheck/`로 옮겼고 테스트는 지웠습니다. 아래 명령과 경로(`python3 -m selfcheck`, `selfcheck/...`)는 저장소 최상위에 `selfcheck/`가 있던 시절 기준이며, 옮긴 위치에 맞게 코드를 고치지 않았으므로 그대로는 실행되지 않습니다. 로컬 이미지와 캐시도 삭제했습니다. 이유와 후속 계획은 `agent-docs/handoff/stale/c379ec40307bd6c0-harness-value-evaluation-redesign.md`를 보세요.
 
@@ -116,7 +125,7 @@ python3 -m selfcheck check
 
 **informed 리포트.** informed 항목이 있으면 리포트 JSON에 `informed`(인스턴스별 블록, `instances`와 같은 모양)와 `informed_effect`(인스턴스·지표별 informed 중앙값 − unassisted 중앙값, 한쪽이 없으면 null)가 추가되고, 마크다운에는 unassisted 섹션 뒤에 `## informed condition: <인스턴스>` 섹션과 `## informed effect` 표가 붙습니다. 차이는 brief를 읽는 사용자의 효과이며 unassisted가 주 점수입니다. informed 항목이 없으면 `informed`는 빈 목록, `informed_effect`는 빈 객체이고 마크다운에 informed 섹션이 붙지 않습니다.
 
-## 참조 변이 평가 (evaluation/reference_mutation)
+### 참조 변이 평가 (evaluation/reference_mutation)
 
 > **중단됨(archived).** pilot(run `7df89a358d3faa30`)에서 이 설계가 하네스의 테스트 품질 대신 참조 구현과의 설계 일치를 잰다고 판단해 본 실험 없이 끝냈습니다. GCP 리소스는 모두 삭제했고, 코드는 기록으로만 남기며 테스트는 지웠습니다. 설계, 재현 절차, 결과, 중단 이유는 [`evaluation/reference_mutation/EXPERIMENT.md`](evaluation/reference_mutation/EXPERIMENT.md)를 보세요.
 
@@ -155,7 +164,7 @@ python3 -m evaluation.reference_mutation gce down
 
 ## 세션 로그 분석 (analytics)
 
-> **하네스 성과 측정은 이제 evaluation으로 시도합니다.** trace 기반 추적은 대부분 정리됐고, 다양한 케이스를 다루기 위한 모델링만 남았습니다. 하네스가 실제로 도움이 되는지는 trace 대신 하네스 arm과 기준선을 비교하는 evaluation으로 확인하려 합니다. 앞의 두 시도(`evaluation/selfcheck`, `evaluation/reference_mutation`)는 보관했고, 다음 설계를 찾는 중입니다.
+> trace 기반 추적은 대부분 정리됐고, 다양한 케이스를 다루기 위한 모델링만 남았습니다. 하네스 성과 측정은 이제 [하네스 평가](#하네스-평가-진행-중)에서 시도합니다.
 
 `analytics/`는 [trace](https://opentelemetry.io/docs/concepts/signals/traces/)로 하네스 실행을 추적해 보여주는 로컬 분석 화면입니다. 여기서 말하는 trace는 개념상 OpenTelemetry의 trace에서 아이디어를 얻었습니다. 설치 payload에는 포함되지 않습니다. 실행하려면 Python 의존성과 프런트엔드를 빌드한 뒤 서버를 시작합니다.
 
