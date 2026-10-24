@@ -2,104 +2,113 @@
 
 > 포트폴리오: [https://blog-steel-ten-13.vercel.app/posts/harness](https://blog-steel-ten-13.vercel.app/posts/harness)
 
-Claude Code와 Codex에 공통 규칙과 작업 도구를 설치하는 AI 에이전트 하네스입니다. Git 저장소에 설치할 수 있으며, 이 저장소의 `harness/`가 배포 원본입니다. 현재 버전은 [`harness/VERSION`](harness/VERSION)에서 확인할 수 있습니다.
+Git 저장소에 설치하는 Claude Code용 AI 에이전트 하네스입니다. 문서 규칙, 스킬, 서브에이전트, 훅, CI 주석 검사를 함께 설치합니다. 배포 원본은 `harness/`이고, 현재 버전은 [`harness/VERSION`](harness/VERSION)에 있습니다.
 
-> **Codex는 지원 대상이 아닙니다.** `.codex/` 파일은 계속 생성되지만 동작을 보장하지 않습니다. Codex 서브에이전트는 부모 세션의 sandbox·권한·MCP 서버를 그대로 상속하며 에이전트 파일로 제한할 수 없으므로, 읽기 전용 격리 등 하네스의 서브에이전트 제약은 Claude Code에서만 강제됩니다.
+> **Codex는 지원하지 않습니다.** `.codex/` 파일은 생성되지만 동작을 보장하지 않으며, 서브에이전트 제약은 Claude Code에서만 강제됩니다.
 
 ## 빠른 시작
 
-Python 3와 Git이 필요합니다. 이 저장소에서 대상 Git 저장소의 경로를 지정해 실행합니다.
+Python 3와 Git이 필요합니다.
 
 ```bash
-python3 installer/harness.py install <target> --dry-run
+python3 installer/harness.py install <target> --dry-run   # 변경 예정 항목만 표시
 python3 installer/harness.py install <target>
 python3 installer/harness.py doctor <target>
-python3 installer/harness.py doctor <target-a> <target-b>
 ```
 
-`--dry-run`은 변경 예정 항목만 보여줍니다. 대상에 이미 `.harness/manifest.json`이 있으면 `install` 대신 `update`를 사용하세요. GitHub Actions를 사용하지 않는 저장소에는 설치·갱신 명령에 `--no-ci`를 붙일 수 있습니다.
+| 옵션 | 효과 |
+| --- | --- |
+| `--dry-run` | 파일을 쓰지 않고 계획만 표시 |
+| `--no-ci` | GitHub Actions 워크플로우와 라벨 생성을 건너뜀 |
+| `--ask-tools` | 저장해 둔 `never` 답을 지우고 도구 설치를 다시 물음 |
 
-설치·갱신 때 저장소 루트의 `pyproject.toml`, `package.json`, `go.mod`, `Cargo.toml`로 언어(Python, JS/TS, Go, Rust)를 감지하고, fuzzing/mutation 도구가 없으면 언어별로 실행할 전체 명령을 보여주며 `[y/N/never]`로 설치 여부를 묻습니다. `y`/`yes`면 그 명령을 실행하고, 그 외 답은 건너뜁니다. `never`는 사용자별·저장소별로 `~/.harness/preferences.json`에 저장되어 이후 같은 저장소의 `install`/`update`에서 묻지 않으며, `install`/`update`에 `--ask-tools`를 붙이면 저장된 `never`를 지우고 다시 묻습니다(`update --all`도 각 저장소에 적용, `--dry-run`은 묻지 않고 예정 명령만 표시). 설치에 실패하면 종료 코드는 그대로이고 `manual review`에 수동 명령을 출력합니다. 도구를 설치하지 않았다면 spec의 `Mutation tool:`은 `none`으로 선언합니다.
+- 이미 설치된 저장소(`.harness/manifest.json` 있음)는 `install` 대신 `update`를 씁니다.
+- 언어(Python, JS/TS, Go, Rust)를 감지해 fuzzing/mutation 도구가 없으면 설치 여부를 `[y/N/never]`로 묻습니다. `never`는 `~/.harness/preferences.json`에 저장됩니다. 도구를 설치하지 않았다면 spec의 `Mutation tool:`을 `none`으로 둡니다.
+- 파일이나 스킬 이름이 충돌하면 설치를 중단하고 경로를 알려 줍니다.
 
 ## 설치되는 것
 
 | 위치 | 역할 |
 | --- | --- |
-| `.harness/` | 버전이 기록된 payload, 스크립트, 설정 원본과 소유 파일의 SHA manifest |
-| `AGENTS.md`, `CLAUDE.md` | 프로젝트 정의와 관리형 문서 규칙; Claude는 `@AGENTS.md`로 같은 규칙을 읽음 |
-| `.agents/skills/`, `.claude/skills/` | `workflow-approach`, `requirement-oracle`, `architecture-options`, `harness-import`, `test-audit`, `rearrange-docs` 스킬과 Claude용 링크 |
-| `.claude/agents/`, `.codex/agents/` | 공통 원본에서 생성한 `implementer`, `test-implementer`, `test-verifier`, `mutant-triager`, `code-explorer` 정의 |
-| `.claude/settings.json`, `.codex/hooks.json` | 세션·서브에이전트·도구 훅 |
-| `.harness/git/` | 커밋 전 문서 규칙 검증과 기존 Git hook 연결 |
-| `agent-docs/` | ADR, 거절 기록, handoff, spec 및 실행 기록의 위치 |
-| `.github/workflows/harness-comment-warning.yml` | PR에서 새 주석과 docstring이 있으면 `comments-approved` 라벨이 없을 때 실패하는 승인 게이트 GitHub Actions 워크플로우(선택, 새 push 시 라벨 제거) |
+| `.harness/` | 버전별 payload, 스크립트, 소유 파일의 SHA manifest |
+| `AGENTS.md`, `CLAUDE.md` | 프로젝트 정의와 관리형 문서 규칙 (`CLAUDE.md`는 `@AGENTS.md` 참조) |
+| `.agents/skills/`, `.claude/skills/` | `workflow-approach`, `requirement-oracle`, `architecture-options`, `harness-import`, `test-audit`, `rearrange-docs` |
+| `.claude/agents/` | `implementer`, `test-implementer`, `test-verifier`, `mutant-triager`, `code-explorer` |
+| `.claude/settings.json` | 세션·서브에이전트·도구 훅 |
+| `.harness/git/` | 커밋 전 문서 규칙 검사 |
+| `agent-docs/` | ADR, 거절 기록, handoff, spec, 실행 기록 |
+| `.github/workflows/harness-comment-warning.yml` | 새 주석이 있는 PR은 `comments-approved` 라벨이 있어야 통과 (선택) |
 
-설치 시 기존 Claude/Codex hook 설정에는 하네스 항목을 병합합니다. 새로 설치하는 저장소에 기존 `AGENTS.md`가 있으면 프로젝트 정의만 남기고 원문을 `agent-docs/logs/`에 보관합니다. 기존 `CLAUDE.md`에는 필요하면 `@AGENTS.md`를 추가합니다. 파일이나 스킬 이름이 충돌하면 설치를 중단하고 경로를 보고합니다.
+기존 설정과의 관계:
 
-Git hook 관리자가 없는 경우 `core.hooksPath`를 `.harness/git`으로 설정합니다. Husky 등 기존 관리자가 있으면 설정을 바꾸지 않고 수동 연결 방법을 출력합니다. 커밋 전 검사는 문서 파일명, index/stale 구조, 동기화된 주석의 메타데이터와 필수 제목처럼 기계적으로 판단할 수 있는 규칙을 검사합니다. 새 주석은 커밋 시 경고만 출력하고 막지 않으며, PR 검사는 `comments-approved` 라벨이 없으면 실패합니다. 실패 메시지에는 필요한 라벨 이름이 표시됩니다. `--no-ci`가 아니면 설치·갱신 시 `gh`로 GitHub 저장소에 `comments-approved` 라벨을 만들고(이미 있으면 건너뜀), `gh`·git remote·권한이 없어 실패하면 수동 생성 명령을 `manual review`에 출력합니다.
+- 기존 hook 설정에는 하네스 항목을 병합합니다.
+- 기존 `AGENTS.md`는 프로젝트 정의만 남기고 원문을 `agent-docs/logs/`에 보관합니다.
+- Git hook 관리자가 없으면 `core.hooksPath`를 `.harness/git`으로 설정합니다. Husky 등이 있으면 수동 연결 방법만 출력합니다.
+- 새 주석은 커밋 때는 경고만 하고, PR에서는 라벨이 없으면 실패합니다.
 
 ## 작업 흐름
 
-[`workflow-approach`](harness/skills/workflow-approach/SKILL.md)는 기능·수정 수준의 구현과 디버깅에 사용하는 명세 우선 워크플로우입니다. 단순 문서 수정이나 이름 변경에는 적용하지 않습니다.
+기능·수정 수준의 구현과 디버깅에는 [`workflow-approach`](harness/skills/workflow-approach/SKILL.md)를 씁니다. 단순 문서 수정이나 이름 변경에는 쓰지 않습니다.
 
-1. 메인 에이전트가 먼저 "이해한 내용"(프로젝트, 작업 위치, 성공 기준, 하지 않을 일)을 채팅으로 제시하고 사용자가 바로잡습니다. 그다음 요구사항, 품질 목표, 검증 의무를 `agent-docs/specs/`의 버전별 spec에 작성하고, 채팅 브리프로 승인을 받습니다. 브리프는 질문(되돌리기 어려운 결정), 사용자가 거부할 수 있는 기본값, 새 개념 설명으로 나뉘며 파일로 남기지 않습니다. 미결정 사항은 `requirement-oracle`이 선택에 필요한 근거를 정리합니다.
-2. `implementer`와 `test-implementer`가 같은 승인된 spec을 기준으로 병렬 작업합니다. 각 역할은 상대방의 결과물을 보지 않습니다.
-3. 테스트가 통과하면 `test-verifier`가 증거를 감사합니다. 메인 에이전트는 선택한 결함을 실제로 주입하고 테스트가 이를 잡는지 확인한 뒤 원본을 복원합니다. 검증 에이전트 호출은 한 실행당 최대 2회입니다.
-4. 완료·중단 상태의 spec은 `agent-docs/spec-logs/`에 보관합니다. 진행 중인 spec과 handoff는 다음 세션에서 이어갈 수 있도록 유지합니다.
+1. **Spec**: 메인 에이전트가 이해한 내용을 제시하고, 사용자 확인을 거쳐 `agent-docs/specs/`에 spec을 쓰고 채팅 브리프로 승인받습니다. 미결정 사항은 `requirement-oracle`이 돕습니다.
+   - 브리프는 질문(되돌리기 어려운 결정), 사용자가 거부할 수 있는 기본값, 새 개념 설명으로 나뉘며 파일로 남기지 않습니다.
+2. **구현 + 테스트**: `implementer`와 `test-implementer`가 서로의 결과물을 보지 않고 병렬로 작업합니다.
+3. **검증**: `test-verifier`가 증거를 감사하고, 메인 에이전트가 결함을 주입해 테스트가 잡는지 확인합니다. 검증 호출은 실행당 최대 2회입니다.
+4. **보관**: 끝난 spec은 `agent-docs/spec-logs/`로 옮기고, 진행 중인 spec과 handoff는 다음 세션을 위해 남깁니다.
 
-세션 및 도구 훅은 spec 생명주기, 동시 실행 표식, 테스트 명령 제한과 실행 이벤트를 관리합니다. 텔레메트리는 기본적으로 사용자 홈의 `~/.harness/telemetry/`에 JSONL로 기록되며, 기록 실패가 작업 흐름을 막지는 않습니다.
-
-문서 작성 기준과 ADR·거절 기록·handoff 규칙은 [`harness-block.md`](harness/instructions/harness-block.md)에 있습니다.
+텔레메트리는 `~/.harness/telemetry/`에 JSONL로 기록됩니다. 문서 규칙 전문은 [`harness-block.md`](harness/instructions/harness-block.md)에 있습니다.
 
 ## 갱신과 점검
 
 ```bash
-python3 installer/harness.py update <target> --dry-run
-python3 installer/harness.py update <target>
+python3 installer/harness.py update <target> [--dry-run]
 python3 installer/harness.py update <target-a> <target-b>
 python3 installer/harness.py update --all
 python3 installer/harness.py doctor <target>
 python3 installer/harness.py import <target> --json
 ```
 
-`update`는 설치된 버전부터 현재 버전까지 필요한 migration을 **버전별로 출력하고 각각 확인받은 뒤** 적용합니다. 하네스 소유 파일은 manifest의 이전 SHA, 디스크의 현재 SHA, 새 payload를 비교합니다. 사용자가 수정한 파일은 건너뛰고 보고하며 이전 SHA를 유지합니다. 더 이상 배포하지 않는 파일은 수정되지 않았을 때만 삭제합니다. `--dry-run`은 migration 계획과 파일 변경을 쓰지 않고 보여줍니다. `update`와 `doctor`는 디렉터리를 여러 개 받아 순서대로 각각 처리하며, 하나가 실패해도 나머지를 계속 처리하고 하나라도 실패하면 종료 코드 1을 반환합니다. `install`/`update`가 성공한 디렉터리는 이 레포의 gitignore된 `.harness-targets.json`에 기록되고, `update --all`은 기록된 디렉터리를 모두 갱신합니다(사라진 경로는 기록에서 지우고 `remove`로 알리며, 설치되지 않은 경로는 `skip`으로 알리고 건너뜀).
+| 명령 | 동작 |
+| --- | --- |
+| `update` | 버전별 migration을 하나씩 확인받고 적용합니다. 사용자가 수정한 파일은 건너뛰고 보고합니다. |
+| `update --all` | 지금까지 `install`/`update`한 저장소(`.harness-targets.json`)를 모두 갱신합니다. |
+| `doctor` | manifest SHA, hook 설정, 관리 블록, Git hook 연결을 읽기 전용으로 점검합니다. |
+| `import` | 설치본과 원본의 차이를 보여 줍니다. 반영 여부는 [`harness-import`](harness/skills/harness-import/SKILL.md) 스킬로 검토합니다. |
 
-`doctor`는 manifest의 파일 SHA, 설정의 hook 항목, `AGENTS.md` 관리 블록, `CLAUDE.md` 참조와 Git hook 연결을 읽기 전용으로 점검합니다. `import`는 설치본과 현재 원본의 차이를 읽기 전용으로 보여주며, `--json`으로 기계 판독용 결과를 출력합니다. 차이를 원본에 반영할지는 [`harness-import`](harness/skills/harness-import/SKILL.md) 스킬에서 검토합니다.
+여러 디렉터리를 주면 하나가 실패해도 나머지를 계속 처리하고, 하나라도 실패하면 종료 코드 1을 반환합니다.
 
 ## 이 저장소에서 개발하기
 
-배포 내용은 `harness/`에서만 수정합니다. `.harness/`, `.claude/`, `.codex/`, `.agents/`의 설치 결과물을 직접 편집하지 마세요. payload를 바꾼 뒤에는 자체 설치본을 갱신합니다.
+`harness/`만 수정합니다. `.harness/`, `.claude/`, `.codex/`, `.agents/`는 생성 결과물이므로 직접 고치지 마세요.
 
 ```bash
 python3 installer/harness.py update .
 python3 -m unittest discover -s tests
 ```
 
-버전을 올릴 때는 [`installer/harness.py`](installer/harness.py)의 버전별 migration 단계를 추가해야 합니다. 에이전트 정의와 hook 설정은 각각 `harness/agents/`와 `harness/hooks/hooks.spec.json`에서 관리하고, [`installer/generate.py`](installer/generate.py)가 Claude/Codex 형식으로 생성합니다.
+- 버전을 올리면 [`installer/harness.py`](installer/harness.py)에 버전별 migration을 추가합니다.
+- 에이전트는 `harness/agents/`, 훅은 `harness/hooks/hooks.spec.json`에서 관리하며 [`installer/generate.py`](installer/generate.py)가 생성합니다.
 
-## 하네스 평가 (진행 중)
+## 하네스 평가
 
-하네스가 실제로 도움이 되는지 확인하는 평가 코드는 `evaluation/`에 있으며 설치 payload에는 포함되지 않습니다. 지금까지의 시도는 모두 중단했고, 각 사용법과 중단 이유는 해당 디렉터리의 문서에 있습니다.
+평가 코드는 `evaluation/`에 있으며 설치되지 않습니다. 지금까지의 시도는 모두 중단했고, 사용법과 중단 이유는 각 문서에 있습니다.
 
-- [`evaluation/selfcheck`](evaluation/selfcheck/README.md) (보관됨)
-- [`evaluation/reference_mutation`](evaluation/reference_mutation/README.md) (pilot 후 중단, 실험 기록은 [`EXPERIMENT.md`](evaluation/reference_mutation/EXPERIMENT.md))
+- [`evaluation/selfcheck`](evaluation/selfcheck/README.md): 보관됨
+- [`evaluation/reference_mutation`](evaluation/reference_mutation/README.md): pilot 후 중단 ([실험 기록](evaluation/reference_mutation/EXPERIMENT.md))
 
 ## 세션 로그 분석 (analytics)
 
-`analytics/`는 [trace](https://opentelemetry.io/docs/concepts/signals/traces/)로 하네스 실행을 추적해 보여주는 로컬 분석 화면입니다. 여기서 말하는 trace는 개념상 OpenTelemetry의 trace에서 아이디어를 얻었습니다. 설치 payload에는 포함되지 않습니다. 실행하려면 Python 의존성과 프런트엔드를 빌드한 뒤 서버를 시작합니다.
+하네스 텔레메트리와 Claude/Codex 세션 기록을 SQLite로 가져와 보여 주는 로컬 화면입니다.  설치되지 않습니다.
 
 ```bash
 python3 -m pip install -r analytics/requirements.txt
 npm ci --prefix analytics/frontend
 npm run build --prefix analytics/frontend
-python3 -m analytics.app
+python3 -m analytics.app   # http://127.0.0.1:8000
 ```
 
-기본 주소는 `http://127.0.0.1:8000`입니다. 분석 화면은 하네스 텔레메트리와 Claude/Codex 세션 기록을 로컬 SQLite 데이터베이스로 가져와 다음을 보여줍니다.
-
-- workflow 실행별 상태와 규칙 준수 여부. amend는 검증 에이전트 결과를 기다리는 동안에만 위반으로 봅니다.
-- 실행 분류(`compliant`, `noncompliant`, `excluded`)와 세션 분류(`compliant`, `noncompliant`, `partial`, `unrelated`, `excluded`)
-- 세션 기록 기반 토큰 사용량과 [`analytics/config.yaml`](analytics/config.yaml)의 모델 단가로 계산한 비용
+- workflow 실행별 상태와 규칙 준수 여부 (`compliant`, `noncompliant`, `partial`, `unrelated`, `excluded`)
+- 토큰 사용량과 [`analytics/config.yaml`](analytics/config.yaml) 단가 기준 비용
 
 | 환경 변수 | 기본값 |
 | --- | --- |
