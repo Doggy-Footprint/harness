@@ -56,7 +56,23 @@ python3 installer/harness.py doctor <target>
 3. **검증**: `test-verifier`가 증거를 감사하고, 메인 에이전트가 결함을 주입해 테스트가 잡는지 확인합니다. 검증 호출은 실행당 최대 2회입니다.
 4. **보관**: 끝난 spec은 `agent-docs/spec-logs/`로 옮기고, 진행 중인 spec과 handoff는 다음 세션을 위해 남깁니다.
 
-텔레메트리는 `~/.harness/telemetry/`에 JSONL로 기록됩니다. 문서 규칙 전문은 [`harness-block.md`](harness/instructions/harness-block.md)에 있습니다.
+텔레메트리는 `~/.harness/telemetry/`에 JSONL로 기록됩니다.
+
+## 문서 관리
+
+에이전트는 `AGENTS.md`의 관리 블록에 따라 문서를 씁니다. 전문은 [`harness-block.md`](harness/instructions/harness-block.md)에 있습니다.
+
+| 문서 | 위치 | 언제 쓰나 |
+| --- | --- | --- |
+| 주석·docstring | 코드 | 코드로 알 수 없는 설계 제약, 외부 시스템, 보안 불변식, 특이한 구현의 이유만 |
+| ADR | `agent-docs/adr/` | 되돌리기 비싸고, 대안을 실제로 검토했고, 이유를 코드로 복원할 수 없을 때. 에이전트는 제안만 하고 사용자 승인 후 작성 |
+| 거절 기록 | `agent-docs/rejections/` | 사용자가 구체적 대안을 거절했고 이유를 코드로 복원할 수 없을 때. 초안 확인 후 작성 |
+| handoff | `agent-docs/handoff/` | 검증 예산 소진, 사용자 결정 대기, 중단, 또는 요청 시. 실패한 시도는 지우지 않고 추가만 |
+| 동기화 주석 | `agent-docs/synced-comments/` | 같은 주석을 여러 곳에 유지할 때. 코드에 `synced id`와 버전을 태그 |
+
+- 관리 디렉터리마다 `index.md`, `stale.md`, `stale/`을 두고, 파일명은 `<16자리 hex id>-<kebab-case>.md`입니다. 낡은 문서는 지우지 않고 `stale/`로 옮깁니다.
+- 커밋 전 Git hook이 파일명, index/stale 구조, 동기화 주석 메타데이터, 필수 제목을 검사합니다.
+- 규칙이 바뀐 뒤 기존 문서를 현재 규칙에 맞게 다시 쓰려면 `/rearrange-docs`를 실행합니다.
 
 ## 갱신과 점검
 
@@ -98,7 +114,7 @@ python3 -m unittest discover -s tests
 
 ## 세션 로그 분석 (analytics)
 
-하네스 텔레메트리와 Claude/Codex 세션 기록을 SQLite로 가져와 보여 주는 로컬 화면입니다.  설치되지 않습니다.
+하네스 텔레메트리와 Claude/Codex 세션 기록을 SQLite로 가져와 보여 주는 로컬 화면입니다. 다른 repo에는 설치되지 않습니다.
 
 ```bash
 python3 -m pip install -r analytics/requirements.txt
