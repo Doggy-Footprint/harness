@@ -55,6 +55,9 @@ Reuse from `selfcheck/`: container runner, arm separation, rate-limit halt and r
 
 In parallel, at low cost: compare sessions with and without `workflow-approach` in `analytics/` data (user correction turns, rework commits) as an observational cross-check. It cannot establish causation.
 
+### Outcome (2026-10-24)
+Stages 1–2 were carried out as `evaluation/reference_mutation/` (preregistration, post-cutoff PR tasks, reference-mutant kill). The pilot was ended by the user without a main run; design, results and the stop reason are in `evaluation/reference_mutation/EXPERIMENT.md`. `selfcheck/` moved to `evaluation/selfcheck/` as an archived record with its tests removed; `selfcheck/` paths in this handoff refer to the old location. This handoff moved to `stale/`.
+
 ## Open Questions
 - Task source: which public repositories (language, test tooling) and is the user willing to run the H2 blind pairwise review on 5–8 tasks?
 - Priority among H1–H4. Recommendation: H2 and H4 decide whether to keep the harness; H1 and H3 explain why.

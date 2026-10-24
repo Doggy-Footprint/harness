@@ -2,7 +2,7 @@
 
 이 문서는 `evaluation/reference_mutation/`으로 진행한 하네스 테스트 품질 평가 실험의 설계, 실제 실행 절차, 결과, 중단 이유를 정리한 기록입니다. 같은 실험을 다시 돌리거나 결과를 인용할 때 이 문서를 기준으로 삼습니다.
 실험은 2026-10-24 12:20 UTC에 pilot 단계에서 사용자 결정으로 끝났고 본 실험(main)은 실행하지 않았습니다.
-앞서 진행한 SWE-bench Verified 기반 자체 점검(`evaluation/selfcheck/`)도 같은 이유로 보관 처리했습니다. 기록은 `agent-docs/handoff/c379ec40307bd6c0-harness-value-evaluation-redesign.md`에 있습니다.
+앞서 진행한 SWE-bench Verified 기반 자체 점검(`evaluation/selfcheck/`)도 같은 이유로 보관 처리했습니다. 기록은 `agent-docs/handoff/stale/c379ec40307bd6c0-harness-value-evaluation-redesign.md`에 있습니다.
 
 ## 1. 요약
 
@@ -90,7 +90,7 @@
 
 ## 5. 재현 절차 (실제로 실행한 순서)
 
-README의 "평가 실험" 절에 있는 순서가 기본이고, 실제로는 아래처럼 돌렸습니다. VM 보조 스크립트는 `~/.harness/evaluation/backups/pilot-7df89a358d3faa30-scripts/vm/`에 보관했습니다.
+README의 "참조 변이 평가" 절에 있는 순서가 기본이고, 실제로는 아래처럼 돌렸습니다. VM 보조 스크립트는 `~/.harness/evaluation/backups/pilot-7df89a358d3faa30-scripts/vm/`에 보관했습니다.
 
 1. Mac에서 준비합니다.
    - `python3 -m evaluation.reference_mutation doctor`로 환경을 점검합니다(docker, claude CLI, 토큰 파일 모드 600, gh 인증).
@@ -266,7 +266,7 @@ typescript 유효율 20%는 게이트 G2(50% 이상)를 통과하지 못하는 �
 
 ## 11. 실패와 수정 기록
 
-시행착오 전체(46행)는 `agent-docs/handoff/d63aaa61098054c3-test-quality-evaluation-verifier-limit.md`의 `## Failed Attempts`에 있습니다. pilot 단계에서 나온 것만 추리면 다음과 같습니다.
+시행착오 전체(46행)는 `agent-docs/handoff/stale/d63aaa61098054c3-test-quality-evaluation-verifier-limit.md`의 `## Failed Attempts`에 있습니다. pilot 단계에서 나온 것만 추리면 다음과 같습니다.
 
 | 문제 | 증상 | 조치 |
 | --- | --- | --- |

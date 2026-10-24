@@ -91,3 +91,13 @@ File: 3cb41f5d6d74d413-per-version-run-metrics.md
 Summary: From issue #10, record harness-version-tagged per-run metrics at run time for before/after comparison; not started
 Related Files: harness/hooks/telemetry_hook.py, analytics/usage.py, analytics/store.py
 Related Symbols: telemetry.emit
+---
+File: c379ec40307bd6c0-harness-value-evaluation-redesign.md
+Summary: SWE-bench Verified self-check archived after run 8b28b1b5525cc30e; stages 1-2 of a claim-based harness evaluation on post-cutoff public feature commits are pending
+Related Files: selfcheck/, selfcheck/results/8b28b1b5525cc30e.md, selfcheck/score.py, agent-docs/adr/stale/5c4c01bdc91769f7-selfcheck-swe-bench-baseline.md
+Related Symbols: swt_outcome, test_id_key, attribute, process.evaluate_entry
+---
+File: d63aaa61098054c3-test-quality-evaluation-verifier-limit.md
+Summary: Reference-mutation test-quality evaluation ended at pilot run 7df89a358d3faa30 by the user; GCP resources deleted, code archived as evaluation/reference_mutation/ without tests
+Related Files: evaluation/reference_mutation/, evaluation/reference_mutation/EXPERIMENT.md, agent-docs/spec-logs/616f94189f1a4147-harness-test-quality-evaluation.md, README.md
+Related Symbols: score.score_entry, score.kill, mutants.build_mutants, session_cost, crossarm.run_matrix
