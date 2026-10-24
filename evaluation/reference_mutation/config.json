@@ -1,0 +1,159 @@
+{
+  "data_dir": "~/.harness/evaluation",
+  "results_dir": "evaluation/reference_mutation/results",
+  "token_file": "~/.config/selfcheck/oauth_token",
+  "mining": {
+    "merged_after": "2026-07-01",
+    "min_stars": 200,
+    "licenses": [
+      "MIT",
+      "Apache-2.0",
+      "BSD-2-Clause",
+      "BSD-3-Clause",
+      "MPL-2.0",
+      "ISC"
+    ],
+    "title_exclude": [
+      "^docs?(\\(.*\\))?[:!]",
+      "^chore\\(deps",
+      "\\bbump\\b",
+      "\\brelease\\b",
+      "^revert\\b",
+      "^ci(\\(.*\\))?[:!]"
+    ],
+    "per_repo_max": 3,
+    "target_per_language": 40
+  },
+  "build": {
+    "timeout_s": 3600
+  },
+  "validation": {
+    "repeats": 3,
+    "timeout_s": 600
+  },
+  "brief": {
+    "model": "claude-opus-5-5",
+    "effort": "medium",
+    "attempts": 3,
+    "timeout_s": 900
+  },
+  "usersim": {
+    "model": "claude-opus-5-5",
+    "effort": "medium",
+    "timeout_s": 900,
+    "poll_s": 2
+  },
+  "judge": {
+    "model": "claude-opus-5-5",
+    "effort": "medium",
+    "timeout_s": 900,
+    "seed": 0
+  },
+  "agent": {
+    "model": "claude-sonnet-5-5",
+    "effort": "medium",
+    "wall_clock_min": 180,
+    "max_user_turns": 8,
+    "idle_grace_s": 120,
+    "host_grace_s": 600,
+    "cpus": 4,
+    "memory": "8g",
+    "concurrency": 3,
+    "disallowed_tools": [
+      "WebSearch",
+      "WebFetch",
+      "EnterWorktree",
+      "ExitWorktree",
+      "CronCreate",
+      "CronDelete",
+      "CronList",
+      "ScheduleWakeup",
+      "RemoteTrigger"
+    ],
+    "aliases": {
+      "opus": "claude-opus-5-5",
+      "sonnet": "claude-sonnet-5-5",
+      "haiku": "claude-haiku-5-5"
+    },
+    "proxy_image": "ubuntu/squid@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029",
+    "allow_hosts": [
+      "api.anthropic.com"
+    ],
+    "network": "evaluation-int",
+    "proxy_name": "evaluation-proxy"
+  },
+  "mutants": {
+    "cap": 40,
+    "seed": 1,
+    "workers": 4
+  },
+  "eval": {
+    "timeout_s": 900
+  },
+  "report": {
+    "min_mutants": 10
+  },
+  "stats": {
+    "resamples": 10000,
+    "seed": 1,
+    "alpha": 0.05,
+    "min_tasks": 10
+  },
+  "pilot": {
+    "repos_per_language": 2,
+    "tasks_per_repo": 2
+  },
+  "gates": {
+    "g1_max_b0_resolved": 0.8,
+    "g2_min_valid": 0.5,
+    "g3_min_consistency": 0.7,
+    "g4_max_anchor_lowest": 0.5,
+    "g5_max_failures": 0
+  },
+  "gce": {
+    "project": "harness-eval-d31ee3",
+    "region": "us-central1",
+    "zone": "us-central1-a",
+    "machine_type": "n2-standard-16",
+    "spot": false,
+    "data_disk": "harness-eval-data",
+    "disk_size": "300GB",
+    "disk_type": "pd-balanced",
+    "secret": "harness-eval-oauth-token",
+    "network": "harness-eval-net"
+  },
+  "tools": {
+    "python": [
+      "pytest==8.3.5",
+      "pytest-cov==6.1.1",
+      "hypothesis==6.131.0",
+      "mutmut==2.5.1"
+    ],
+    "typescript": [
+      "@stryker-mutator/core@10.0.0",
+      "fast-check@4.10.2"
+    ],
+    "typescript_jest": [
+      "jest-junit@17.0.0"
+    ],
+    "go": [
+      "github.com/avito-tech/go-mutesting/cmd/go-mutesting@v0.0.0-20261002081621-9ce5f731e321",
+      "gotest.tools/gotestsum@v1.13.0"
+    ],
+    "rust": [
+      "cargo-mutants@27.1.0",
+      "cargo-nextest@0.9.149"
+    ],
+    "rust_dev": [
+      "proptest@1.7.0"
+    ],
+    "managers": {
+      "poetry": "poetry==2.1.3",
+      "pdm": "pdm==2.24.0",
+      "bun": "bun@1.2.0"
+    },
+    "typescript_mocha": [
+      "mocha-junit-reporter@2.2.1"
+    ]
+  }
+}

@@ -14,3 +14,4 @@ agent-docs/specs/.seed/
 analytics/frontend/node_modules/
 analytics/frontend/dist/
 .harness-targets.json
+.hypothesis/
