@@ -61,7 +61,7 @@ def token_path(cfg: dict) -> Path:
     if not path.is_file():
         raise Refused(
             f"token file missing: {path}; save the subscription OAuth token there (chmod 600) "
-            "or set token_file in evaluation/pr_test_quality/config.json"
+            "or set token_file in evaluation/reference_mutation/config.json"
         )
     return path
 
@@ -303,7 +303,7 @@ def _finalize(ctx: _Ctx, d: Path, state: dict, host: dict) -> str:
 
 
 def _missing_image_message(name: str, task: dict) -> str:
-    return f"image missing: {name}; run python3 -m evaluation.pr_test_quality build --language {task['language']}"
+    return f"image missing: {name}; run python3 -m evaluation.reference_mutation build --language {task['language']}"
 
 
 def _run_entry(ctx: _Ctx, n: int, entry: dict, resume_state) -> str:
@@ -536,17 +536,17 @@ def run(
         tasks = [t for t in tasks if not t.get("pilot")]
         pilot_language = pilot_language if not tasks else None
         if not prereg_path or not Path(prereg_path).is_file():
-            raise Refused(f"preregistration missing: {prereg_path}; restore evaluation/pr_test_quality/preregistration.md")
+            raise Refused(f"preregistration missing: {prereg_path}; restore evaluation/reference_mutation/preregistration.md")
     if not tasks:
         language = pilot_language or "<language>"
         if pilot_language:
             raise Refused(
                 "pilot tasks are excluded from main runs and none remain; add tasks with "
-                f"python3 -m evaluation.pr_test_quality mine --language {language}"
+                f"python3 -m evaluation.reference_mutation mine --language {language}"
             )
         raise Refused(
-            "no valid tasks to run; run python3 -m evaluation.pr_test_quality validate --language "
-            f"{language} and python3 -m evaluation.pr_test_quality brief --language {language}"
+            "no valid tasks to run; run python3 -m evaluation.reference_mutation validate --language "
+            f"{language} and python3 -m evaluation.reference_mutation brief --language {language}"
         )
     for task in tasks:
         for name in (task["image"], recipes.agent_image_name(task["image"])):

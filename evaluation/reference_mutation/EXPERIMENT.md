@@ -1,8 +1,8 @@
 # 하네스 테스트 품질 평가 실험 기록 (pilot 7df89a358d3faa30, 중단)
 
-이 문서는 `evaluation/pr_test_quality/`으로 진행한 하네스 테스트 품질 평가 실험의 설계, 실제 실행 절차, 결과, 중단 이유를 정리한 기록입니다. 같은 실험을 다시 돌리거나 결과를 인용할 때 이 문서를 기준으로 삼습니다.
+이 문서는 `evaluation/reference_mutation/`으로 진행한 하네스 테스트 품질 평가 실험의 설계, 실제 실행 절차, 결과, 중단 이유를 정리한 기록입니다. 같은 실험을 다시 돌리거나 결과를 인용할 때 이 문서를 기준으로 삼습니다.
 실험은 2026-10-24 12:20 UTC에 pilot 단계에서 사용자 결정으로 끝났고 본 실험(main)은 실행하지 않았습니다.
-앞서 진행한 SWE-bench Verified 기반 자체 점검(`selfcheck/`)도 같은 이유로 보관 처리했습니다. 기록은 `agent-docs/handoff/c379ec40307bd6c0-harness-value-evaluation-redesign.md`에 있습니다.
+앞서 진행한 SWE-bench Verified 기반 자체 점검(`evaluation/selfcheck/`)도 같은 이유로 보관 처리했습니다. 기록은 `agent-docs/handoff/c379ec40307bd6c0-harness-value-evaluation-redesign.md`에 있습니다.
 
 ## 1. 요약
 
@@ -20,7 +20,7 @@
 
 ## 2. 질문, 가설, 사전등록
 
-주장, 측정, 임계값, 게이트는 결과를 보기 전에 [`evaluation/pr_test_quality/preregistration.md`](preregistration.md)에 고정했습니다. pilot 실행 기록에는 sha256 `03a8213335bd2999ba1f1ed73c3f5675a218fd65e9ad660ffa8d0e2e8d3d2906`이 저장되어 있고, 현재 파일과 같습니다.
+주장, 측정, 임계값, 게이트는 결과를 보기 전에 [`evaluation/reference_mutation/preregistration.md`](preregistration.md)에 고정했습니다. pilot 실행 기록에는 sha256 `03a8213335bd2999ba1f1ed73c3f5675a218fd65e9ad660ffa8d0e2e8d3d2906`이 저장되어 있고, 현재 파일과 같습니다.
 
 | 가설 | 주 측정 | 비교 |
 | --- | --- | --- |
@@ -70,19 +70,19 @@
 | 항목 | 값 |
 | --- | --- |
 | 하네스 | `89d7f58` (master), harness 0.28.0 |
-| 평가 코드 | `evaluation/pr_test_quality/` (실험 당시 경로는 `evaluation/`). 아래 "평가 코드 상태" 참고 |
-| 테스트(Mac) | `.venv/bin/python -m pytest evaluation/pr_test_quality/tests -q -p no:cacheprovider --cov=evaluation/pr_test_quality --cov-branch --cov-config=evaluation/pr_test_quality/tests/.coveragerc --cov-fail-under=85` → 1049 passed, coverage 91.25% |
+| 평가 코드 | `evaluation/reference_mutation/` (실험 당시 경로는 `evaluation/`). 아래 "평가 코드 상태" 참고 |
+| 테스트 | 기록 용도로 보관하면서 삭제함. 실험 당시 1049 passed, coverage 91.25% |
 | GCP | 프로젝트 `harness-eval-d31ee3`, `us-central1-a` |
 | VM | `n2-standard-16` on-demand, 외부 IP 없음, IAP SSH, Cloud NAT |
 | 데이터 디스크 | `harness-eval-data` pd-balanced 500GB(설정값 300GB에서 늘림). SSD_TOTAL_GB 지역 할당량이 500이라 그 이상은 불가 |
 | docker data-root | `/data/docker`. 50GB 부트 디스크로는 이미지 160개를 감당하지 못함 |
-| 도구 고정 | `evaluation/pr_test_quality/config.json`의 `tools`, `evaluation/pr_test_quality/requirements.txt`, `evaluation/pr_test_quality/docker/*.Dockerfile` |
+| 도구 고정 | `evaluation/reference_mutation/config.json`의 `tools`, `evaluation/reference_mutation/requirements.txt`, `evaluation/reference_mutation/docker/*.Dockerfile` |
 | squid 이미지 | `ubuntu/squid@sha256:6a097f68…bbe029`. VM에서 직접 `docker pull`해야 함 |
 
 **평가 코드 상태.**
 
 - pilot은 커밋하지 않은 작업 트리로 실행했습니다. 그때 패키지 경로는 `evaluation/`(모듈 `evaluation`)였고, VM에서는 `python -m evaluation ...`으로 실행했습니다.
-- 실험이 끝난 뒤 코드를 `evaluation/pr_test_quality/`로 옮겨 커밋했습니다. 바뀐 것은 import 경로, 저장소 루트 계산, 문서와 메시지 속 경로뿐이고 동작은 같습니다. 테스트 결과(1049 passed, 91.25%)도 이동 전과 같습니다. 사전등록 파일의 sha256도 그대로입니다.
+- 실험이 끝난 뒤 코드를 `evaluation/reference_mutation/`로 옮겨 커밋했습니다. 바뀐 것은 import 경로, 저장소 루트 계산, 문서와 메시지 속 경로뿐이고 동작은 같습니다. 사전등록 파일의 sha256도 그대로입니다. 기록 용도라 테스트 디렉터리는 지웠습니다(커밋 `3aa385f`에 남아 있음).
 - pilot 도중 아래 수정을 VM에 `scp`로 반영했고, 커밋한 코드에는 모든 수정이 들어 있습니다.
 
 - 에이전트 실행 전에 반영한 수정: driver 복사 경로, nonroot 토큰 읽기, `allowed_warning`을 멈춤 조건에서 제외.
@@ -93,10 +93,10 @@
 README의 "평가 실험" 절에 있는 순서가 기본이고, 실제로는 아래처럼 돌렸습니다. VM 보조 스크립트는 `~/.harness/evaluation/backups/pilot-7df89a358d3faa30-scripts/vm/`에 보관했습니다.
 
 1. Mac에서 준비합니다.
-   - `python3 -m evaluation.pr_test_quality doctor`로 환경을 점검합니다(docker, claude CLI, 토큰 파일 모드 600, gh 인증).
-   - `python3 -m evaluation.pr_test_quality gce up`으로 VM을 만듭니다.
-2. Mac에서 `python3 -m evaluation.pr_test_quality mine`으로 후보를 모읍니다. gh 인증이 필요하고, 저장소 검색은 10페이지까지만 봅니다.
-3. `python3 -m evaluation.pr_test_quality gce push`로 작업 트리와 과제를 VM의 `/data/src`, `/data/evaluation/tasks`로 보냅니다.
+   - `python3 -m evaluation.reference_mutation doctor`로 환경을 점검합니다(docker, claude CLI, 토큰 파일 모드 600, gh 인증).
+   - `python3 -m evaluation.reference_mutation gce up`으로 VM을 만듭니다.
+2. Mac에서 `python3 -m evaluation.reference_mutation mine`으로 후보를 모읍니다. gh 인증이 필요하고, 저장소 검색은 10페이지까지만 봅니다.
+3. `python3 -m evaluation.reference_mutation gce push`로 작업 트리와 과제를 VM의 `/data/src`, `/data/evaluation/tasks`로 보냅니다.
    - **이후에는 push를 다시 하지 마세요.** VM에서 만든 과제 기록이 지워집니다.
    - 소스를 고칠 때는 `gcloud compute scp`와 `sudo install -o evaluation`으로 파일 하나씩 바꿉니다.
 4. VM에서 언어별로 `lang.sh`를 병렬 실행합니다.
@@ -107,7 +107,7 @@ README의 "평가 실험" 절에 있는 순서가 기본이고, 실제로는 아
 6. 사용자 결정으로 rust를 제외했습니다. 유효 과제가 0개였기 때문이며, 사전등록에도 기록했습니다.
 7. pilot을 실행합니다.
    - 시작 전에 squid 이미지를 `docker pull`합니다.
-   - `python -m evaluation.pr_test_quality pilot`은 시작할 때 과제에 pilot 표시를 씁니다.
+   - `python -m evaluation.reference_mutation pilot`은 시작할 때 과제에 pilot 표시를 씁니다.
    - 실패한 뒤 다시 실행하면 다른 과제가 뽑힙니다. 다시 실행하기 전에 모든 `tasks.jsonl`의 `pilot`을 false로 되돌리거나 `run --resume` 또는 `run --retry-errors`를 쓰세요.
 8. 실행 run `7df89a358d3faa30`을 `run --resume`으로 이어서 끝낸 뒤 `score`, `judge`, `report`를 차례로 돌립니다. `pilot` 명령에는 resume이 없습니다.
    - 이번에는 `postpilot.sh`가 이 순서를 실행했습니다.
@@ -305,7 +305,7 @@ python3 $A/costs.py $R Panniantong__Agent-Reach-575 caddyserver__caddy-7995 exca
 python3 $A/segment.py $R Panniantong__Agent-Reach-575 caddyserver__caddy-7995 excalidraw__excalidraw-11632
 ```
 
-`costs.py`는 `sys.path`에 저장소 루트를 넣고 `evaluation.pr_test_quality.session_cost`를 가져옵니다. 경로가 다르면 첫 줄들을 고치세요.
+`costs.py`는 `sys.path`에 저장소 루트를 넣고 `evaluation.reference_mutation.session_cost`를 가져옵니다. 경로가 다르면 첫 줄들을 고치세요.
 
 ## 13. 정리 상태 (2026-10-24)
 

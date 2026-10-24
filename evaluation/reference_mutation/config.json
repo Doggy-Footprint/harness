@@ -1,6 +1,6 @@
 {
   "data_dir": "~/.harness/evaluation",
-  "results_dir": "evaluation/pr_test_quality/results",
+  "results_dir": "evaluation/reference_mutation/results",
   "token_file": "~/.config/selfcheck/oauth_token",
   "mining": {
     "merged_after": "2026-07-01",

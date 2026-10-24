@@ -101,7 +101,7 @@ def cmd_mine(args, cfg, deps) -> int:
             reset = getattr(exc, "reset", "") or "unknown"
             _say(
                 f"GitHub API failure or rate limit ({exc}); candidates so far are saved in "
-                f"{candidates_path(cfg, language)}; rerun `python3 -m evaluation.pr_test_quality mine --language {language}` "
+                f"{candidates_path(cfg, language)}; rerun `python3 -m evaluation.reference_mutation mine --language {language}` "
                 f"after the limit resets (reset epoch: {reset})"
             )
             return 3
@@ -182,7 +182,7 @@ def _load_all(cfg: dict) -> dict[str, dict]:
 
 def _halted(exc: run.Halted) -> int:
     _say(f"halted ({exc.reason}); finished entries are kept; continue with "
-         f"`python3 -m evaluation.pr_test_quality run --resume {exc.run_dir.name}`")
+         f"`python3 -m evaluation.reference_mutation run --resume {exc.run_dir.name}`")
     return 3
 
 
@@ -202,8 +202,8 @@ def cmd_run(args, cfg, deps) -> int:
         tasks = [t for t in tasks if t["task_id"] in wanted]
     if not tasks:
         language = args.language or "<language>"
-        _say(f"no valid tasks for run; run `python3 -m evaluation.pr_test_quality validate --language {language}` and "
-             f"`python3 -m evaluation.pr_test_quality brief --language {language}`, or relax --language/--tasks")
+        _say(f"no valid tasks for run; run `python3 -m evaluation.reference_mutation validate --language {language}` and "
+             f"`python3 -m evaluation.reference_mutation brief --language {language}`, or relax --language/--tasks")
         return 2
     run_dir = run.run(
         sorted(tasks, key=lambda t: t["task_id"]), args.arms.split(","), cfg=cfg, phase=args.phase,
@@ -312,7 +312,7 @@ def cmd_gce(args, cfg, deps) -> int:
     if action == "exec":
         command = args.remote_argv[1:] if args.remote_argv[:1] == ["--"] else args.remote_argv
         if not command:
-            _say("gce exec needs a command; usage: python3 -m evaluation.pr_test_quality gce exec -- python3 -m evaluation.pr_test_quality doctor")
+            _say("gce exec needs a command; usage: python3 -m evaluation.reference_mutation gce exec -- python3 -m evaluation.reference_mutation doctor")
             return 2
         return gce.exec_remote(cfg, command, run_fn=deps.run_fn, detach=args.detach)
     if action == "pull":
@@ -321,7 +321,7 @@ def cmd_gce(args, cfg, deps) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="python3 -m evaluation.pr_test_quality")
+    parser = argparse.ArgumentParser(prog="python3 -m evaluation.reference_mutation")
     sub = parser.add_subparsers(dest="command", required=True)
     for name in ("mine", "build", "validate", "brief", "mutants"):
         p = sub.add_parser(name, help=f"{name} stage")
@@ -383,7 +383,7 @@ def main(argv: list[str] | None = None, cfg: dict | None = None, deps: dict | No
         _say(str(exc))
         return 2
     except KeyboardInterrupt:
-        _say("interrupted; rerun the same command, or `python3 -m evaluation.pr_test_quality run --resume <run_id>` for a run")
+        _say("interrupted; rerun the same command, or `python3 -m evaluation.reference_mutation run --resume <run_id>` for a run")
         return 3
 
 

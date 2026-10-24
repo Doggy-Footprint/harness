@@ -55,7 +55,7 @@ def data_dir(cfg: dict) -> Path:
 
 
 def results_dir(cfg: dict) -> Path:
-    path = Path(os.environ.get("EVALUATION_RESULTS_DIR") or cfg.get("results_dir") or "evaluation/pr_test_quality/results").expanduser()
+    path = Path(os.environ.get("EVALUATION_RESULTS_DIR") or cfg.get("results_dir") or "evaluation/reference_mutation/results").expanduser()
     return path if path.is_absolute() else Path(__file__).parents[2] / path
 
 

@@ -259,9 +259,9 @@ def build(run_dir, *, prereg_path, cfg: dict) -> dict:
     run_id = meta["run_id"]
     problems = []
     if any(e["status"] == "error" and e.get("attempts", 1) == 1 for e in meta["entries"]):
-        problems.append(f"entries ended in error after one attempt; run `python3 -m evaluation.pr_test_quality run --retry-errors {run_id}`")
+        problems.append(f"entries ended in error after one attempt; run `python3 -m evaluation.reference_mutation run --retry-errors {run_id}`")
     if any(e["status"] == "interrupted" for e in meta["entries"]):
-        problems.append(f"entries are interrupted; run `python3 -m evaluation.pr_test_quality run --resume {run_id}`")
+        problems.append(f"entries are interrupted; run `python3 -m evaluation.reference_mutation run --resume {run_id}`")
     if problems:
         raise RunIncomplete("; ".join(problems))
     rows, entry_rows = [], []

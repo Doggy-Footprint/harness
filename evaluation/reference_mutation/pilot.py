@@ -123,7 +123,7 @@ def run_pilot(cfg: dict, *, docker, call_fn, prereg_path, token: str, harness_re
     selected = select(by_language, cfg)
     if not selected:
         raise run_mod.Refused(
-            "no valid tasks for the pilot; run python3 -m evaluation.pr_test_quality mine/build/validate/brief first"
+            "no valid tasks for the pilot; run python3 -m evaluation.reference_mutation mine/build/validate/brief first"
         )
     mark_pilot(cfg, selected)
     run_dir = run_mod.run(

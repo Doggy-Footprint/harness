@@ -1,8 +1,0 @@
-[run]
-branch = True
-omit =
-    evaluation/pr_test_quality/tests/*
-    evaluation/pr_test_quality/agent/driver.py
-
-[report]
-show_missing = True
