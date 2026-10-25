@@ -22,7 +22,7 @@
     ".harness/lib/telemetry.py": "b155c249622e95d3d0f1116073e190102191c713c5de083435856101c097c53f",
     ".harness/lib/hook_shared.py": "fcf88e77fe33f6d38c4c9c8fd44491f34f06bfe5752d6c4e0a565f874819c764",
     ".harness/lib/session_metrics.py": "a0cbf1d6a78d1282185eb2fc8af9420f0b0403a66d1a4a3ddd9b88898e29cfae",
-    ".harness/git/warn_new_comments.py": "8ab4e5122aa870fc3d5c910bb5e78744fc59098ca4468b7b5430aa42add258d9",
+    ".harness/git/warn_new_comments.py": "b3cf080a3d2b1e0ff06efb71c19d66d41b71ae1549239242856592acdcb6ea5b",
     ".harness/git/post-merge": "333b095901d1c4606dacdbc3a18dbfa7670a744eab05e91e2e2faa79130bddfa",
     ".harness/git/pre-commit": "d05cffdf1f2a2ace9325d2c63510642238cb513f2d28d651ef146acd754aa6e4",
     ".harness/git/verify_rules.py": "b95039af992bd14fd0c6528a6daa1763f76c9604644a6412295c33a699199ac1",
