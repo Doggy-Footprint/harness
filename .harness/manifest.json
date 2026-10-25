@@ -27,7 +27,7 @@
     ".harness/git/warn_commit_message.py": "d2a42f860fe00fab84689699b48e30f424a5f155a47440dbf3cdfb83fa36cfc3",
     ".harness/git/warn_retrospective.py": "03281c38fa3733cabcc1b25f4706aa1668dc2ce84bc86c7da028b761b1c0ebed",
     ".harness/git/commit-msg": "94caf823782bad755bcb7b2f6a924d3a7093e659fb8ac121aa486a90f0d80650",
-    ".harness/git/warn_new_comments.py": "8ab4e5122aa870fc3d5c910bb5e78744fc59098ca4468b7b5430aa42add258d9",
+    ".harness/git/warn_new_comments.py": "b3cf080a3d2b1e0ff06efb71c19d66d41b71ae1549239242856592acdcb6ea5b",
     ".harness/git/post-merge": "333b095901d1c4606dacdbc3a18dbfa7670a744eab05e91e2e2faa79130bddfa",
     ".harness/git/pre-commit": "96688954e635f425831a63b4fb2ce9c873786fa847468279d11aca815bba490d",
     ".harness/git/verify_rules.py": "cf9baf63d18e903f54e4ef4b480fbba72e31e7be64e488b4414ceecfaa68149b",
