@@ -21,9 +21,11 @@ python3 installer/harness.py doctor <target>
 | `--dry-run` | 파일을 쓰지 않고 계획만 표시 |
 | `--no-ci` | GitHub Actions 워크플로우와 라벨 생성을 건너뜀 |
 | `--ask-tools` | 저장해 둔 `never` 답을 지우고 도구 설치를 다시 물음 |
+| `--model sonnet\|opus` | workflow 서브에이전트의 기본 모델을 바꾸고 `.harness/config.json`에 저장 (기본 `sonnet`) |
 
 - 이미 설치된 저장소(`.harness/manifest.json` 있음)는 `install` 대신 `update`를 씁니다.
 - 언어(Python, JS/TS, Go, Rust)를 감지해 fuzzing/mutation 도구가 없으면 설치 여부를 `[y/N/never]`로 묻습니다. `never`는 `~/.harness/preferences.json`에 저장됩니다. 도구를 설치하지 않았다면 spec의 `Mutation tool:`을 `none`으로 둡니다.
+- `--model`은 `implementer`, `test-implementer`, `test-verifier`, `code-explorer`에 적용됩니다. 이후 `--model` 없이 `update`하면 저장된 값을 씁니다. `mutant-triager`는 항상 `haiku`를 씁니다. workflow 브리프에는 역할별 모델이 기본값으로 표시됩니다.
 - 파일이나 스킬 이름이 충돌하면 설치를 중단하고 경로를 알려 줍니다.
 
 ## 설치되는 것
@@ -34,9 +36,9 @@ python3 installer/harness.py doctor <target>
 | `AGENTS.md`, `CLAUDE.md` | 프로젝트 정의와 관리형 문서 규칙 (`CLAUDE.md`는 `@AGENTS.md` 참조) |
 | `.agents/skills/`, `.claude/skills/` | `workflow-approach`, `requirement-oracle`, `architecture-options`, `harness-import`, `test-audit`, `rearrange-docs` |
 | `.claude/agents/` | `implementer`, `test-implementer`, `test-verifier`, `mutant-triager`, `code-explorer` |
-| `.claude/settings.json` | 세션·서브에이전트·도구 훅 |
-| `.harness/git/` | 커밋 전 문서 규칙 검사 |
-| `agent-docs/` | ADR, 거절 기록, handoff, spec, 실행 기록 |
+| `.claude/settings.json` | 세션·서브에이전트·도구 훅. `gh pr create`/`gh pr edit` 뒤에는 PR 설명을 5분 standup 소개 기준으로 쓰라고 상기시킴 |
+| `.harness/git/` | 커밋 전 문서 규칙 검사, 커밋 메시지의 `Request:`·`Intent:` 줄 경고 |
+| `agent-docs/` | try-n-fail 기록, handoff, spec, 실행 기록 |
 | `.github/workflows/harness-comment-warning.yml` | 새 주석이 있는 PR은 `comments-approved` 라벨이 있어야 통과 (선택) |
 
 기존 설정과의 관계:
@@ -45,6 +47,7 @@ python3 installer/harness.py doctor <target>
 - 기존 `AGENTS.md`는 프로젝트 정의만 남기고 원문을 `agent-docs/logs/`에 보관합니다.
 - Git hook 관리자가 없으면 `core.hooksPath`를 `.harness/git`으로 설정합니다. Husky 등이 있으면 수동 연결 방법만 출력합니다.
 - 새 주석은 커밋 때는 경고만 하고, PR에서는 라벨이 없으면 실패합니다.
+- 새 회고 항목 없이 바뀐 spec과 `Request:`·`Intent:` 줄이 없는 커밋 메시지도 커밋 때 경고만 합니다.
 
 ## 작업 흐름
 
@@ -55,6 +58,7 @@ python3 installer/harness.py doctor <target>
 2. **구현 + 테스트**: `implementer`와 `test-implementer`가 서로의 결과물을 보지 않고 병렬로 작업합니다.
 3. **검증**: `test-verifier`가 증거를 감사하고, 메인 에이전트가 결함을 주입해 테스트가 잡는지 확인합니다. 검증 호출은 실행당 최대 2회입니다.
 4. **보관**: 끝난 spec은 `agent-docs/spec-logs/`로 옮기고, 진행 중인 spec과 handoff는 다음 세션을 위해 남깁니다.
+5. **회고**: 세션을 마칠 때마다 spec의 `# Retrospective`에 넣을 항목(다음 세션이 다시 알아낼 수 없는 관찰, 근거, 재확인 방법) 초안을 사용자에게 보여 주고, 확인받은 뒤 기록합니다.
 
 텔레메트리는 `~/.harness/telemetry/`에 JSONL로 기록됩니다.
 
@@ -65,13 +69,14 @@ python3 installer/harness.py doctor <target>
 | 문서 | 위치 | 언제 쓰나 |
 | --- | --- | --- |
 | 주석·docstring | 코드 | 코드로 알 수 없는 설계 제약, 외부 시스템, 보안 불변식, 특이한 구현의 이유만 |
-| ADR | `agent-docs/adr/` | 되돌리기 비싸고, 대안을 실제로 검토했고, 이유를 코드로 복원할 수 없을 때. 에이전트는 제안만 하고 사용자 승인 후 작성 |
-| 거절 기록 | `agent-docs/rejections/` | 사용자가 구체적 대안을 거절했고 이유를 코드로 복원할 수 없을 때. 초안 확인 후 작성 |
+| try-n-fail | `agent-docs/try-n-fail/` | 실패를 알아내는 데 실제 구현·실행·조사가 든 시도, 또는 사용자가 거절한 구체적 제안을 다음 작업이 반복할 수 있을 때. 초안 확인 후 작성 |
 | handoff | `agent-docs/handoff/` | 검증 예산 소진, 사용자 결정 대기, 중단, 또는 요청 시. 실패한 시도는 지우지 않고 추가만 |
 | 동기화 주석 | `agent-docs/synced-comments/` | 같은 주석을 여러 곳에 유지할 때. 코드에 `synced id`와 버전을 태그 |
 
 - 관리 디렉터리마다 `index.md`, `stale.md`, `stale/`을 두고, 파일명은 `<16자리 hex id>-<kebab-case>.md`입니다. 낡은 문서는 지우지 않고 `stale/`로 옮깁니다.
 - 커밋 전 Git hook이 파일명, index/stale 구조, 동기화 주석 메타데이터, 필수 제목을 검사합니다.
+- `agent-docs/` 문서(`index.md`, `stale.md` 제외)의 frontmatter `commit`은 hook이 마지막 작성 시점의 HEAD로 채웁니다.
+- 커밋 메시지에는 작업을 요청한 user 요청(`Request:`)과 의도(`Intent:`)를, PR 설명은 프로젝트를 모르는 사람에게 하는 5분 standup 소개 기준으로 씁니다.
 - 규칙이 바뀐 뒤 기존 문서를 현재 규칙에 맞게 다시 쓰려면 `/rearrange-docs`를 실행합니다.
 
 ## 갱신과 점검
