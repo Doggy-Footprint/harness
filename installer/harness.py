@@ -632,6 +632,25 @@ def migrate_message_nudges(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_test_implementer_dispatch(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "workflow-approach dispatch to test-implementer now lists allowed load checks (collect, list, or type-check Tests paths) "
+        "and never instructs it to execute tests, the Test command, or Implementation code",
+        "test-implementer treats reading Implementation paths through shell commands as a violation and reports a conflicting "
+        "dispatch instruction as a challenge instead of following it",
+    ]
+
+
+def migrate_isolation_telemetry(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "a Claude PreToolUse hook records `isolation_candidate` telemetry (detection only, no blocking) when test-implementer "
+        "names an Implementation path or runs tests, implementer names a Tests path or runs the Test command, or main's "
+        "dispatch to test-implementer contains a run instruction; each event stores a raw excerpt of up to 500 characters locally",
+        "workflow-approach Test command includes the project's lint gate when it has one",
+        "test-implementer no longer has a rule inviting characterization tests; expected results still come only from the spec",
+    ]
+
+
 def migrate_missing_stale_records(target: Path, dry_run: bool) -> list[str]:
     docs_root = target / "agent-docs"
     if not docs_root.is_dir():
@@ -683,6 +702,8 @@ MIGRATIONS = (
     (parse_version("0.28.0"), "offer to install verification tools; allow Mutation tool: none", migrate_verification_tool_install),
     (parse_version("0.29.0"), "replace ADR and rejection records with try-n-fail; stamp commits; add retrospectives and model choice", migrate_try_n_fail_records),
     (parse_version("0.30.0"), "nudge commit messages toward Request/Intent and PR descriptions toward a standup intro", migrate_message_nudges),
+    (parse_version("0.31.0"), "stop workflow-approach dispatch from telling test-implementer to run tests", migrate_test_implementer_dispatch),
+    (parse_version("0.32.0"), "record isolation-candidate telemetry; lint gate in Test command; drop characterization-test rule", migrate_isolation_telemetry),
 )
 
 

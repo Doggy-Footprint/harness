@@ -64,6 +64,30 @@ export const HINTS = {
   output_tokens: { en: "Generated tokens.", ko: "모델이 생성한 출력 토큰입니다." },
   cache_read: { en: "Prompt tokens served from cache (cheaper).", ko: "캐시에서 읽은 입력 토큰입니다 (더 저렴)." },
   cache_write: { en: "Prompt tokens written to cache.", ko: "캐시에 기록한 입력 토큰입니다." },
+  harness_hacking: {
+    en: "Tool calls by implementer, test-implementer, or main that touch the other side of the isolation boundary (detection only, nothing is blocked).",
+    ko: "implementer, test-implementer, main이 격리 경계 반대편을 건드린 도구 호출입니다 (탐지만 하며 차단하지 않습니다).",
+  },
+  rule_test_reads_implementation: {
+    en: "test-implementer read or searched a path listed under Implementation.",
+    ko: "test-implementer가 스펙의 Implementation 경로를 읽거나 검색했습니다.",
+  },
+  rule_test_runs_tests: {
+    en: "test-implementer ran a test runner or the spec's Test command.",
+    ko: "test-implementer가 테스트 러너 또는 스펙의 Test command를 실행했습니다.",
+  },
+  rule_impl_reads_tests: {
+    en: "implementer read or searched a path listed under Tests.",
+    ko: "implementer가 스펙의 Tests 경로를 읽거나 검색했습니다.",
+  },
+  rule_impl_runs_test_command: {
+    en: "implementer ran the spec's Test command.",
+    ko: "implementer가 스펙의 Test command를 실행했습니다.",
+  },
+  rule_dispatch_run_instruction: {
+    en: "Main dispatched test-implementer with a prompt that tells it to run tests.",
+    ko: "main이 테스트를 실행하라는 지시가 담긴 프롬프트로 test-implementer를 호출했습니다.",
+  },
 };
 
 export function detectLang() {
