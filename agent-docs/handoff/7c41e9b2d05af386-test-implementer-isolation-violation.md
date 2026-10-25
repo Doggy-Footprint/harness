@@ -10,6 +10,7 @@ commit: 5e21d1a616033577320a2476111f2742baf38566
 Session 2: "test-implementer-isolation-violation의 격리 위반이 실제하는지 평가해줘" → "격리 위반을 고치기 위해 어떻게 해야해? 작업량은?" → "1. main 지시가 규칙과 반대인 점은 고치면 되겠다. 2. test-implemeneter 를 아예 sandbox에서 실행시킬 방법은 없나? hook으로 막는다 하더라도 Bash sed 같은 건 우회가 가능하잖아. 음 최대한 막는 것도 의미가 있기는 하겠다. + 이건 analytics에 추가해. harness hacking 섹션으로 ++ 평상시에는 어떻게 탐지하는 게 좋을까? (raw data로 남겨 뒀다가 분석할 때 Jev(https://typesafe.ai/blog/introducing-system-one-models-and-jev)를 이용해서 분류하는 방안도 괜찮을 것 같아.)"
 
 ## State
+- Session 3 (2026-10-25): items 2a, 3, 4, 2b resolved as follows. Item 3 (detection telemetry + analytics "Harness hacking" section) implemented as harness 0.32.0, workflow-approach run 4ac23629e9b7a145 (`agent-docs/spec-logs/4ac23629e9b7a145-isolation-telemetry.md`), commit a24e331 on `fix/test-impl`, PR #24. Item 2a moved to issue #21 (decide after data), item 4 to #22, item 2b to #23; subagent cross-reading trend evaluation to #25. Open Questions: lint gate added to the Test command definition in 0.32.0; characterization question closed without a rule (existing "expected results come from the spec" covers it; the "Label characterization tests" sentence was removed).
 - Branch `fix/test-impl`, uncommitted. Session 2 implemented proposal 1 as harness 0.31.0: `harness/skills/workflow-approach/SKILL.md` step 3 lists allowed load checks for test-implementer and forbids instructing test execution; `harness/agents/test-implementer.md` covers shell reads of Implementation paths and says a conflicting dispatch instruction is reported as a challenge; `installer/harness.py` migration `migrate_test_implementer_dispatch`; tests updated for the version bump; `python3 installer/harness.py update .` applied.
 - Test run: `python3 -m unittest discover -s tests` 619 pass; `tests/test_session_metrics.py` needs `pytest` and `hypothesis` (absent from system python), 129 pass in a venv with both.
 - Issue #16 closed with a comment stating its diagnosis does not match the pilot data (see Execution Ledger).
@@ -47,6 +48,13 @@ In excalidraw-11632 main also directed running the base-commit worktree to set e
 | Main self-audit at Reconcile merged with Test command failures into one batch | 0 of 18 follow-up items were batchable within a phase; adds main work and implementation-informed judgement | user rejected: no risk accepted for issue #16 |
 
 ## Next Step
+Session 3 — remaining work is one evaluation (waiting on data):
+1. After workflow runs on harness ≥ 0.32.0 accumulate (see Open Questions for the count), read `/api/summary` `harness_hacking` or the telemetry jsonl and count `dispatch_run_instruction` candidates per workflow run, together with each run's number of test-implementer dispatches (`subagent_start` events with `agent_type: test-implementer`).
+2. Read each candidate's `excerpt`: the rule also fires on negations such as "do not run pytest" (spec assumption D6), so classify each as a run instruction or not before comparing.
+3. Compare with the 0.28.0 pilot baseline in Observed defect: 3 of 3 H runs had a run instruction in the initial test-implementer dispatch.
+4. Report the result to issue #21 as input to the blocking decision; subagent-side rules are evaluated in #25, not here.
+
+Earlier plan (sessions 1–2, kept for history):
 Proposal 1 (dispatch wording) is implemented in session 2 (see State). User decisions in session 2: order 2a → 3 → 2b later separately → 4; worktree (2b) deferred until detection data exists; classifier as an interface only, no external transmission decided.
 
 Remaining (not started; the next session re-checks and decides):
@@ -58,6 +66,7 @@ Remaining (not started; the next session re-checks and decides):
 Claude Code facts used above (from code.claude.com docs, via a claude-code-guide subagent; re-check against the raw pages): sandbox covers shell commands only and is configured session-wide, not per subagent; `Read(path)` deny rules are not per subagent and do not stop Bash; subagent frontmatter supports `hooks` and `isolation: worktree`; PreToolUse input from a subagent carries `agent_id` and `agent_type`; the hooks doc says hooks are best-effort and recommends permissions for hard enforcement.
 
 ## Open Questions
+- Session 3: how many 0.32.0 workflow runs to collect before the dispatch comparison. Default proposed: 3, matching the pilot.
 - Whether proposal 1 alone changes main's dispatch behavior; re-check with the next pilot's test-implementer dispatch prompts.
 - Whether the lint gate should be part of the Test command when the project has one (excalidraw main read `"test:code": "eslint --max-warnings=0 ..."` in package.json before writing the spec and omitted it). Left out of scope; 1 supporting case.
 - Characterization tests need observed pre-existing behavior, but test-implementer may not execute tests; how it should obtain that behavior is unresolved (excalidraw main had it run the base-commit worktree).

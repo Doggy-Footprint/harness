@@ -106,8 +106,3 @@ File: aea0d3ab56c57d53-adr-rejection-to-try-n-fail.md
 Summary: Move ADR and rejection records to try-n-fail as the user chooses after the 0.29.0 update.
 Related Files: agent-docs/adr/4a5b6c7d8e9f0123-versioned-migrations.md, agent-docs/adr/stale/5c4c01bdc91769f7-selfcheck-swe-bench-baseline.md
 Related Symbols: none
----
-File: 7c41e9b2d05af386-test-implementer-isolation-violation.md
-Summary: Main's dispatch told test-implementer to run tests in 3/3 pilot runs; dispatch wording fixed in 0.31.0; hook blocking, analytics harness-hacking detection, classifier, worktree isolation remain
-Related Files: harness/skills/workflow-approach/SKILL.md, harness/agents/test-implementer.md, harness/hooks/spec_gate.py, installer/harness.py, analytics/transcripts.py, analytics/app.py
-Related Symbols: on_pre_tool_use, GATED_AGENTS, migrate_test_implementer_dispatch, _parse_claude
