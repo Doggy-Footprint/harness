@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import shutil
 import subprocess
 import sys
@@ -54,6 +55,12 @@ INFO_PATHS = [
     "bitbucket-pipelines.yml",
 ]
 
+
+AGENT_MODELS = ("sonnet", "opus")
+DEFAULT_AGENT_MODEL = "sonnet"
+MODEL_SELECTABLE_AGENTS = {"code-explorer", "implementer", "test-implementer", "test-verifier"}
+TARGET_CONFIG = ".harness/config.json"
+MANAGED_DOC_DIRS = ("try-n-fail", "handoff")
 
 COMMENT_APPROVAL_LABEL = "comments-approved"
 COMMENT_APPROVAL_LABEL_COLOR = "0E8A16"
@@ -521,6 +528,101 @@ def migrate_verification_tool_install(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+TRY_N_FAIL_HANDOFF_SUFFIX = "-adr-rejection-to-try-n-fail.md"
+
+
+def _retired_records(target: Path) -> list[str]:
+    records = []
+    for name in ("adr", "rejections"):
+        directory = target / "agent-docs" / name
+        if directory.is_dir():
+            records.extend(
+                path.relative_to(target).as_posix()
+                for path in sorted(directory.rglob("*.md"))
+                if MANAGED_DOC_RE.match(path.name)
+            )
+    return records
+
+
+def _try_n_fail_handoff(commit: str | None, records: list[str]) -> str:
+    frontmatter = f"---\ncommit: {commit}\n---\n\n" if commit else ""
+    listed = "\n".join(f"- `{record}`" for record in records)
+    return f"""{frontmatter}# Migrate ADR and rejection records to try-n-fail
+
+## User Query
+Harness 0.29.0 replaced the ADR and rejection record rules with the try-n-fail rule. Review the ADR and rejection records below and move what a later task still needs into `agent-docs/try-n-fail/`. How each record is handled depends on the repository's current state and the user's choices.
+
+## State
+Written by `harness.py update` (migration 0.29.0); no code or record was changed. Records to review (`stale/` entries are history):
+{listed}
+
+## Failed Attempts
+| attempt | failure evidence | cause |
+| --- | --- | --- |
+| none | none | none |
+
+## Next Step
+1. Read each record and check its claims against the current code.
+2. Per record, propose one of these to the user, with the reason: convert its rejected alternatives or failed approaches to try-n-fail attempts (cause `user rejected: <reason>` or `verified`/`hypothesis`) with a Revisit Condition; leave it in place; or delete it. A decision the code already shows needs no record.
+3. Write only what the user confirms, following the Try-n-Fail Rule in `AGENTS.md`.
+4. Mark this handoff stale under the Index & Staleness Management rule.
+
+## Open Questions
+- Which records the user wants converted, kept in place, or deleted.
+
+## Spec
+none — not a workflow-approach task.
+
+## Execution Ledger
+none
+"""
+
+
+def write_try_n_fail_handoff(target: Path, dry_run: bool) -> list[str]:
+    records = _retired_records(target)
+    handoff_dir = target / "agent-docs" / "handoff"
+    if not records or any(handoff_dir.rglob(f"*{TRY_N_FAIL_HANDOFF_SUFFIX}")):
+        return []
+    path = handoff_dir / f"{secrets.token_hex(8)}{TRY_N_FAIL_HANDOFF_SUFFIX}"
+    planned = [
+        f"write a handoff in agent-docs/handoff/ asking the agent to move the {len(records)} ADR and rejection "
+        "record(s) to try-n-fail, record by record, as the user chooses"
+    ]
+    if dry_run:
+        return planned
+    head = run_git(target, ["rev-parse", "HEAD"])
+    commit = head.stdout.strip() if head.returncode == 0 else None
+    handoff_dir.mkdir(parents=True, exist_ok=True)
+    path.write_text(_try_n_fail_handoff(commit, records), encoding="utf-8")
+    index = handoff_dir / "index.md"
+    blocks = _index_blocks(index.read_text(encoding="utf-8")) if index.exists() else []
+    blocks.append(
+        f"File: {path.name}\n"
+        "Summary: Move ADR and rejection records to try-n-fail as the user chooses after the 0.29.0 update.\n"
+        "Related Files: " + ", ".join(records) + "\n"
+        "Related Symbols: none\n"
+    )
+    index.write_text(_write_index_blocks(blocks), encoding="utf-8")
+    return planned
+
+
+def migrate_try_n_fail_records(target: Path, dry_run: bool) -> list[str]:
+    planned = [
+        "replace the ADR and rejection record rules with a try-n-fail record rule; install creates agent-docs/try-n-fail/",
+        "a Claude PostToolUse hook stamps `commit: <HEAD>` into the frontmatter of Markdown documents under agent-docs/",
+        "workflow-approach specs end with a `# Retrospective` section; pre-commit warns when a staged spec changes "
+        "without a new entry, and the agent asks the user before writing one",
+        f"workflow subagents use the model chosen with `--model {'|'.join(AGENT_MODELS)}` (stored in {TARGET_CONFIG}, "
+        f"default {DEFAULT_AGENT_MODEL}); the approval brief lists each role's model",
+        "summaries and reports must not use labels the user cannot resolve from the message itself",
+    ]
+    for name in ("adr", "rejections"):
+        directory = target / "agent-docs" / name
+        if directory.is_dir():
+            planned.append(f"keep agent-docs/{name}/ untouched; the harness no longer creates or checks it")
+    return planned + write_try_n_fail_handoff(target, dry_run)
+
+
 def migrate_missing_stale_records(target: Path, dry_run: bool) -> list[str]:
     docs_root = target / "agent-docs"
     if not docs_root.is_dir():
@@ -570,6 +672,7 @@ MIGRATIONS = (
     (parse_version("0.26.0"), "create the comments-approved label on install and update", migrate_comment_label_setup),
     (parse_version("0.27.0"), "rename the handoff Goal heading to User Query", migrate_handoff_user_query),
     (parse_version("0.28.0"), "offer to install verification tools; allow Mutation tool: none", migrate_verification_tool_install),
+    (parse_version("0.29.0"), "replace ADR and rejection records with try-n-fail; stamp commits; add retrospectives and model choice", migrate_try_n_fail_records),
 )
 
 
@@ -771,7 +874,36 @@ def is_git_worktree(target: Path) -> bool:
     return result.returncode == 0 and result.stdout.strip() == "true"
 
 
-def render_owned_files(no_ci: bool) -> dict:
+def stored_agent_model(target: Path) -> str:
+    try:
+        data = json.loads((target / TARGET_CONFIG).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return DEFAULT_AGENT_MODEL
+    model = data.get("agent_model") if isinstance(data, dict) else None
+    return model if model in AGENT_MODELS else DEFAULT_AGENT_MODEL
+
+
+def save_agent_model(target: Path, model: str, dry_run: bool, report: dict) -> None:
+    path = target / TARGET_CONFIG
+    data = {}
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            data = None
+        if not isinstance(data, dict):
+            report["manual review"].append(f"{TARGET_CONFIG} is not a JSON object; set \"agent_model\": \"{model}\" yourself")
+            return
+    if data.get("agent_model") == model:
+        return
+    data["agent_model"] = model
+    if not dry_run:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    report["write"].append(f"{TARGET_CONFIG} (agent_model: {model})")
+
+
+def render_owned_files(no_ci: bool, agent_model: str = DEFAULT_AGENT_MODEL) -> dict:
     owned = {}
     for path in SOURCE_HARNESS.rglob("*"):
         if path.is_dir():
@@ -784,6 +916,8 @@ def render_owned_files(no_ci: bool) -> dict:
     for agent_path in sorted((SOURCE_HARNESS / "agents").glob("*.md")):
         name = agent_path.stem
         fields, body = generate.parse_agent_source(agent_path.read_text(encoding="utf-8"))
+        if name in MODEL_SELECTABLE_AGENTS and "claude.model" in fields:
+            fields["claude.model"] = agent_model
         owned[f".claude/agents/{name}.md"] = generate.render_claude_agent_md(fields, body).encode("utf-8")
         owned[f".codex/agents/{name}.toml"] = generate.render_codex_agent_toml(fields, body).encode("utf-8")
 
@@ -818,7 +952,7 @@ def check_write_path_obstructions(target: Path, owned: dict) -> list[str]:
         ".claude/settings.json", ".codex/hooks.json",
         "agent-docs/logs/agents-md-pre-harness.md",
     }
-    for name in ("adr", "rejections", "handoff"):
+    for name in MANAGED_DOC_DIRS:
         planned.add(f"agent-docs/{name}/index.md")
         planned.add(f"agent-docs/{name}/stale.md")
         planned.add(f"agent-docs/{name}/stale/.gitkeep")
@@ -1059,7 +1193,7 @@ def install_claude_md(target: Path, dry_run: bool, report: dict, original_agents
 
 
 def ensure_agent_docs_dirs(target: Path, dry_run: bool, report: dict):
-    for name in ("adr", "rejections", "handoff"):
+    for name in MANAGED_DOC_DIRS:
         directory = target / "agent-docs" / name
         path = directory / "index.md"
         if not path.exists():
@@ -1197,7 +1331,7 @@ def check_settings_json_validity(target: Path, report: dict) -> bool:
     return ok
 
 
-def cmd_install(target: Path, dry_run: bool, no_ci: bool, ask_tools: bool = False) -> int:
+def cmd_install(target: Path, dry_run: bool, no_ci: bool, ask_tools: bool = False, model: str | None = None) -> int:
     report = new_report()
 
     if not is_git_worktree(target):
@@ -1211,7 +1345,8 @@ def cmd_install(target: Path, dry_run: bool, no_ci: bool, ask_tools: bool = Fals
         print_report(report)
         return 1
 
-    owned = render_owned_files(no_ci)
+    agent_model = model or stored_agent_model(target)
+    owned = render_owned_files(no_ci, agent_model)
     guarded_paths = list(owned) + list(GUARDED_MANAGED_PATHS)
     for c in check_owned_conflicts(target, owned, {}):
         report["conflict"].append(c)
@@ -1246,6 +1381,9 @@ def cmd_install(target: Path, dry_run: bool, no_ci: bool, ask_tools: bool = Fals
     if not no_ci:
         ensure_comment_approval_label(target, dry_run, report)
     verification_tools.offer(target, dry_run, ask_tools, report)
+    if model:
+        save_agent_model(target, model, dry_run, report)
+    report["info"].append(f"workflow subagent model: {agent_model} (change with --model {'|'.join(AGENT_MODELS)})")
 
     if not dry_run:
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1259,7 +1397,7 @@ def cmd_install(target: Path, dry_run: bool, no_ci: bool, ask_tools: bool = Fals
     return 1 if dry_run_ignored else 0
 
 
-def cmd_update(target: Path, dry_run: bool, no_ci: bool, ask_tools: bool = False) -> int:
+def cmd_update(target: Path, dry_run: bool, no_ci: bool, ask_tools: bool = False, model: str | None = None) -> int:
     report = new_report()
 
     if not is_git_worktree(target):
@@ -1281,7 +1419,8 @@ def cmd_update(target: Path, dry_run: bool, no_ci: bool, ask_tools: bool = False
         return 1
 
     old_files = manifest.get("files", {})
-    owned = render_owned_files(no_ci)
+    agent_model = model or stored_agent_model(target)
+    owned = render_owned_files(no_ci, agent_model)
     guarded_paths = list(owned) + list(GUARDED_MANAGED_PATHS)
     for c in check_owned_conflicts(target, owned, old_files):
         report["conflict"].append(c)
@@ -1330,6 +1469,9 @@ def cmd_update(target: Path, dry_run: bool, no_ci: bool, ask_tools: bool = False
     if not no_ci:
         ensure_comment_approval_label(target, dry_run, report)
     verification_tools.offer(target, dry_run, ask_tools, report)
+    if model:
+        save_agent_model(target, model, dry_run, report)
+    report["info"].append(f"workflow subagent model: {agent_model} (change with --model {'|'.join(AGENT_MODELS)})")
 
     if not dry_run:
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1501,7 +1643,7 @@ def cmd_import(target: Path, as_json: bool) -> int:
         return 1
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    drift = collect_drift(target, manifest, render_owned_files(no_ci=False))
+    drift = collect_drift(target, manifest, render_owned_files(no_ci=False, agent_model=stored_agent_model(target)))
 
     if as_json:
         print(json.dumps(drift, indent=2, ensure_ascii=False))
@@ -1556,6 +1698,9 @@ def main(argv) -> int:
         "--ask-tools", action="store_true", help="ask again about installing verification tools after answering never"
     )
     parser.add_argument("--json", action="store_true", help="machine-readable output (import only)")
+    parser.add_argument(
+        "--model", choices=AGENT_MODELS, help="model for workflow subagents, stored in .harness/config.json (install and update)"
+    )
     args = parser.parse_args(argv)
     if args.all and args.command != "update":
         parser.error("--all is only valid with update")
@@ -1565,6 +1710,8 @@ def main(argv) -> int:
         parser.error("a target directory is required")
     if args.ask_tools and args.command not in ("install", "update"):
         parser.error("--ask-tools is only valid with install or update")
+    if args.model and args.command not in ("install", "update"):
+        parser.error("--model is only valid with install or update")
     multi = args.command in ("update", "doctor")
     if len(args.target) > 1 and not multi:
         parser.error(f"{args.command} accepts exactly one directory")
@@ -1588,7 +1735,7 @@ def main(argv) -> int:
             return 1
 
     def update(directory: Path) -> int:
-        code = cmd_update(directory, args.dry_run, args.no_ci, args.ask_tools)
+        code = cmd_update(directory, args.dry_run, args.no_ci, args.ask_tools, args.model)
         if code == 0 and not args.dry_run:
             remember_target(directory)
         return code
@@ -1611,7 +1758,7 @@ def main(argv) -> int:
 
     target = Path(args.target[0]).resolve()
     if args.command == "install":
-        code = cmd_install(target, args.dry_run, args.no_ci, args.ask_tools)
+        code = cmd_install(target, args.dry_run, args.no_ci, args.ask_tools, args.model)
         if code == 0 and not args.dry_run:
             remember_target(target)
         return code

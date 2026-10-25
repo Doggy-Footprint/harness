@@ -21,6 +21,8 @@ python3 installer/harness.py doctor <target-a> <target-b>
 
 설치·갱신 때 저장소 루트의 `pyproject.toml`, `package.json`, `go.mod`, `Cargo.toml`로 언어(Python, JS/TS, Go, Rust)를 감지하고, fuzzing/mutation 도구가 없으면 언어별로 실행할 전체 명령을 보여주며 `[y/N/never]`로 설치 여부를 묻습니다. `y`/`yes`면 그 명령을 실행하고, 그 외 답은 건너뜁니다. `never`는 사용자별·저장소별로 `~/.harness/preferences.json`에 저장되어 이후 같은 저장소의 `install`/`update`에서 묻지 않으며, `install`/`update`에 `--ask-tools`를 붙이면 저장된 `never`를 지우고 다시 묻습니다(`update --all`도 각 저장소에 적용, `--dry-run`은 묻지 않고 예정 명령만 표시). 설치에 실패하면 종료 코드는 그대로이고 `manual review`에 수동 명령을 출력합니다. 도구를 설치하지 않았다면 spec의 `Mutation tool:`은 `none`으로 선언합니다.
 
+`install`/`update`에 `--model sonnet|opus`를 붙이면 `implementer`, `test-implementer`, `test-verifier`, `code-explorer`의 기본 모델을 바꾸고 `.harness/config.json`의 `agent_model`에 저장합니다. 이후 `--model` 없이 `update`하면 저장된 값을 쓰며, 저장된 값이 없으면 `sonnet`입니다. `mutant-triager`는 항상 자체 모델(`haiku`)을 씁니다. workflow 브리프에는 역할별 모델이 기본값으로 표시되고, 태스크에 따라 다른 모델을 제안할 수 있습니다.
+
 ## 설치되는 것
 
 | 위치 | 역할 |
@@ -31,12 +33,12 @@ python3 installer/harness.py doctor <target-a> <target-b>
 | `.claude/agents/`, `.codex/agents/` | 공통 원본에서 생성한 `implementer`, `test-implementer`, `test-verifier`, `mutant-triager`, `code-explorer` 정의 |
 | `.claude/settings.json`, `.codex/hooks.json` | 세션·서브에이전트·도구 훅 |
 | `.harness/git/` | 커밋 전 문서 규칙 검증과 기존 Git hook 연결 |
-| `agent-docs/` | ADR, 거절 기록, handoff, spec 및 실행 기록의 위치 |
+| `agent-docs/` | try-n-fail 기록, handoff, spec 및 실행 기록의 위치; 각 문서 frontmatter의 `commit`은 hook이 마지막 작성 시점의 HEAD로 채움 |
 | `.github/workflows/harness-comment-warning.yml` | PR에서 새 주석과 docstring이 있으면 `comments-approved` 라벨이 없을 때 실패하는 승인 게이트 GitHub Actions 워크플로우(선택, 새 push 시 라벨 제거) |
 
 설치 시 기존 Claude/Codex hook 설정에는 하네스 항목을 병합합니다. 새로 설치하는 저장소에 기존 `AGENTS.md`가 있으면 프로젝트 정의만 남기고 원문을 `agent-docs/logs/`에 보관합니다. 기존 `CLAUDE.md`에는 필요하면 `@AGENTS.md`를 추가합니다. 파일이나 스킬 이름이 충돌하면 설치를 중단하고 경로를 보고합니다.
 
-Git hook 관리자가 없는 경우 `core.hooksPath`를 `.harness/git`으로 설정합니다. Husky 등 기존 관리자가 있으면 설정을 바꾸지 않고 수동 연결 방법을 출력합니다. 커밋 전 검사는 문서 파일명, index/stale 구조, 동기화된 주석의 메타데이터와 필수 제목처럼 기계적으로 판단할 수 있는 규칙을 검사합니다. 새 주석은 커밋 시 경고만 출력하고 막지 않으며, PR 검사는 `comments-approved` 라벨이 없으면 실패합니다. 실패 메시지에는 필요한 라벨 이름이 표시됩니다. `--no-ci`가 아니면 설치·갱신 시 `gh`로 GitHub 저장소에 `comments-approved` 라벨을 만들고(이미 있으면 건너뜀), `gh`·git remote·권한이 없어 실패하면 수동 생성 명령을 `manual review`에 출력합니다.
+Git hook 관리자가 없는 경우 `core.hooksPath`를 `.harness/git`으로 설정합니다. Husky 등 기존 관리자가 있으면 설정을 바꾸지 않고 수동 연결 방법을 출력합니다. 커밋 전 검사는 문서 파일명, index/stale 구조, 동기화된 주석의 메타데이터와 필수 제목처럼 기계적으로 판단할 수 있는 규칙을 검사합니다. 새 주석과, 새 회고 항목 없이 바뀐 spec은 커밋 시 경고만 출력하고 막지 않으며, PR 검사는 `comments-approved` 라벨이 없으면 실패합니다. 실패 메시지에는 필요한 라벨 이름이 표시됩니다. `--no-ci`가 아니면 설치·갱신 시 `gh`로 GitHub 저장소에 `comments-approved` 라벨을 만들고(이미 있으면 건너뜀), `gh`·git remote·권한이 없어 실패하면 수동 생성 명령을 `manual review`에 출력합니다.
 
 ## 작업 흐름
 
@@ -45,11 +47,11 @@ Git hook 관리자가 없는 경우 `core.hooksPath`를 `.harness/git`으로 설
 1. 메인 에이전트가 먼저 "이해한 내용"(프로젝트, 작업 위치, 성공 기준, 하지 않을 일)을 채팅으로 제시하고 사용자가 바로잡습니다. 그다음 요구사항, 품질 목표, 검증 의무를 `agent-docs/specs/`의 버전별 spec에 작성하고, 채팅 브리프로 승인을 받습니다. 브리프는 질문(되돌리기 어려운 결정), 사용자가 거부할 수 있는 기본값, 새 개념 설명으로 나뉘며 파일로 남기지 않습니다. 미결정 사항은 `requirement-oracle`이 선택에 필요한 근거를 정리합니다.
 2. `implementer`와 `test-implementer`가 같은 승인된 spec을 기준으로 병렬 작업합니다. 각 역할은 상대방의 결과물을 보지 않습니다.
 3. 테스트가 통과하면 `test-verifier`가 증거를 감사합니다. 메인 에이전트는 선택한 결함을 실제로 주입하고 테스트가 이를 잡는지 확인한 뒤 원본을 복원합니다. 검증 에이전트 호출은 한 실행당 최대 2회입니다.
-4. 완료·중단 상태의 spec은 `agent-docs/spec-logs/`에 보관합니다. 진행 중인 spec과 handoff는 다음 세션에서 이어갈 수 있도록 유지합니다.
+4. 완료·중단 상태의 spec은 `agent-docs/spec-logs/`에 보관합니다. 진행 중인 spec과 handoff는 다음 세션에서 이어갈 수 있도록 유지합니다. 세션을 마칠 때마다 메인 에이전트가 spec의 `# Retrospective`에 넣을 항목 초안(다음 세션이 다시 알아낼 수 없는 관찰, 근거, 재확인 방법)을 사용자에게 보여주고, 확인을 받은 뒤에 기록합니다.
 
 세션 및 도구 훅은 spec 생명주기, 동시 실행 표식, 테스트 명령 제한과 실행 이벤트를 관리합니다. 텔레메트리는 기본적으로 사용자 홈의 `~/.harness/telemetry/`에 JSONL로 기록되며, 기록 실패가 작업 흐름을 막지는 않습니다.
 
-문서 작성 기준과 ADR·거절 기록·handoff 규칙은 [`harness-block.md`](harness/instructions/harness-block.md)에 있습니다.
+문서 작성 기준과 try-n-fail·handoff 규칙은 [`harness-block.md`](harness/instructions/harness-block.md)에 있습니다.
 
 ## 갱신과 점검
 

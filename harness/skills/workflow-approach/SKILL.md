@@ -11,7 +11,7 @@ A spec is the approved, versioned source of truth for one workflow run. The main
 
 1. Active path: `agent-docs/specs/<16-hex-run-id>-<kebab-name>.md`.
 2. Archived path: `agent-docs/spec-logs/<same-file-name>`.
-3. `specs/` and `spec-logs/` are excluded from Index & Staleness Management.
+3. `specs/` and `spec-logs/` are excluded from Index & Staleness Management. An archived spec changes only by appending a `# Retrospective` entry.
 4. Frontmatter fields are `version`, `run_id`, `status`, `base_commit`, `max_verifier_invocations`, and `handoff`. Status is `draft`, `active`, `complete`, `limit`, or `aborted`; use `handoff: none` when absent.
 5. Amendment increments `version` and adds a Version Log entry, prefixed `[intent-mismatch]` when an intent mismatch found after approval forced it. When it changes a brief item (understanding, an answer, a listed default, or the plain-words quality list), re-brief before continuing: show current → proposed, why it must change, and its impact. Log contract-only changes such as a technique, coverage-item naming, or an obligation split without interrupting the user.
 6. Before drafting, run the understanding round. Before dispatch, present the brief and obtain approval; approval covers every listed default the user did not veto. Pause on unanswered Ask items; use `requirement-oracle` when the user needs evidence or options to decide.
@@ -106,6 +106,11 @@ Execution ledger (append attempts; preserve failed approaches):
 # Version Log
 ## v<n>
 - <what changed and the evidence or decision that forced it>
+
+# Retrospective
+## <YYYY-MM-DD>
+| observation | evidence | how to re-check |
+| --- | --- | --- |
 ````
 
 Every intent, requirement, Case, quality requirement, obligation, and assumption has a stable id. Each applicable quality characteristic has at least one quality requirement. Each quality requirement defines the measured property and context, method and input quantities, unit, threshold and pass direction, evidence procedure, and source. ISO/IEC 25023 supplies measure concepts and ISO/IEC/IEEE 29119-4 supplies test design techniques with their coverage measures; neither supplies project-specific pass thresholds or coverage targets. The brief lists both for the user to approve or veto.
@@ -122,7 +127,7 @@ Write for a developer with 4 years of experience, explain anything beyond that, 
 
 **Approval brief.** Classify every decision the spec depends on:
 - *Ask*: not easy to fix later, or contradicts what the user or project stated. Not easy to fix later means persisted data, schemas or formats; interfaces others depend on (CLI flags, API fields, file formats); external side effects (sending, deleting, publishing); security boundaries; and money.
-- *Decided for you*: one line each with the choice, why, and how to change it later. Thresholds, coverage targets, and test techniques normally belong here.
+- *Decided for you*: one line each with the choice, why, and how to change it later. Thresholds, coverage targets, test techniques, and each dispatched role's model normally belong here.
 - *New concept*: a decision that depends on knowledge the user may lack. First ask whether the user already knows the concept; ask fresh every run. Then give one sentence on what it is, why it matters here, a concrete consequence of each option, and the choice, treated as Ask or Decided by the rules above.
 
 Ask at most 3 items per round, ranked by cost to reverse times the chance the user disagrees. Overflow becomes Decided unless it is not easy to fix later; such overflow waits for the next round.
@@ -151,7 +156,13 @@ Carry audit state between fresh verifiers. Acceptance is scoped to the spec vers
 
 # Subagent model
 
-Use the model and effort in each installed agent definition. Override them only when the user names a model.
+Installed agent definitions carry the repository's default model, chosen with `harness.py install|update --model sonnet|opus` (`mutant-triager` keeps its own), and their effort. List each dispatched role's model in the approval brief. Propose a different model for a role only with a task-specific reason, such as concurrency, a security boundary, or a cross-module change for `implementer`, or a large obligation map for `test-verifier`, and pass the approved model as the Agent tool's model override for that role's dispatches. A model the user names overrides both.
+
+# Retrospective
+
+Each session that worked on a spec ends with one retrospective entry for it. The pre-commit hook warns when a commit changes a spec without adding one; if the session is ending, or the user is stopping, draft the entry, show it to the user, and write it only after the user confirms or edits it. Append it under `# Retrospective` in the active spec, or in the archived copy in `spec-logs/`; never edit earlier entries.
+
+Include only facts the next session cannot recover from the code, git history, or the spec, and would otherwise rediscover by repeating work or making a wrong move: an environment quirk, a misleading signal, an external behavior, or a cause ruled out. Write each row as an observation, its evidence, and a procedure to re-check it. Do not write recommendations, preferences, or instructions; the next session re-checks and decides for itself. When nothing qualifies, write one `none` row.
 
 # Telemetry
 
@@ -190,4 +201,4 @@ Emit `start` before the initial dispatch. Emit `implement_test` before the paral
 
    Emit `amend` and increment the correction count for history. Redispatch complete replacement instructions, continuing existing agents where possible. Implementation defects receive ids and observable behavior, never test code. Test/evidence defects receive rules, variants, and sanitized evidence, never implementation diffs. Correct the cause across all declared obligations sharing the defective pattern or helper; report the full affected set, including checked siblings needing no change. Do not add undeclared combinations during this sweep. Update evidence references and invalidate affected acceptance before redispatch. A spec gap increments spec version after required approval and redispatches both roles. Reconcile, rerun the restored Test command, repeat confirming mutations, then return to Verify for a fresh audit.
 8. **Stop condition.** Complete only when every required functional and quality obligation passes at its approved coverage target, review artifacts exist, the verifier audit is complete with no open blocking finding, every obligation has current accepted evidence, the selected confirming mutations fail for the intended assertion, declared fuzzing completed with no open violation, and every triaged survivor of a declared mutation tool has a disposition. Advisory suggestions may remain; unresolved spec challenges may not. If further verification is required after two invocations, stop with status `limit` before making corrections that require that audit. For ordinary corrections blocked on a user decision or external change, finish independent work and request what is missing, keeping the spec active for a nonterminal handoff. Use the same handoff when no new discriminating check or justified correction is available.
-9. **Close or hand off (main).** For success, set status `complete`, archive with `python3 .harness/bin/spec_lifecycle.py archive --spec PATH --status complete`, then emit end complete. For verifier-budget exhaustion, write a handoff, set `handoff` and status `limit`, archive with `--status limit`, then emit end limit. For a nonterminal stop, write the handoff, store its path in the still-active spec, and emit end handoff without archiving. Report spec version/path, evidence map, finding dispositions, correction causes and count, verifier count, mutations, fuzz and mutation-tool outcomes, blocked ids, and handoff if any.
+9. **Close or hand off (main).** Before closing or handing off, get the session's retrospective entry approved and written. For success, set status `complete`, archive with `python3 .harness/bin/spec_lifecycle.py archive --spec PATH --status complete`, then emit end complete. For verifier-budget exhaustion, write a handoff, set `handoff` and status `limit`, archive with `--status limit`, then emit end limit. For a nonterminal stop, write the handoff, store its path in the still-active spec, and emit end handoff without archiving. Report spec version/path, evidence map, finding dispositions, correction causes and count, verifier count, mutations, fuzz and mutation-tool outcomes, blocked ids, and handoff if any.

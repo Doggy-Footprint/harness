@@ -123,11 +123,11 @@ class HookTests(RepoTestCase):
         self.assertIn(AGENT_SENTENCE, r.stderr)
 
     def violation(self, repo):
-        adr = repo / "agent-docs" / "adr"
-        adr.mkdir(parents=True, exist_ok=True)
-        (adr / "index.md").unlink(missing_ok=True)
-        (adr / "0123456789abcdef-x.md").write_text("# X\n")
-        git(repo, "add", "-f", "agent-docs/adr/0123456789abcdef-x.md")
+        records = repo / "agent-docs" / "try-n-fail"
+        records.mkdir(parents=True, exist_ok=True)
+        (records / "index.md").unlink(missing_ok=True)
+        (records / "0123456789abcdef-x.md").write_text("# X\n")
+        git(repo, "add", "-f", "agent-docs/try-n-fail/0123456789abcdef-x.md")
 
     # O2 S2
     def test_s2_verify_rules_violation_still_blocks_commit(self):
@@ -453,9 +453,9 @@ class LabelSetupTests(RepoTestCase):
         manifest = json.loads(mp.read_text())
         manifest["version"] = "0.25.0"
         mp.write_text(json.dumps(manifest, indent=2) + "\n")
-        r = self.run_installer("update", str(repo), input="y\ny\ny\n")
+        r = self.run_installer("update", str(repo), input="y\ny\ny\ny\n")
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertEqual(re.findall(r"^migration (\S+):", r.stdout, re.MULTILINE), ["0.26.0", "0.27.0", "0.28.0"])
+        self.assertEqual(re.findall(r"^migration (\S+):", r.stdout, re.MULTILINE), ["0.26.0", "0.27.0", "0.28.0", "0.29.0"])
         section = r.stdout.split("migration 0.26.0", 1)[1].split("Apply migration", 1)[0]
         self.assertIn("comments-approved", section)
         self.assertEqual([c.split("|", 2)[2].split()[:2] for c in self.gh_calls()], [["api", "repos/{owner}/{repo}/labels/comments-approved"], ["label", "create"]])

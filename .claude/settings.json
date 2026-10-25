@@ -69,6 +69,15 @@
     ],
     "PostToolUse": [
       {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.harness/hooks/doc_commit.py\""
+          }
+        ]
+      },
+      {
         "matcher": "Bash|Write|Edit|NotebookEdit|Read|Grep|Glob|LS",
         "hooks": [
           {
