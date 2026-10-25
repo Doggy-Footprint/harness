@@ -563,12 +563,12 @@ Written by `harness.py update` (migration 0.29.0); no code or record was changed
 
 ## Next Step
 1. Read each record and check its claims against the current code.
-2. Per record, propose one of these to the user, with the reason: convert its rejected alternatives or failed approaches to try-n-fail attempts (cause `user rejected: <reason>` or `verified`/`hypothesis`) with a Revisit Condition; leave it in place; or delete it. A decision the code already shows needs no record.
-3. Write only what the user confirms, following the Try-n-Fail Rule in `AGENTS.md`.
+2. Per record, propose one of these to the user, with the reason: convert the rejected alternatives or failed approaches a later task could try again into try-n-fail attempts (cause `user rejected: <reason>` or `verified`/`hypothesis`) with a Revisit Condition; otherwise recommend deleting it. A decision the code already shows needs no record.
+3. Write and delete only what the user confirms, following the Try-n-Fail Rule in `AGENTS.md`. When no record is left, recommend deleting `agent-docs/adr/` and `agent-docs/rejections/` with their `index.md`, `stale.md`, and `stale/`. The harness does not manage these directories after this step; whatever the user keeps stays as it is.
 4. Mark this handoff stale under the Index & Staleness Management rule.
 
 ## Open Questions
-- Which records the user wants converted, kept in place, or deleted.
+- Which records the user wants converted or deleted, and whether to delete the emptied directories.
 
 ## Spec
 none — not a workflow-approach task.
