@@ -101,3 +101,8 @@ File: d63aaa61098054c3-test-quality-evaluation-verifier-limit.md
 Summary: Reference-mutation test-quality evaluation ended at pilot run 7df89a358d3faa30 by the user; GCP resources deleted, code archived as evaluation/reference_mutation/ without tests
 Related Files: evaluation/reference_mutation/, evaluation/reference_mutation/EXPERIMENT.md, agent-docs/spec-logs/616f94189f1a4147-harness-test-quality-evaluation.md, README.md
 Related Symbols: score.score_entry, score.kill, mutants.build_mutants, session_cost, crossarm.run_matrix
+---
+File: aea0d3ab56c57d53-adr-rejection-to-try-n-fail.md
+Summary: Move ADR and rejection records to try-n-fail as the user chooses after the 0.29.0 update.
+Related Files: agent-docs/adr/4a5b6c7d8e9f0123-versioned-migrations.md, agent-docs/adr/stale/5c4c01bdc91769f7-selfcheck-swe-bench-baseline.md
+Related Symbols: none
