@@ -22,7 +22,6 @@ EXCERPT_LIMIT = 500
 
 _SEGMENT_SPLIT = re.compile(r"&&|\|\||;|\||\n")
 _PYTHON = re.compile(r"python(3(\.\d+)?)?")
-# (first token, following tokens); first token compared by basename.
 _RUNNERS = (
     ("pytest",), ("py.test",), ("python", "-m", "pytest"), ("python", "-m", "unittest"),
     ("go", "test"), ("vitest",), ("jest",), ("npm", "test"), ("npm", "run", "test"),
@@ -46,7 +45,6 @@ def _tokens(text: str) -> list:
 
 
 def _read_specs(specs_dir: Path) -> list:
-    """Return one dict per active spec: implementation, tests, test_command."""
     specs = []
     try:
         files = sorted(specs_dir.glob("*.md"))
@@ -115,7 +113,6 @@ def _references(tool_name: str, tool_input: dict) -> list:
 
 
 def _path_match(tool_name: str, tool_input: dict, spec_paths: list, cwd: str, repo_root: Path):
-    """Return (match, match_kind) or None; path matches beat basename matches."""
     if not spec_paths:
         return None
     root = os.path.realpath(str(repo_root))
@@ -141,7 +138,6 @@ def _path_match(tool_name: str, tool_input: dict, spec_paths: list, cwd: str, re
 
 
 def _runner_segments(text: str):
-    """Yield (start index, normalized segment) for each non-excluded runner segment."""
     start = 0
     pieces = []
     for sep in _SEGMENT_SPLIT.finditer(text):

@@ -5,8 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { HINTS } from "./hints";
 
-// Independent oracle for agent-docs/specs/4ac23629e9b7a145-isolation-telemetry.md (v1), O9.
-// Item ids U1..U5 follow the Verification Obligations table.
 
 const RULES = ["test_reads_implementation", "test_runs_tests", "impl_reads_tests",
   "impl_runs_test_command", "dispatch_run_instruction"];
@@ -56,8 +54,6 @@ async function renderDetail(summary, detail) {
 
 const findSection = () => screen.findByRole("region", { name: "Harness hacking" });
 
-// v3 DOM shape (F15): the label element's immediately following sibling element
-// carries exactly one number, equal to the expected count. No ancestor fallback.
 function siblingNumbers(label) {
   const sibling = label.nextElementSibling;
   expect(sibling, `no following sibling element for label "${label.textContent}"`).not.toBeNull();

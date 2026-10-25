@@ -1,8 +1,3 @@
-"""Independent oracle for agent-docs/specs/4ac23629e9b7a145-isolation-telemetry.md (v1), O8.
-
-Derived only from the spec text (F13, F14, C9); evidence labels A1..A8 follow
-the Verification Obligations table.
-"""
 import json
 import tempfile
 import unittest

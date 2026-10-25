@@ -20,7 +20,7 @@
     ".harness/hooks/telemetry_hook.py": "eb2c260cceaa3a4626b57ebc7f9a797f6b2e933af6959b9d3c6171cc4237da2d",
     ".harness/hooks/hooks.spec.json": "997d33439b6bacd9df9e29de5adf0bf9213a4a14bfff86214355fa24cf11e312",
     ".harness/hooks/pr_message_nudge.py": "2b77eedbfcb45208ad713aabdf992897fa822fd1b52529b778f5de72202caed8",
-    ".harness/lib/isolation.py": "2caeccda0c71049a1a507d70869016ccc7c7e2f9bf956e81e916388d8abb505b",
+    ".harness/lib/isolation.py": "d476429373ab6e1e5d1018d2d63739ff100ae4baafe5642fcbfb7215e6736f45",
     ".harness/lib/config.py": "438e0a3d26846d156661ac5df30ba1df43c4fbe782f8923fb8562ad053332e54",
     ".harness/lib/telemetry.py": "b155c249622e95d3d0f1116073e190102191c713c5de083435856101c097c53f",
     ".harness/lib/hook_shared.py": "fcf88e77fe33f6d38c4c9c8fd44491f34f06bfe5752d6c4e0a565f874819c764",

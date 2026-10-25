@@ -1,10 +1,3 @@
-"""Independent oracle for agent-docs/specs/4ac23629e9b7a145-isolation-telemetry.md (v1).
-
-Obligations O1-O7 and O10. Expected values come from the spec text only.
-Item ids (P1.., R1.., X1.., S1.., E1.., N1..) follow the Verification
-Obligations table. `detect()` is exercised directly (unit) and through the
-installed PreToolUse hook as a subprocess (integration).
-"""
 import ast
 import hashlib
 import json
@@ -28,7 +21,7 @@ HARNESS_LIB = REPO_ROOT / "harness" / "lib"
 sys.path.insert(0, str(HARNESS_LIB))
 try:
     import isolation
-except ImportError:  # expected while the implementation is being written
+except ImportError:
     isolation = None
 
 RULES = ("test_reads_implementation", "test_runs_tests", "impl_reads_tests",
@@ -68,8 +61,6 @@ def pre_tool_use(agent, tool, tool_input, cwd=None, **extra):
 
 
 class DetectCase(unittest.TestCase):
-    """Fixture: temp repo with one active spec (Implementation, Tests, Test command)."""
-
     def setUp(self):
         self.assertIsNotNone(isolation, "harness/lib/isolation.py is not importable")
         tmp = tempfile.TemporaryDirectory()
@@ -117,8 +108,6 @@ class TestSignatureConstants(DetectCase):
 
 
 class TestO1PathEquivalence(DetectCase):
-    """O1: equivalence partitioning of path/basename matching, test-implementer."""
-
     def test_p1_read_relative_path(self):
         for label, cwd in (("cwd=repo", "repo"), ("cwd absent", None), ("cwd not a string", 7)):
             with self.subTest(label):
@@ -195,7 +184,6 @@ class TestO1PathEquivalence(DetectCase):
         self.assertEqual(self.ti_read("other/unrelated.go"), [])
         self.assertEqual(self.ti_read("pkg/directives.gox"), [])
         self.assertEqual(self.ti_read("pkg/directives.go.bak"), [])
-        # D7: a parent directory of an Implementation path is not a match.
         self.assertEqual(self.run_as("test-implementer", "LS", {"path": str(self.repo)}), [])
         self.assertEqual(self.run_as("test-implementer", "Grep",
                                      {"pattern": "x", "path": str(self.repo), "glob": "*.go"}), [])
@@ -296,8 +284,6 @@ class TestO2RunnerRule(DetectCase):
 
 
 class TestO3DecisionTable(DetectCase):
-    """O3: agent_type x input, 20 cells."""
-
     def test_agent_type_by_input_decision_table(self):
         inputs = {
             "impl_read": lambda agent: pre_tool_use(agent, "Read", {"file_path": IMPL_FILE}, str(self.repo)),
@@ -393,11 +379,8 @@ class TestO4DispatchAndExcerpts(DetectCase):
     def test_dispatch_runner_window_uses_segment_start_not_runner_token_start(self):
         tail = " tail" * 200
         cases = (
-            # single segment starting at 0; runner tokens start at 350 (window would shift to 150)
             ("single segment", "word " * 70 + "run pytest -q" + tail, 0),
-            # newline-separated later segment starting at 301; runner tokens start at 309
             ("newline segment", "a" * 300 + "\nNow run pytest -q" + tail, 101),
-            # '&&' separated later segment starting at 302 with no surrounding whitespace
             ("&& segment", "a" * 300 + "&&Now run pytest -q" + tail, 102),
         )
         for label, prompt, start in cases:
@@ -574,10 +557,6 @@ class TestO10SideEffectFreeAndOffline(DetectCase):
         self.assertEqual(imported & {"socket", "urllib", "http", "requests"}, set())
 
 
-# ---------------------------------------------------------------------------
-# O6 / O7: installed hook, subprocess level
-# ---------------------------------------------------------------------------
-
 class HookCase(TelemetryTestCase):
     def setUp(self):
         self.repo, self.telemetry_dir = self.install_with_telemetry_dir()
@@ -661,10 +640,6 @@ class TestO6HookScenarios(HookCase):
         failure = self.commands(claude.get("PostToolUseFailure", []))
         self.assertTrue(any("telemetry_hook.py" in c for c in failure), failure)
 
-
-# ---------------------------------------------------------------------------
-# O7
-# ---------------------------------------------------------------------------
 
 junk_fragment = st.sampled_from([
     "pytest", "go test", "npm test", "python3 -m pytest", IMPL_FILE, "directives.go", "tests/",
