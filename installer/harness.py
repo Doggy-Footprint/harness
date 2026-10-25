@@ -623,6 +623,15 @@ def migrate_try_n_fail_records(target: Path, dry_run: bool) -> list[str]:
     return planned + write_try_n_fail_handoff(target, dry_run)
 
 
+def migrate_message_nudges(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "a commit-msg git hook warns, without blocking, when a commit message has no `Request:` or `Intent:` line",
+        "a Claude PostToolUse hook reminds the agent after `gh pr create` (and `gh pr edit` with a body flag) "
+        "to write the PR description as a five-minute standup introduction for someone new to the project",
+        "projects with a git hook manager must add `.harness/git/commit-msg \"$@\"` to their commit-msg hook",
+    ]
+
+
 def migrate_missing_stale_records(target: Path, dry_run: bool) -> list[str]:
     docs_root = target / "agent-docs"
     if not docs_root.is_dir():
@@ -673,6 +682,7 @@ MIGRATIONS = (
     (parse_version("0.27.0"), "rename the handoff Goal heading to User Query", migrate_handoff_user_query),
     (parse_version("0.28.0"), "offer to install verification tools; allow Mutation tool: none", migrate_verification_tool_install),
     (parse_version("0.29.0"), "replace ADR and rejection records with try-n-fail; stamp commits; add retrospectives and model choice", migrate_try_n_fail_records),
+    (parse_version("0.30.0"), "nudge commit messages toward Request/Intent and PR descriptions toward a standup intro", migrate_message_nudges),
 )
 
 
@@ -1010,7 +1020,7 @@ def apply_owned_files(target: Path, owned: dict, old_manifest_files: dict, dry_r
             report["skip"].append(f"{relpath} (user-modified, not deleted)")
             new_manifest[relpath] = old_sha
 
-    for name in ("pre-commit", "post-merge"):
+    for name in ("pre-commit", "commit-msg", "post-merge"):
         path = target / ".harness" / "git" / name
         if not dry_run and path.exists():
             os.chmod(path, 0o755)
@@ -1247,7 +1257,8 @@ def ensure_git_hooks(target: Path, dry_run: bool, report: dict):
     if manager_present:
         report["manual review"].append(
             "git hook manager detected; add these invocations to your hooks: "
-            '`.harness/git/pre-commit "$@"` (pre-commit), `.harness/git/post-merge "$@"` (post-merge)'
+            '`.harness/git/pre-commit "$@"` (pre-commit), `.harness/git/commit-msg "$@"` (commit-msg), '
+            '`.harness/git/post-merge "$@"` (post-merge)'
         )
         return
     if not dry_run:

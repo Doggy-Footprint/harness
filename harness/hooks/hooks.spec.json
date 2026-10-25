@@ -40,6 +40,12 @@
     },
     {
       "event": "PostToolUse",
+      "matcher": "Bash",
+      "targets": ["claude"],
+      "command": "python3 \"{root}/.harness/hooks/pr_message_nudge.py\""
+    },
+    {
+      "event": "PostToolUse",
       "matcher": "Bash|Write|Edit|NotebookEdit|Read|Grep|Glob|LS",
       "targets": ["claude"],
       "command": "python3 \"{root}/.harness/hooks/telemetry_hook.py\""
