@@ -55,6 +55,15 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.harness/hooks/spec_gate.py\""
           }
         ]
+      },
+      {
+        "matcher": "Bash|Read|Grep|Glob|LS|Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.harness/hooks/telemetry_hook.py\""
+          }
+        ]
       }
     ],
     "SessionStart": [

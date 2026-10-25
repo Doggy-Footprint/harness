@@ -36,6 +36,28 @@ def _metrics(events):
                for name in _VERIFICATION_COUNTS}}
 
 
+_ISOLATION_RULES = (
+    "test_reads_implementation", "test_runs_tests", "impl_reads_tests",
+    "impl_runs_test_command", "dispatch_run_instruction",
+)
+_ISOLATION_LIMIT = 200
+_ISOLATION_FIELDS = ("ts", "workflow_run_id", "session_id", "agent_type", "rule", "tool_name", "match", "match_kind", "excerpt")
+
+
+def _harness_hacking(candidates):
+    ordered = sorted(enumerate(candidates), key=lambda pair: (pair[1].get("ts") or "", pair[0]), reverse=True)
+    by_rule = {rule: 0 for rule in _ISOLATION_RULES}
+    by_agent_type: dict[str, int] = {}
+    for event in candidates:
+        rule = event.get("rule")
+        if rule in by_rule:
+            by_rule[rule] += 1
+        agent_type = event.get("agent_type") or "main"
+        by_agent_type[agent_type] = by_agent_type.get(agent_type, 0) + 1
+    return {"total": len(candidates), "by_rule": by_rule, "by_agent_type": by_agent_type,
+            "candidates": [{key: event.get(key) for key in _ISOLATION_FIELDS} for _, event in ordered[:_ISOLATION_LIMIT]]}
+
+
 def _session_cost(session: dict, prices: dict) -> float | None:
     if session.get("client") == "codex":
         return calculate_codex_cost(session.get("model"), session.get("requests", []), prices)
@@ -183,6 +205,7 @@ def _workflow_entry(run_id, events, sessions, sessions_by_key, prices):
         "status": status, "compliant": state["compliant"], "compliance_reasons": state["reasons"],
         "phases": _run_phases(events), **_metrics(events),
         "subagents": _run_subagents(events, sessions), "sessions": _run_sessions(events, sessions_by_key, prices),
+        "isolation_candidates": sum(event.get("event") == "isolation_candidate" for event in events),
     }
 
 
@@ -277,6 +300,11 @@ def create_app(database_path: Path, telemetry_dir: Path, price_path: Path, trans
         sessions_by_key = {(session.get("client"), session.get("session_id")): session for session in sessions}
         return grouped, sessions_by_key, sessions
 
+    def candidates():
+        with lock:
+            rows = connection.execute("SELECT * FROM events WHERE event = 'isolation_candidate' ORDER BY id").fetchall()
+        return [event_dict(row) for row in rows]
+
     def detail(run_id, events, sessions, sessions_by_key):
         state = evaluate(events)
         transcript_metadata = _linked_usage(events, sessions_by_key, prices)
@@ -317,14 +345,16 @@ def create_app(database_path: Path, telemetry_dir: Path, price_path: Path, trans
                 "run_items": [{key: item[key] for key in ("run_id", "spec", "status", "compliant")} for item in details],
                 "workflow": {"runs": workflow_runs},
                 "non_workflow": _non_workflow_section(sessions, workflow_keys, prices),
-                "classification": classification}
+                "classification": classification, "harness_hacking": _harness_hacking(candidates())}
 
     @app.get("/api/runs/{run_id}")
     def run(run_id: str):
         grouped, sessions_by_key, sessions = runs()
         if run_id not in grouped:
             raise HTTPException(status_code=404, detail="run not found")
-        return detail(run_id, grouped[run_id], sessions, sessions_by_key)
+        result = detail(run_id, grouped[run_id], sessions, sessions_by_key)
+        result["harness_hacking"] = _harness_hacking([e for e in candidates() if e.get("workflow_run_id") == run_id])
+        return result
 
     if frontend_dir is not None:
         assets = frontend_dir / "assets"

@@ -136,3 +136,6 @@ button.ghost:hover { color: var(--text); }
 .has-tip:focus-visible { box-shadow: 0 0 0 2px var(--accent); border-radius: 4px; }
 .tip { position: fixed; z-index: 50; width: max-content; max-width: 280px; padding: 8px 10px; border-radius: 8px; background: var(--text); color: var(--bg); font-size: 12px; font-weight: 400; line-height: 1.45; text-transform: none; letter-spacing: 0; text-align: left; white-space: normal; box-shadow: 0 6px 20px rgba(0, 0, 0, .18); pointer-events: none; animation: tip-in .12s ease-out; }
 @keyframes tip-in { from { opacity: 0; transform: translateY(-2px); } }
+
+td.nowrap { white-space: nowrap; }
+td.excerpt { max-width: 480px; white-space: pre-wrap; word-break: break-all; font-size: 12px; }

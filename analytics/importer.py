@@ -16,6 +16,7 @@ _FIELDS = {
     "phase", "status", "result", "round", "findings", "seeds_run",
     "seeds_detected", "fuzz_execs", "fuzz_violations", "mutants", "killed",
     "survived", "equivalent", "overturned",
+    "rule", "tool_name", "match", "match_kind", "excerpt",
 }
 
 

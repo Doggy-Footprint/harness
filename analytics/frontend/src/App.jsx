@@ -197,6 +197,51 @@ function OtherSessions({ nonWorkflow }) {
   );
 }
 
+const ISOLATION_RULES = [
+  "test_reads_implementation", "test_runs_tests", "impl_reads_tests", "impl_runs_test_command", "dispatch_run_instruction",
+];
+
+function HarnessHacking({ data }) {
+  if (!data) return null;
+  const candidates = data.candidates ?? [];
+  return (
+    <section aria-label="Harness hacking" className="card">
+      <div className="card-head"><Tip as="h2" hint="harness_hacking">Harness hacking</Tip></div>
+      <ul className="legend">
+        <li>
+          <span className="legend-name">Total</span>
+          <span className="legend-value" data-metric="harness-hacking-total">{formatNumber(data.total)}</span>
+        </li>
+        {ISOLATION_RULES.map(rule => (
+          <li key={rule}>
+            <Tip hint={`rule_${rule}`} className="legend-name mono">{rule}</Tip>
+            <span className="legend-value" data-metric={`harness-hacking-${rule}`}>{formatNumber(data.by_rule?.[rule] ?? 0)}</span>
+          </li>
+        ))}
+      </ul>
+      {candidates.length === 0 ? <p className="muted">No isolation candidates recorded.</p> : (
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Time</th><th>Run</th><th>Agent</th><th>Rule</th><th>Match</th><th>Excerpt</th></tr></thead>
+            <tbody>
+              {candidates.map((item, i) => (
+                <tr key={i}>
+                  <td className="muted nowrap">{item.ts ?? "—"}</td>
+                  <td className="mono">{item.workflow_run_id ?? "—"}</td>
+                  <td>{item.agent_type ?? "main"}</td>
+                  <td className="mono">{item.rule}</td>
+                  <td className="mono">{item.match ?? "—"}{item.match_kind && <> <Badge tone="neutral">{item.match_kind}</Badge></>}</td>
+                  <td className="mono excerpt">{item.excerpt ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function RunDetail({ detail, onBack }) {
   const reasons = detail.compliance_reasons ?? [];
   return (
@@ -240,6 +285,7 @@ function RunDetail({ detail, onBack }) {
           ))}
         </ul>
       </div>
+      <HarnessHacking data={detail.harness_hacking} />
     </section>
   );
 }
@@ -277,6 +323,7 @@ function WorkflowSummary({ summary, onSelect }) {
           ["Equivalent mutants", summary.equivalent, "equivalent"], ["Triage verdicts overturned", summary.overturned, "overturned"],
         ]} />
       </div>
+      <HarnessHacking data={summary.harness_hacking} />
       <div className="card">
         <div className="card-head"><Tip as="h2" hint="run_list">Workflow runs</Tip><span className="muted">{summary.run_items.length}</span></div>
         {summary.run_items.length === 0 ? (

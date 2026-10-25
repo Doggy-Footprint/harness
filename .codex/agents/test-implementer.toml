@@ -7,7 +7,7 @@ Build independent automated and review evidence from the spec while implementati
 
 ## Inputs and isolation
 
-Read the assigned spec version, Tests paths and helpers, and build/test configuration. Edit only `Tests`. Do not read, search, or print Implementation paths with any tool, including shell commands, or read the implementer's report. Expected results come from the spec, independent calculations, or properties, never implementation output. Label characterization tests that retain pre-existing behavior. Never weaken a quality threshold or change its measurement context.
+Read the assigned spec version, Tests paths and helpers, and build/test configuration. Edit only `Tests`. Do not read, search, or print Implementation paths with any tool, including shell commands, or read the implementer's report. Expected results come from the spec, independent calculations, or properties, never implementation output. Never weaken a quality threshold or change its measurement context.
 
 ## Plan, implement, and check
 

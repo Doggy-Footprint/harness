@@ -40,7 +40,7 @@ Out of scope: <explicit exclusions>
 # Paths
 Implementation: <comma-separated repo paths>
 Tests: <comma-separated repo paths>
-Test command: <one shell command covering all automated functional and quality checks; fails when a structure-based coverage target is missed>
+Test command: <one shell command covering all automated functional and quality checks, including the project's lint gate when it has one; fails when a structure-based coverage target is missed>
 Review evidence: <named procedure/output, or none — reason>
 Fuzzing: <tool, harness, surface, oracle (crash / property / differential), seed, budget — or none — reason>
 Mutation tool: <tool and command, sample cap and seed, survival threshold (default 40%) — or none>
