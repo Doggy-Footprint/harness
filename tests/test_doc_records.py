@@ -222,13 +222,13 @@ class TestMigration0290(DocRecordsTestCase):
         manifest["version"] = "0.28.0"
         manifest_path.write_text(json.dumps(manifest))
 
-        result = run_installer("update", str(repo), "--no-ci", input="y\ny\n")
+        result = run_installer("update", str(repo), "--no-ci", input="y\ny\ny\n")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("migration 0.29.0:", result.stdout)
         self.assertIn("keep agent-docs/adr/ untouched", result.stdout)
         self.assertNotIn("agent-docs/rejections/", result.stdout)
         self.assertEqual(record.read_text(), "# X\n")
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.30.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.31.0")
         block = (repo / "AGENTS.md").read_text()
         self.assertIn("## Try-n-Fail Rule", block)
         self.assertNotIn("## Architecture Decision Record Rule", block)
@@ -256,7 +256,7 @@ class TestMigration0290(DocRecordsTestCase):
         self.assertIn("record(s) to try-n-fail", dry.stdout)
         self.assertEqual(self.handoffs(repo), [])
 
-        result = run_installer("update", str(repo), "--no-ci", input="y\ny\n")
+        result = run_installer("update", str(repo), "--no-ci", input="y\ny\ny\n")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         [handoff] = self.handoffs(repo)
         text = handoff.read_text()
@@ -268,7 +268,7 @@ class TestMigration0290(DocRecordsTestCase):
         self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
 
         self.set_version(repo, "0.28.0")
-        again = run_installer("update", str(repo), "--no-ci", input="y\ny\n")
+        again = run_installer("update", str(repo), "--no-ci", input="y\ny\ny\n")
         self.assertEqual(again.returncode, 0, again.stdout + again.stderr)
         self.assertEqual(len(self.handoffs(repo)), 1)
 
@@ -276,6 +276,6 @@ class TestMigration0290(DocRecordsTestCase):
         repo, _ = self.installed()
         (repo / "agent-docs" / "adr").mkdir(parents=True)
         self.set_version(repo, "0.28.0")
-        result = run_installer("update", str(repo), "--no-ci", input="y\ny\n")
+        result = run_installer("update", str(repo), "--no-ci", input="y\ny\ny\n")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(self.handoffs(repo), [])
