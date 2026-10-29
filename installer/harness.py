@@ -706,10 +706,6 @@ def _stdin_readable() -> bool:
 
 
 def move_handoff_to_todos(target: Path, input_fn: Callable[[str], str]) -> list[str]:
-    """Ask, separately from the migration approval, whether to move handoff records to todos/ (0.33.0).
-
-    No, EOF, or no readable stdin leaves agent-docs/handoff/ untouched; the answer never fails the update.
-    """
     handoff_dir = target / "agent-docs" / "handoff"
     todos_dir = target / "agent-docs" / "todos"
     records = _handoff_records(handoff_dir)

@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""Progress record hooks: SessionStart state, masked prompt recording, rotation
-and entry checks on progress writes, PreCompact reminder, and Stop enforcement.
-
-PostToolUse feedback and Stop blocks exit 2 with the message on stderr;
+"""PostToolUse feedback and Stop blocks exit 2 with the message on stderr;
 UserPromptSubmit and PreCompact notices go to stdout with exit 0.
 """
 import datetime

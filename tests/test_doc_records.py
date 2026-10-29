@@ -493,7 +493,6 @@ class TestProgressRecordRules(ProgressRecordTestCase):
         self.assertEqual(result.returncode, 0, output)
 
 
-# category -> samples (Q7/Q8); every sample must be detected
 SECRET_SAMPLES = {
     "token": (
         "AKIAIOSFODNN7ABCDEFG",
@@ -505,7 +504,6 @@ SECRET_SAMPLES = {
     "ip": ("10.0.0.5", "192.168.1.255", "fe80::1"),
     "host": ("build01.corp", "db.prod.internal"),
 }
-# C28 exceptions and C31 already-masked text; none may be reported
 CLEAN_LINES = (
     "dev@example.com",
     "127.0.0.1",
@@ -520,7 +518,6 @@ CLEAN_LINES = (
 
 class TestProgressSecretCheck(ProgressRecordTestCase):
     def place(self, repo, location, line_text):
-        """Replace the Changes bullet of a valid record with `line_text`; returns (path, line number)."""
         directory = self.progress_dir(repo) if location == "progress" else self.logs_dir(repo)
         lines = PROGRESS_TEMPLATE.splitlines()
         index = lines.index("- edited the parser")

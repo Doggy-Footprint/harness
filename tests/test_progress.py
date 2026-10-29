@@ -1,10 +1,3 @@
-"""Independent evidence for agent-docs/specs/388ea2d9a2de1f5f-progress-and-continue-on.md (v2).
-
-Expected values come from the spec text and from hand-built fixtures (Levenshtein
-distances are recomputed here); the implementation is exercised only through the
-installed hook, CLI, git hooks and installer in temporary repositories, plus the
-pure functions of harness/lib/progress.py.
-"""
 import importlib
 import json
 import os
@@ -58,7 +51,6 @@ def entry_lines(items):
 def build(session="sessa", before="none", previous="none", branch="main", stamp=None, state=(),
           next_step=(), constraints=(), verify=(), dead_ends=(), related=(), none_bullet=None,
           changes="- edited the parser", user_requests="", title="Sample task", trailer=""):
-    """A format-valid progress record (FR2-FR4); `session=None` omits the field."""
     lines = ["---"]
     if session is not None:
         lines.append(f"session: {session}")
@@ -106,7 +98,6 @@ def frontmatter(path):
 
 
 def split_requests(text):
-    """(text before the User Requests subsection, its non-blank body lines, text after it)."""
     match = re.search(r"^### User Requests[ \t]*\n", text, re.M)
     if not match:
         return text, None, ""
@@ -238,9 +229,7 @@ def out(result):
     return result.stdout + result.stderr
 
 
-# ---------------------------------------------------------------- O1
 class TestRotation(ProgressCase):
-    """O1: FR1, FR2, FR5, FR6, FR7, C1-C4, Q6 (state transition testing)."""
 
     def test_o1_c1_empty_to_one_keeps_file_fills_session_and_before_none(self):
         repo = self.new_repo()
@@ -350,9 +339,7 @@ class TestRotation(ProgressCase):
         self.assertNotIn("Traceback", result.stderr)
 
 
-# ---------------------------------------------------------------- O2
 class TestFreshness(ProgressCase):
-    """O2: FR4, FR8(a)(b), C5-C8 (equivalence partitioning + boundary values)."""
 
     def entry_repo(self, commit, files, text="alpha module wiring"):
         repo = self.new_repo()
@@ -493,9 +480,7 @@ class TestFreshness(ProgressCase):
         self.assertIn("stale", loud.stderr)
 
 
-# ---------------------------------------------------------------- O3
 def near(base, distance):
-    """`base` with `distance` non-space characters replaced by '#', so lev == distance."""
     assert "#" not in base
     chars = list(base)
     positions = [i for i, c in enumerate(chars) if c != " "]
@@ -519,7 +504,6 @@ def sized(length):
 
 
 class TestSimilarity(ProgressCase):
-    """O3: FR8(c), C9, C10 (boundary value analysis)."""
 
     def pair_repo(self, old_text, new_text, old_commit="first", new_commit="second", link="before",
                   extra_old=(), old_section="state", new_section="next_step"):
@@ -620,12 +604,9 @@ class TestSimilarity(ProgressCase):
 
 
 
-# ---------------------------------------------------------------- O4
 class TestStopSessionStartPreCompact(ProgressCase):
-    """O4: FR9, FR10, FR15, C11-C13, C22 (decision table)."""
 
     def setup_session(self, changed, kind):
-        """kind: none | own_empty | own_filled | other. Progress is committed before SessionStart."""
         repo = self.new_repo()
         head = self.head(repo)
         if kind != "none":
@@ -735,9 +716,7 @@ class TestStopSessionStartPreCompact(ProgressCase):
                     self.assertEqual((result.stdout, result.stderr), ("", ""))
 
 
-# ---------------------------------------------------------------- O5
 class TestErrors(ProgressCase):
-    """O5: every Errors row and C23 (error guessing)."""
 
     def old_and_new(self, repo, new_text):
         head = self.head(repo)
@@ -921,9 +900,7 @@ class TestErrors(ProgressCase):
         self.assertFalse(any((repo / "agent-docs" / "progress-logs").glob("*.md")))
 
 
-# ---------------------------------------------------------------- O6
 class TestShow(ProgressCase):
-    """O6: FR12, FR13, C14-C17 (equivalence partitioning on target resolution)."""
 
     def make(self, repo, name, session, directory="progress", before="none", text="item"):
         head = self.head(repo)
@@ -1001,9 +978,7 @@ class TestShow(ProgressCase):
         self.assertNotIn("## Record", result.stdout)
 
 
-# ---------------------------------------------------------------- O7
 class TestPostMerge(ProgressCase):
-    """O7: FR14, C18 (use case testing with real merges)."""
 
     LOCAL_MARK = "LOCAL-POST-MERGE-RAN"
 
@@ -1103,13 +1078,11 @@ class TestPostMerge(ProgressCase):
         self.assertFalse(any((repo / "agent-docs" / "progress").glob("*.md")))
 
 
-# ---------------------------------------------------------------- O16
 VERBS = ("write", "merge", "add", "rename", "ask", "re-check", "replace", "end", "remove", "quote", "move", "update", "run", "fix")
 VERB_RE = re.compile(r"(?<![\w-])(" + "|".join(re.escape(v) for v in VERBS) + r")(?![\w-])", re.I)
 
 
 class TestMessageQuality(ProgressCase):
-    """O16 / Q3: every message names its file and gives a next-action verb (equivalence partitioning)."""
 
     def assert_actionable(self, text, names, label):
         self.assertTrue(any(n in text for n in names), f"{label}: none of {names} in {text!r}")
@@ -1221,9 +1194,7 @@ class TestMessageQuality(ProgressCase):
         self.assert_actionable(out(checked), [NAME1], "check finding")
 
 
-# ---------------------------------------------------------------- O14
 class TestPromptRecording(ProgressCase):
-    """O14: FR21, FR22, C29, Errors (state file rows) (state transition testing)."""
 
     PROMPTS = ("first request", "second request line one\nsecond request line two",
                "third request with key AKIAIOSFODNN7ABCDEFG inside", "fourth request")
@@ -1380,7 +1351,6 @@ class TestPromptRecording(ProgressCase):
             self.assertNotIn(b"UNIQUE-STATE-MARKER", data, path)
 
 
-# ---------------------------------------------------------------- O13
 SECRET_FIXTURES = {
     "AKIA": ["AKIAIOSFODNN7ABCDEFG", "AKIAABCDEFGHIJKLMNOP"],
     "gh[pousr]_": ["ghp_" + "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8", "gho_" + "Zy9X8w7V6u5T4s3R2q1P0o9N8m7L6k5J4i3H",
@@ -1439,7 +1409,6 @@ class MaskCase(unittest.TestCase):
 
 
 class TestMaskKeysAndTokens(MaskCase):
-    """O13 (FR23 step 2, C24, C28): one partition per pattern, boundaries, idempotence."""
 
     def test_o13_each_token_pattern_is_replaced_whole_in_every_context(self):
         for group, samples in SECRET_FIXTURES.items():
@@ -1515,7 +1484,6 @@ class TestMaskKeysAndTokens(MaskCase):
 
 
 class TestMaskPersonalData(MaskCase):
-    """O13 (FR23 steps 3-5, C27, C28): emails, IPs, hostnames and their exceptions."""
 
     def test_o13_c27_each_category_replaced(self):
         for text, expected in (("alice@acme.io", "[masked:email]"), ("10.0.0.5", "[masked:ip]"),
@@ -1594,7 +1562,6 @@ class TestMaskPersonalData(MaskCase):
 
 
 class TestMaskLogBlocks(MaskCase):
-    """O13 (FR23 step 1, C25, C26): log blocks become one placeholder line."""
 
     def test_o13_c25_fenced_block_counts_fence_lines(self):
         block = "```\n" + "\n".join(f"content {n}" for n in range(1, 11)) + "\n```"
@@ -1688,7 +1655,6 @@ class TestMaskLogBlocks(MaskCase):
 
 
 class TestMaskProperties(MaskCase):
-    """O13/Q7/Q9 (properties): no survivors, idempotence, unmasked() agreement, speed."""
 
     def test_o13_q7_no_sample_survives_masking(self):
         survivors = []
@@ -1753,9 +1719,7 @@ class TestMaskProperties(MaskCase):
             self.assertNotIn(secret, result)
 
 
-# ---------------------------------------------------------------- O11 (Q1)
 class TestHookTiming(ProgressCase):
-    """O11 / Q1: PostToolUse on a 40-entry progress with a 40-entry predecessor, 1,000-commit repository."""
 
     def build_history(self, repo, count):
         base, branch = self.head(repo), self.branch(repo)

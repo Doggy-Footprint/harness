@@ -10,9 +10,7 @@ Covers only rules that can be verified without judgement calls:
     checking the tracking file's code_hash against participating files'
     non-comment content), scanned over `git ls-files` only
   - Required headings for try-n-fail/ and todos/ managed files
-  - Progress records: one file in progress/, its headings and entry metadata,
-    and no unmasked keys, emails, IPs, or internal hostnames in progress/ or
-    progress-logs/
+  - Progress records: format of progress/ and unmasked secrets in progress-logs/ too
 
 Exit code is non-zero if any rule is violated.
 """

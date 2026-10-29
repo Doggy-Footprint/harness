@@ -1,7 +1,3 @@
-"""Progress records: parsing, entry checks, rotation, and prompt masking.
-
-Shared by the progress hook, `bin/progress.py`, and `git/verify_rules.py`.
-"""
 import hashlib
 import json
 import os
@@ -101,7 +97,6 @@ def normalize_text(text: str) -> str:
 
 
 def parse_frontmatter(text: str) -> tuple[dict | None, str | None, int]:
-    """Return (fields, error, body offset in lines)."""
     lines = text.split("\n")
     if not lines or lines[0].rstrip("\r") != "---":
         return None, "no frontmatter block (`---` on the first line)", 0
@@ -143,7 +138,6 @@ def parse(text: str) -> Progress:
 
 
 def _section_items(progress: Progress, title: str):
-    """Yield (subsection, first line index, item lines) for top-level bullets of a `##` section."""
     section = progress.section_range(title)
     if section is None:
         return
@@ -223,7 +217,6 @@ def _excerpt(text: str) -> str:
 
 
 def format_findings(progress: Progress) -> list[tuple[int, str]]:
-    """Heading (FR3) and metadata syntax (FR4) findings as (line, message)."""
     findings = []
     if progress.title() is None:
         findings.append((1, "missing `# <title>` heading; add it"))
@@ -311,7 +304,6 @@ def _same_commit(a: str | None, b: str | None) -> bool:
 
 
 def near_duplicates(current: list[Entry], predecessors: list[Entry]) -> dict[int, Entry]:
-    """Map index in `current` to the predecessor entry it nearly duplicates (FR8 c)."""
     result = {}
     for index, entry in enumerate(current):
         if len(entry.text) < SIMILARITY_MIN_LENGTH or not entry.commit:
@@ -412,7 +404,6 @@ def _touches(changed: str, listed: str) -> bool:
 
 
 def freshness(entry_list: list[Entry], repo_root: Path) -> list[str]:
-    """Per entry: `fresh` or `stale: <reason>` (FR8 a, b). Raises GitUnavailable."""
     head = git_head(repo_root)
     statuses: list[str | None] = [None] * len(entry_list)
     wanted = sorted({entry.commit for entry in entry_list if entry.commit})
@@ -528,12 +519,6 @@ def set_frontmatter_field(text: str, key: str, value: str) -> str:
 
 
 def rotate(new_path: Path, session_id: str | None) -> Path | None:
-    """Move the other progress in `new_path`'s directory to progress-logs/ (FR5).
-
-    Raises SameSession when that progress belongs to `session_id` (FR6) and
-    DestinationExists when progress-logs/ already holds its name. Fills the new
-    file's `session` and `before`. Returns the moved destination, or None.
-    """
     new_path = new_path.resolve()
     progress_dir = new_path.parent
     logs_dir = progress_dir.parent / PROGRESS_LOGS_DIR_NAME
@@ -582,7 +567,6 @@ def predecessor_entries(parsed: Progress, repo_root: Path) -> list[tuple[str, li
 
 
 def check_findings(path: Path, repo_root: Path, label: str) -> list[str]:
-    """Findings of `progress.py check` for `path`, each naming `label` and the next action."""
     text = path.read_text(encoding="utf-8")
     parsed = parse(text)
     findings = []
@@ -616,7 +600,6 @@ def check_findings(path: Path, repo_root: Path, label: str) -> list[str]:
 
 
 def entry_report(parsed: Progress, repo_root: Path) -> list[tuple[Entry, str]]:
-    """Per entry: `fresh`, `stale: <reason>`, `near-duplicate`, or both joined (FR13)."""
     entry_list = entries(parsed)
     try:
         statuses = freshness(entry_list, repo_root)
@@ -680,10 +663,6 @@ def render_user_requests(prompts: list[dict]) -> str:
 
 
 def sync_user_requests(text: str, prompts: list[dict] | None) -> str:
-    """Rewrite only the `### User Requests` subsection (FR22).
-
-    `prompts` None means no session state: an existing subsection is left as is.
-    """
     progress = parse(text)
     lines = text.split("\n")
     record = progress.section_range(RECORD)
@@ -766,7 +745,6 @@ def _host_re(host_suffixes) -> re.Pattern | None:
 
 
 def _log_block_end(lines: list[str], start: int) -> tuple[int, bool]:
-    """Return (end index exclusive, is_block) for a log block starting at `start`."""
     line = lines[start]
     fence = _FENCE_LINE_RE.match(line)
     if fence:
@@ -827,7 +805,6 @@ def _ipv6_groups(address: str) -> int:
 
 
 def _substitutions(host_suffixes):
-    """(category, pattern, replacement builder) in FR23 order (2)-(5)."""
 
     def whole(category):
         def build(match, keep_lines):
@@ -884,12 +861,10 @@ def text_before_line(text: str, offset: int) -> int:
 
 
 def mask(text: str, host_suffixes=DEFAULT_HOST_SUFFIXES) -> str:
-    """Replace log blocks, keys and tokens, emails, IPs, and internal hostnames (FR23)."""
     return _apply(_mask_logs(text), host_suffixes, keep_lines=False, found=None)
 
 
 def unmasked(text: str, host_suffixes=DEFAULT_HOST_SUFFIXES) -> list[tuple[int, str]]:
-    """(line, category) of FR23 categories (2)-(5) still present in `text` (FR24)."""
     found: list[tuple[int, str]] = []
     _apply(text, host_suffixes, keep_lines=True, found=found)
     return sorted(set(found))

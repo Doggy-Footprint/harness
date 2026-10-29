@@ -3085,7 +3085,6 @@ class TestVerificationToolsCli(InstallerTestCase):
 
 
 class TestHandoffToTodosMigration(InstallerTestCase):
-    """O9 (FR19, FR20, C20, C21, Q6): the 0.33.0 migration's handoff-to-todos prompt."""
 
     LIVE = "1111111111111111-live.md"
     OLD = "2222222222222222-old.md"
