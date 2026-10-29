@@ -19,7 +19,9 @@ class Paths:
         self.docs_root = REPO_ROOT / config["docs_root"]
         self.exclude_dirs = set(config["exclude_dirs"])
         self.try_n_fail = self.docs_root / "try-n-fail"
-        self.handoff = self.docs_root / "handoff"
+        self.todos = self.docs_root / "todos"
+        self.progress = self.docs_root / "progress"
+        self.progress_logs = self.docs_root / "progress-logs"
         self.synced_comments = self.docs_root / "synced-comments"
         self.specs = self.docs_root / "specs"
         self.spec_logs = self.docs_root / "spec-logs"
@@ -27,3 +29,10 @@ class Paths:
 
 def load_paths() -> Paths:
     return Paths(load_config())
+
+
+def load_mask_host_suffixes() -> list[str]:
+    suffixes = load_config().get("mask_host_suffixes")
+    if not isinstance(suffixes, list):
+        return []
+    return [suffix for suffix in suffixes if isinstance(suffix, str)]

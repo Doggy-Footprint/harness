@@ -73,10 +73,10 @@ class TelemetryTestCase(InstallerTestCase):
         path.write_text(body)
         return path
 
-    def write_handoff(self, repo, filename="0123456789abcdef-y.md"):
-        handoff_dir = repo / "agent-docs" / "handoff"
-        handoff_dir.mkdir(parents=True, exist_ok=True)
-        path = handoff_dir / filename
+    def write_progress(self, repo, filename="0123456789abcdef-y.md", directory="progress"):
+        target_dir = repo / "agent-docs" / directory
+        target_dir.mkdir(parents=True, exist_ok=True)
+        path = target_dir / filename
         path.write_text("# Y\n")
         return path
 
@@ -286,20 +286,47 @@ class TestNormal(TelemetryTestCase):
         self.assertIsNone(events[0]["spec"])
         self.assertEqual(events[0]["version"], 3)
 
-    def test_c6_handoff_write_records_file_name(self):
+    def test_c6_progress_write_records_file_name(self):
         repo, telemetry_dir = self.install_with_telemetry_dir()
-        handoff = self.write_handoff(repo, "0123456789abcdef-y.md")
+        progress = self.write_progress(repo, "0123456789abcdef-y.md")
         env = self.telemetry_env(telemetry_dir)
 
         result = self.run_hook_env(
-            repo, "telemetry_hook.py", self.post_tool_use_write(handoff), env
+            repo, "telemetry_hook.py", self.post_tool_use_write(progress), env
         )
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         events = self.read_events(telemetry_dir, repo)
         self.assertEqual(len(events), 1, events)
-        self.assertEqual(events[0]["event"], "handoff_write")
+        self.assertEqual(events[0]["event"], "progress_write")
         self.assertEqual(events[0]["file"], "0123456789abcdef-y.md")
+
+    def test_o10_fr18_writes_outside_progress_directory_emit_nothing(self):
+        for label, directory in (
+            ("progress-logs", "progress-logs"),
+            ("retired handoff", "handoff"),
+            ("todos", "todos"),
+        ):
+            with self.subTest(directory=label):
+                repo, telemetry_dir = self.install_with_telemetry_dir()
+                path = self.write_progress(repo, "0123456789abcdef-y.md", directory=directory)
+                env = self.telemetry_env(telemetry_dir)
+
+                result = self.run_hook_env(
+                    repo, "telemetry_hook.py", self.post_tool_use_write(path), env
+                )
+
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(self.read_events(telemetry_dir, repo), [])
+
+    def test_o10_fr18_progress_write_never_emits_handoff_write(self):
+        repo, telemetry_dir = self.install_with_telemetry_dir()
+        progress = self.write_progress(repo, "0123456789abcdef-y.md")
+        env = self.telemetry_env(telemetry_dir)
+
+        self.run_hook_env(repo, "telemetry_hook.py", self.post_tool_use_write(progress), env)
+
+        self.assertNotIn("handoff_write", [e["event"] for e in self.read_events(telemetry_dir, repo)])
 
     def test_c7_gate_block_while_implementer_marker_running_exits_2(self):
         repo, telemetry_dir = self.install_with_telemetry_dir()
@@ -505,7 +532,7 @@ class TestBoundary(TelemetryTestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(self.read_events(telemetry_dir, repo), [])
 
-    def test_c10_write_to_non_spec_non_handoff_path_writes_nothing(self):
+    def test_c10_write_to_non_spec_non_progress_path_writes_nothing(self):
         repo, telemetry_dir = self.install_with_telemetry_dir()
         env = self.telemetry_env(telemetry_dir)
         other = repo / "src" / "app.py"
@@ -519,10 +546,10 @@ class TestBoundary(TelemetryTestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(self.read_events(telemetry_dir, repo), [])
 
-    def test_c10_write_to_handoff_index_writes_nothing(self):
+    def test_c10_write_to_try_n_fail_index_writes_nothing(self):
         repo, telemetry_dir = self.install_with_telemetry_dir()
         env = self.telemetry_env(telemetry_dir)
-        index = repo / "agent-docs" / "handoff" / "index.md"
+        index = repo / "agent-docs" / "try-n-fail" / "index.md"
         index.parent.mkdir(parents=True, exist_ok=True)
         index.write_text("")
 
@@ -772,11 +799,11 @@ class TestBoundary(TelemetryTestCase):
         self.assertEqual(events[0]["event"], "spec_write")
         self.assertIsNone(events[0]["agent_type"])
 
-    def test_c24_handoff_write_event_empty_string_agent_type_records_null(self):
+    def test_c24_progress_write_event_empty_string_agent_type_records_null(self):
         repo, telemetry_dir = self.install_with_telemetry_dir()
-        handoff = self.write_handoff(repo, "0123456789abcdef-y.md")
+        progress = self.write_progress(repo, "0123456789abcdef-y.md")
         env = self.telemetry_env(telemetry_dir)
-        payload = self.post_tool_use_write(handoff)
+        payload = self.post_tool_use_write(progress)
         payload["agent_type"] = ""
 
         result = self.run_hook_env(repo, "telemetry_hook.py", payload, env)
@@ -784,7 +811,7 @@ class TestBoundary(TelemetryTestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         events = self.read_events(telemetry_dir, repo)
         self.assertEqual(len(events), 1, events)
-        self.assertEqual(events[0]["event"], "handoff_write")
+        self.assertEqual(events[0]["event"], "progress_write")
         self.assertIsNone(events[0]["agent_type"])
 
     def test_c24_gate_block_event_empty_string_agent_type_records_null(self):
@@ -1134,7 +1161,7 @@ class TestEdge(TelemetryTestCase):
 
 
     def test_c18_harness_version_is_0_9_0(self):
-        self.assertEqual(HARNESS_VERSION, "0.32.0")
+        self.assertEqual(HARNESS_VERSION, "0.33.0")
 
     def test_c20_update_preserves_pre_existing_post_tool_use_hook(self):
         repo = self.install()

@@ -210,7 +210,7 @@ class WorkflowMarkerTestCase(InstallerTestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         event = self.events(telemetry_dir, repo)[0]
         self.assertEqual(event["v"], 1)
-        self.assertEqual(event["harness_version"], "0.32.0")
+        self.assertEqual(event["harness_version"], "0.33.0")
         self.assertEqual(event["repo"], str(repo.resolve()))
         timestamp = datetime.fromisoformat(event["ts"].replace("Z", "+00:00"))
         self.assertEqual(timestamp.utcoffset(), timedelta(0))
@@ -447,9 +447,9 @@ class WorkflowMarkerTestCase(InstallerTestCase):
 
                 spec_path = repo / "agent-docs" / "specs" / "written.md"
                 spec_path.write_text("---\nversion: 1\n---\n")
-                handoff_path = repo / "agent-docs" / "handoff" / "0123456789abcdef-auto.md"
-                handoff_path.parent.mkdir(parents=True, exist_ok=True)
-                handoff_path.write_text("# Handoff\n")
+                progress_path = repo / "agent-docs" / "progress" / "0123456789abcdef-auto.md"
+                progress_path.parent.mkdir(parents=True, exist_ok=True)
+                progress_path.write_text("# Progress\n")
                 event_calls = (
                     ("seed", lambda: self.hook(repo, env, {
                         "hook_event_name": "PostToolUse", "tool_name": "Bash",
@@ -460,9 +460,9 @@ class WorkflowMarkerTestCase(InstallerTestCase):
                         "hook_event_name": "PostToolUse", "tool_name": "Write",
                         "tool_input": {"file_path": str(spec_path)}, "tool_response": {},
                     })),
-                    ("handoff_write", lambda: self.hook(repo, env, {
+                    ("progress_write", lambda: self.hook(repo, env, {
                         "hook_event_name": "PostToolUse", "tool_name": "Write",
-                        "tool_input": {"file_path": str(handoff_path)}, "tool_response": {},
+                        "tool_input": {"file_path": str(progress_path)}, "tool_response": {},
                     })),
                     ("test_command", lambda: self.hook(repo, env, {
                         "hook_event_name": "PostToolUse", "tool_name": "Bash",
@@ -528,13 +528,13 @@ class WorkflowMarkerTestCase(InstallerTestCase):
         for repo, run_id, spec in ((first, "first-run", "first"), (second, "second-run", "second")):
             spec_path = repo / "agent-docs" / "specs" / "written.md"
             spec_path.write_text("---\nversion: 1\n---\n")
-            handoff_path = repo / "agent-docs" / "handoff" / "0123456789abcdef-auto.md"
-            handoff_path.parent.mkdir(parents=True, exist_ok=True)
-            handoff_path.write_text("# Handoff\n")
+            progress_path = repo / "agent-docs" / "progress" / "0123456789abcdef-auto.md"
+            progress_path.parent.mkdir(parents=True, exist_ok=True)
+            progress_path.write_text("# Progress\n")
             calls = (
                 ("seed", lambda: self.hook(repo, env, {"hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_input": {"command": "python3 .harness/bin/seed.py backup src/a.py"}, "tool_response": {"exit_code": 0}})),
                 ("spec_write", lambda: self.hook(repo, env, {"hook_event_name": "PostToolUse", "tool_name": "Write", "tool_input": {"file_path": str(spec_path)}, "tool_response": {}})),
-                ("handoff_write", lambda: self.hook(repo, env, {"hook_event_name": "PostToolUse", "tool_name": "Write", "tool_input": {"file_path": str(handoff_path)}, "tool_response": {}})),
+                ("progress_write", lambda: self.hook(repo, env, {"hook_event_name": "PostToolUse", "tool_name": "Write", "tool_input": {"file_path": str(progress_path)}, "tool_response": {}})),
                 ("test_command", lambda: self.hook(repo, env, {"hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_input": {"command": "python3 -m unittest"}, "tool_response": {"exit_code": 0}})),
                 ("tool_failure", lambda: self.hook(repo, env, {"hook_event_name": "PostToolUseFailure", "tool_name": "Bash", "tool_input": {"command": "python3 -m unittest"}, "error_code": "timeout"})),
                 ("subagent_start", lambda: self.gate(repo, env, {"hook_event_name": "SubagentStart", "agent_type": "test-verifier", "agent_id": "auto-start"})),
@@ -731,7 +731,7 @@ class WorkflowMarkerTestCase(InstallerTestCase):
         self.assertTrue(marker_path.is_file())
         skill = skill_path.read_text()
         self.assertIn("workflow_marker.py", skill)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.32.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.33.0")
         self.assertEqual(user_file.read_text(), "keep me\n")
 
     def test_m10_repositories_keep_active_runs_and_telemetry_isolated(self):
