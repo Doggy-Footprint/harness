@@ -1,7 +1,7 @@
 ---
-version: 2
+version: 5
 run_id: 388ea2d9a2de1f5f
-status: active
+status: complete
 base_commit: b16e923b7d320c869f411a4f06d0fb98a2cc856c
 max_verifier_invocations: 2
 handoff: none
@@ -23,9 +23,9 @@ In scope: progress record format and rules; progress rotation, entry checks, and
 Out of scope: a store for project-wide lessons (separate future work); semantic or vector retrieval; masking free-text personal or customer data that has no fixed pattern (for example customer names; user accepted); `analytics/` changes for the new `progress_write` event; rewriting historical handoff, spec-log, or try-n-fail records; changing the pre-existing 0.29.0 installer migration; Codex behavior beyond best-effort file generation; GitHub-side (server) merges that never run local git hooks.
 
 # Paths
-Implementation: harness/lib/progress.py, harness/hooks/progress_hook.py, harness/bin/progress.py, harness/skills/continue-on/SKILL.md, harness/hooks/hooks.spec.json, harness/git/post-merge, harness/git/verify_rules.py, harness/lib/config.py, harness/config.default.json, harness/bin/spec_lifecycle.py, harness/hooks/telemetry_hook.py, harness/instructions/harness-block.md, harness/skills/workflow-approach/SKILL.md, harness/skills/test-audit/SKILL.md, harness/skills/rearrange-docs/SKILL.md, installer/harness.py, harness/VERSION, README.md
-Tests: tests/test_progress.py, tests/test_doc_records.py, tests/test_installer.py, tests/test_workflow_markers.py, tests/test_telemetry.py
-Test command: python3 -m unittest discover -s tests
+Implementation: harness/lib/progress.py, harness/hooks/progress_hook.py, harness/bin/progress.py, harness/skills/continue-on/SKILL.md, harness/hooks/hooks.spec.json, harness/hooks/doc_commit.py, harness/git/post-merge, harness/git/verify_rules.py, harness/lib/config.py, harness/config.default.json, harness/bin/spec_lifecycle.py, harness/hooks/telemetry_hook.py, harness/instructions/harness-block.md, harness/skills/workflow-approach/SKILL.md, harness/skills/test-audit/SKILL.md, harness/skills/rearrange-docs/SKILL.md, installer/harness.py, harness/VERSION, README.md
+Tests: tests/test_progress.py, tests/test_doc_records.py, tests/test_installer.py, tests/test_workflow_markers.py, tests/test_telemetry.py, tests/test_comment_gate.py, tests/test_session_metrics.py
+Test command: uv run --no-project --with pytest --with hypothesis python3 -m unittest discover -s tests
 Review evidence: R1 — main reads `harness-block.md`, `workflow-approach/SKILL.md`, `test-audit/SKILL.md`, `rearrange-docs/SKILL.md`, `README.md` and confirms no remaining instruction writes or reads `agent-docs/handoff/` except the installer migration notice and the historical-record notes (FR17, FR18); result recorded in the execution ledger. R2 — main confirms `continue-on/SKILL.md` frontmatter has `disable-model-invocation: true` and its steps read only the CLI's `show` output and listed pointers (FR11).
 Fuzzing: none — parsing inputs are small Markdown files and prompts; malformed-input robustness is covered deterministically by O5 and masking by fixture sets in O13.
 Mutation tool: none — no mutation tool is installed in this repository; hand mutations listed per obligation replace it.
@@ -64,7 +64,7 @@ Installer: `python3 installer/harness.py update <target>` gains a handoff→todo
 | FR16 | `verify_rules.py`: fails when `agent-docs/progress/` holds more than one `*.md`; checks FR3 headings and FR4 metadata syntax for the file in `progress/`; skips format checks for `progress-logs/`; treats `agent-docs/todos/` as a managed directory (index.md, stale.md, stale/) requiring only `#` title and `## Next Step`, accepting any additional sections; no longer manages `agent-docs/handoff/`. | must | design; user (todos extensible) |
 | FR17 | `harness-block.md`: the Handoff Rule is replaced by a Progress Rule (FR1–FR4, FR22, read only the Next Session of the chosen progress and its listed pointers when continuing, never guess related records, never edit a progress after its session ends, commit progress with the work) and a Todo Rule (work items not tied to a session; required `#` title and `## Next Step`, recommended `## Goal` and `## Related`, further sections allowed). Try-n-fail candidates come from a progress `### Failed Attempts` or a spec ledger. | must | user |
 | FR18 | `workflow-approach`: spec frontmatter `handoff` becomes optional (not listed in the format); nonterminal stops and `limit` stops write the session progress (remaining work under Next Session, failed attempts under Record) instead of a handoff; Recover step no longer requires a handoff and resumes an active spec only when the user asks or runs `continue-on`. The telemetry end status token `handoff` stays for nonterminal stops (analytics compatibility, A18). `spec_lifecycle.py validate` stops requiring `handoff` and accepts it when present; `spec_lifecycle.py session` no longer mentions a handoff and instead points draft/active specs to the progress and `/continue-on`. `test-audit` writes one todo per feature group to `agent-docs/todos/` instead of handoffs; `rearrange-docs` treats `todos/` as it treated `handoff/`. `telemetry_hook.py` emits `progress_write` for writes to `agent-docs/progress/*.md` instead of `handoff_write`. | must | user |
-| FR19 | `installer update` to 0.33.0: creates `progress/`, `progress-logs/`, `todos/` (todos with index.md, stale.md, stale/); registers the progress hooks; installs `continue-on`. The 0.33.0 migration runs after every earlier migration, so a handoff written by the 0.29.0 migration in the same update is included. When `agent-docs/handoff/` contains records other than index.md/stale.md, it lists them and asks, separately from the migration approval, whether to move all of them (including `stale/` and both index files, merged into todos' index/stale) to `agent-docs/todos/`. Yes → move. No, EOF, or no TTY → leave `handoff/` untouched and print that it is no longer managed. The update never fails or raises `MigrationDeclined` because of this answer. | must | user |
+| FR19 | `installer update` to 0.33.0: creates `progress/`, `progress-logs/`, `todos/` (todos with index.md, stale.md, stale/); registers the progress hooks; installs `continue-on`. The 0.33.0 migration runs after every earlier migration, so a handoff written by the 0.29.0 migration in the same update is included. When `agent-docs/handoff/` contains records other than index.md/stale.md, it lists them and asks, separately from the migration approval, whether to move all of them (including `stale/` and both index files, merged into todos' index/stale) to `agent-docs/todos/`. Yes → move. No, EOF, or closed/absent stdin ("no TTY"; piped answers are accepted like the earlier migration approvals) → leave `handoff/` untouched and print that it is no longer managed. The update never fails or raises `MigrationDeclined` because of this answer. | must | user |
 | FR20 | Moved handoff records keep their content; `verify_rules.py` accepts them in `todos/` because they have `#` title and `## Next Step`. | must | project rule (no rewriting historical records) |
 | FR21 | UserPromptSubmit appends `{"at": <UTC ISO-8601>, "text": progress.mask(prompt)}` to the session state file's `prompts` (creating the state file when SessionStart did not), and never stores the unmasked prompt anywhere. | must | user |
 | FR22 | On every progress write (PostToolUse) and at Stop, the hook rewrites the `### User Requests` subsection of this session's progress from the state file: one `#### <n> — <at>` heading per prompt in order, followed by the masked text with every line prefixed `> `. Content before and after the subsection is preserved byte for byte; a missing subsection is appended at the end of `## Record`. | must | user (record in Record, A20) |
@@ -92,7 +92,7 @@ Installer prompt interrupted (EOF) or no TTY — treated as No — handoff left 
 | C5 | normal | entry commit = HEAD, files unchanged | fresh |
 | C6 | boundary | entry commit X; one later commit touches a listed file | stale: changed |
 | C7 | boundary | entry commit X; later commits touch only other files, including the progress file itself | fresh |
-| C8 | error | entry commit not in repo / not ancestor (rebased) | stale: unresolved / not ancestor |
+| C8 | error | entry commit not in repo / not ancestor (rebased) | label starting `stale: unresolved` / `stale: not ancestor` |
 | C9 | boundary | entry text similarity 0.90 vs predecessor entry, different commit | near-duplicate warning |
 | C10 | boundary | similarity 0.89, or identical text and same commit, or text < 20 chars | no warning |
 | C11 | normal | session changed files, no progress, Stop with `stop_hook_active` false | block once with write-progress reason |
@@ -107,7 +107,7 @@ Installer prompt interrupted (EOF) or no TTY — treated as No — handoff left 
 | C20 | normal | update with handoff records, answer yes | all moved to todos, index blocks merged, update succeeds |
 | C21 | normal | update with handoff records, answer no / EOF / no TTY | handoff untouched, notice printed, update succeeds |
 | C22 | edge | Next Session with only `- none: finished` | Stop does not block; show warns nothing |
-| C23 | edge | malformed progress (no frontmatter, missing sections, garbage metadata) | findings reported, no crash, no rotation |
+| C23 | edge | malformed progress (no frontmatter, missing sections, garbage metadata) | findings reported, no crash; no rotation when the frontmatter is missing or unparsable (rotation follows FR5 when the frontmatter is valid) |
 | C24 | normal | prompt with an `sk-ant-…` key, a `ghp_…` token, and `password=hunter2` | each value replaced by `[masked:token]`; surrounding text kept |
 | C25 | normal | prompt with a fenced 12-line block and a 5-line timestamped log run | `[masked:log 12 lines]` and `[masked:log 5 lines]` (fence lines counted in N); other text kept |
 | C26 | boundary | 2 consecutive timestamped lines; 3 consecutive timestamped lines | 2 kept; 3 masked |
@@ -135,10 +135,10 @@ Installer prompt interrupted (EOF) or no TTY — treated as No — handoff left 
 | --- | --- | --- | --- | --- | --- | --- |
 | Q1 | Performance / time behaviour | progress PostToolUse hook on a progress with 40 entries and a predecessor with 40 entries, 1,000-commit repo fixture | wall time, seconds | ≤ 2.0 s | automated (timed test) | design |
 | Q2 | Compatibility / co-existence | pre-existing tests | pre-existing test files pass; only listed test files change | 100% | automated Test command; review `git diff --stat base_commit -- tests` | project |
-| Q3 | Interaction / self-descriptiveness | every hook feedback and CLI error | each message names the file and the next action | 100% of messages in Errors and FR5–FR10, FR24 | automated (string assertions) | design |
+| Q3 | Interaction / self-descriptiveness | every hook feedback and CLI error | each message contains the repo-relative path (or file name) of the file it concerns — or, when that file does not exist yet (FR10 missing progress, `show` with nothing to continue), the `agent-docs/progress` directory — and at least one next-action verb from {write, merge, add, rename, ask, re-check, replace, end, remove, quote, move, update, run, fix} | 100% of messages in Errors and FR5–FR10, FR24 | automated (string assertions) | design |
 | Q4 | Reliability / fault tolerance | malformed progress, missing git, missing or unreadable state file, payload without prompt | hook exit status and no traceback | exit 0 or documented feedback, 0 tracebacks | automated (C23, Errors rows) | design |
 | Q5 | Maintainability / modularity | parsing, freshness, similarity, rotation, masking | defined once in `harness/lib/progress.py`, imported by hook, CLI, verify_rules | 0 duplicate implementations | review | design |
-| Q6 | Safety / fail safe | rotation, post-merge, installer move | files deleted | 0 deletions; every moved file exists at its destination with identical bytes | automated | user |
+| Q6 | Safety / fail safe | rotation, post-merge, installer move | files deleted | 0 deletions of records; every moved file exists at its destination with identical bytes; an index.md/stale.md merged into an existing todos index keeps every block | automated | user |
 | Q7 | Security / confidentiality | `progress.mask` over a fixture set with ≥ 2 samples per FR23 pattern (each token prefix, PEM, Bearer, each assignment key, email, IPv4, IPv6, each default host suffix, fence, traceback, timestamp run, level run) | samples whose secret substring survives in output / samples | 0 survivors (100% masked) | automated | user |
 | Q8 | Security / confidentiality | `verify_rules.py` over progress files containing each Q7 category (2)–(5) sample, and over the C28 exception set | detected samples / samples; false positives on exceptions | 100% detected; 0 false positives | automated | user |
 | Q9 | Performance / time behaviour | `progress.mask` on a 100 KB prompt mixing all categories | wall time, seconds, in-process | ≤ 0.2 s | automated (timed test) | design |
@@ -161,6 +161,9 @@ Installer prompt interrupted (EOF) or no TTY — treated as No — handoff left 
 | O13 | FR23, C24–C28, C31, Q7 | `progress.mask` | unit | equivalence partitioning + boundary value analysis | each FR23 pattern and each exception as a partition; log-run 2/3 lines; IPv4 octet 255/256; `sk-` 19/20 chars; boundary prefix inside a word; idempotence | 100% | masked output equals expected string | tests/test_progress.py |
 | O14 | FR21, FR22, C29, Errors (state file rows) | UserPromptSubmit + sync | unit with payload fixtures, temp repo | state transition testing | no state→first prompt; prompt→progress write sync; prompt after write→Stop sync; subsection missing→appended; unwritable state→notice | 100% | state file `prompts`, subsection text, other bytes unchanged, no raw prompt on disk | tests/test_progress.py |
 | O15 | FR24, C30, C31, Q8 | verify_rules secret check | unit, temp repo | decision table | location {progress, progress-logs} × category {token, email, ip, host, none} ; exception set | 100% | exit code, `<path>:<line>` and category in message | tests/test_doc_records.py |
+| O16 | Q3, FR5–FR10, FR24, Errors | every hook feedback, Stop reason, CLI error, and verify_rules secret message | unit with payload fixtures / CLI subprocess | equivalence partitioning | one partition per message: FR5 move report; FR6 refusal; FR7 refusal; FR8 stale and near-duplicate findings; FR10 missing-progress and empty-Next-Session reasons; FR24 finding; each Errors row that emits a message (invalid frontmatter, missing metadata, git unavailable, destination exists, show outside progress dirs, prompt not recorded) | 100% | message contains the concerned file's repo-relative path or name and a next-action verb from Q3 | tests/test_progress.py, tests/test_doc_records.py |
+| O17 | Q2 | pre-existing tests | review | — | `git diff --stat <base_commit> -- tests` | 100% | only Tests-path files changed; Test command exit 0 | review, recorded in ledger |
+| O18 | Q5 | parsing, freshness, similarity, rotation, masking | review | — | hook, CLI, verify_rules import these from `harness/lib/progress.py`; no second Levenshtein, mask, or parser | 100% | 0 duplicate implementations | review, recorded in ledger |
 
 # Assumptions and Defaults
 | id | decision | evidence and uncertainty | brief v<n> — approved / vetoed → <answer> / user answer |
@@ -203,22 +206,34 @@ Installer prompt interrupted (EOF) or no TTY — treated as No — handoff left 
 | FR21, FR22 | C29 | O14 | tests/test_progress.py |
 | FR23 | C24–C28, C31 | O13, O11 | tests/test_progress.py |
 | FR24 | C30, C31 | O15 | tests/test_doc_records.py |
+| Q3 | — | O16 | tests/test_progress.py, tests/test_doc_records.py |
+| Q2, Q5 | — | O17, O18 | review |
 
 # Workflow Control
 | item | value |
 | --- | --- |
-| correction batches used | 0 |
-| verifier invocations | 0 |
+| correction batches used | 3 |
+| verifier invocations | 2 |
 | open finding ids | none |
 
 Audit state (one entry per obligation; retain prior decisions in the execution ledger):
 | obligation id | spec version | evidence references and revision | accepted / open / invalidated / pending | rationale and mutation outcome | dependencies and reopening evidence |
 | --- | --- | --- | --- | --- | --- |
-| O1–O15 | 2 | none | pending | approved, not yet implemented | — |
+| O1–O8, O10–O12, O14, O15 | 4 | verifier round 1 (spec v3), tests after correction batch 1 | accepted | verifier 1 accepted; advisories A1–A6 recorded in ledger | reopen if hook messages, rotation, freshness, or mask code changes in batch 2 |
+| O9, O13, O16 | 5 | batch 2 tests and I1 message rewording; verifier round 2 | accepted | verifier 2 pass; E1, E2, S1 closed; M11, M12 killed | reopen if installer move, traceback masking, or message wording changes |
+| O17 | 5 | `git diff --stat b16e923 -- tests` after batch 2 | accepted | only Tests-path files changed; Test command exit 0 | — |
+| O18 | 5 | main review: `grep -rn "def levenshtein\|def mask\|def similarity\|def parse_frontmatter\|def unmasked\|def rotate\|re.compile.*AKIA" harness installer` hits only harness/lib/progress.py; progress_hook.py, bin/progress.py, verify_rules.py `import progress` and call parse/mask/unmasked/format_findings/rotate/check_findings/entry_report | accepted | 0 duplicate implementations | — |
 
 Execution ledger (append attempts; preserve failed approaches):
 | attempt | finding / failure signature | cause hypothesis | changed approach / new evidence | result / disposition |
 | --- | --- | --- | --- | --- |
+| 1 | Test command (plain python3): 16 failures + 2 import errors (`pytest`, `hypothesis` missing) | test defects: pre-existing tests hard-code VERSION 0.32.0, migration y-line counts, and the `.harness/bin` file list; tests/test_comment_gate.py and tests/test_session_metrics.py were outside Tests paths; deps not installed in system python | Test command switched to `uv run --with pytest --with hypothesis`; with it test_isolation_telemetry passes and test_session_metrics fails only on VERSION; finding T1 sent to test-implementer | closed by attempt 2 |
+| 2 | after test correction batch 1: Test command exit 0, 866 tests | — | — | T1 closed; review R1 and R2 passed (only historical-record notes, migration notice, and the kept `handoff` telemetry token mention handoff; continue-on has `disable-model-invocation: true` and reads only `show` output and `### Related`) |
+| 3 | verifier round 1: retry; S1 Q2/Q3/Q5 unmapped; E1 todos-index merge into existing blocks untested; E2 single traceback sample | S1 spec gap; E1, E2 test evidence gaps | spec v4 adds O16–O18; batch 2 to test-implementer for E1, E2, O16; advisories A1 touch-and-revert freshness, A2 PreCompact other-session row, A3 C23 hook silence, A4 6/7-char commit in verify_rules, A5 blank prompt lines, A6 no session id / dangling before / `::x` IPv6 not taken (undeclared combinations) | open |
+| 4 | hand mutations on batch-1 tests (targeted modules test_progress / test_doc_records via the Test command's runner) | strongest defect classes: verifier proposals 2–9, 10, 12 plus rotation and storage | M1 similarity ≥→> (killed by test_o3_boundaries_of_the_similarity_threshold); M2 same-commit guard dropped (test_o3_same_commit_never_warns_and_different_commit_does); M3 live foreign marker ignored (test_o1_c4_live_foreign_marker_refuses_rotation); M4 stop_hook_active ignored (test_o4_stop_decision_table, 4 rows); M5 prompt stored unmasked (test_o14_raw_secret_appears_in_no_file_of_the_repository + 2); M6 token prefix boundary dropped (test_o13_prefix_inside_a_word_is_not_a_token); M7 log run 3→2 (test_o13_c26_two_lines_kept_three_masked); M8 loopback exception removed (test_o13_loopback_boundary_126_127_128 + 4); M9 post-merge A→AM (test_o7_merge_that_only_modifies_an_existing_progress_does_not_move_it: FileNotFoundError because the modified progress was moved — the injected violation); M10 secret check skips progress-logs (test_o15_* progress-logs rows, 13) | 10/10 detected; all restored (`seed.py status`: none) |
+| 5 | Test command after batch 2: 875 tests, 2 failures in O16: FR5 move report ("Keep … use `/continue-on`") and `show` outside-progress-dir error ("pass a file …") have no Q3 verb | implementation defect I1 (messages written before Q3 was made measurable); test-implementer challenge: messages about a not-yet-existing progress name its directory | spec v5 Q3 accepts the directory for those two; I1 sent to implementer; S1, E1, E2 closed by batch 2 evidence (O9 cases a/b, three traceback samples, O16 table) pending verifier round 2 | closed by attempt 6 |
+| 6 | implementer fixed I1: 11 messages reworded (rotation report, findings header, no-session-id notice, invalid frontmatter, missing title/section/subsection, show/check path errors), 46/46 messages checked; Test command exit 0, 875 tests; confirming mutations M11 todos index overwritten instead of merged (killed by test_o9_q6_existing_todos_blocks_survive_the_merge_and_all_records_arrive_intact) and M12 traceback exception line left out of block (killed by 4 traceback tests); restored, `seed.py status`: none; O17 re-checked: `git diff --stat b16e923 -- tests` lists only Tests paths | — | — | I1 closed; verifier round 2 dispatched |
+| 7 | verifier round 2: pass, 0 blocking; advisories: O18 grep patterns not recorded (now recorded in Audit state), O16 stale-message scenario covers FR8(b) only (same message path as FR8(a)) | — | — | complete |
 
 # Version Log
 ## v1
@@ -228,3 +243,19 @@ Execution ledger (append attempts; preserve failed approaches):
 - Added I6, FR21–FR24, C24–C31, Q7–Q9, O13–O15; Security now applicable.
 - Fixed FR12 env var name (`CLAUDE_SESSION_ID` does not exist; `CLAUDE_CODE_SESSION_ID` observed). Added `spec_lifecycle.py session` warning change and `rearrange-docs` to FR18; migration ordering to FR19; post-merge ordering to FR14; README.md and config.default.json to Implementation.
 - Status set to `active`.
+## v3
+- Contract-only: added `harness/hooks/doc_commit.py` to Implementation (required by the Signatures hook-write rule); added tests/test_comment_gate.py and tests/test_session_metrics.py to Tests (they hard-code version and migration counts); Test command runs through `uv` with pytest and hypothesis (repository tests import them; system python lacks them); clarified FR19 "no TTY", C8 labels, C23 rotation, and Q6 for index merges into an existing todos index (implementer and test-implementer challenges).
+## v4
+- Contract-only, from verifier round 1 finding S1: Q3 made measurable (path/name + next-action verb list); added O16 (Q3 messages), O17 (Q2 review), O18 (Q5 review) and their traceability.
+## v5
+- Contract-only, from test-implementer challenge in batch 2: Q3 accepts the `agent-docs/progress` directory for messages about a progress that does not exist yet.
+
+# Retrospective
+## 2026-10-29
+| observation | evidence | how to re-check |
+| --- | --- | --- |
+| System `python3` lacks pytest and hypothesis; plain `python3 -m unittest discover -s tests` reports import errors for test_session_metrics and test_isolation_telemetry | first Test command run of this spec: `ModuleNotFoundError: No module named 'pytest'` / `'hypothesis'` | `python3 -c "import pytest, hypothesis"` |
+| In Bash, `CLAUDE_CODE_SESSION_ID` equals the transcript file id; `CLAUDE_SESSION_ID` is not set | 2026-10-28: env value `1f08ec89-…` matched `~/.claude/projects/<project>/1f08ec89-….jsonl` | `echo $CLAUDE_CODE_SESSION_ID` and compare with the newest transcript file name |
+| Pre-existing tests hard-code VERSION and per-migration `y` answer counts, so a version bump fails about 16 tests across 5 files | Test command run 1 failure list (ledger attempt 1) | `grep -rn '"0\.33\.0"\|"y\\n' tests/` |
+| This macOS shell has no `timeout`; zsh treats a word starting with `=` as a command lookup (`echo ======` fails) | command output in this session | `which timeout`; `zsh -c 'echo ===='` |
+

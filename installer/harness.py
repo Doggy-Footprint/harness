@@ -29,6 +29,7 @@ GITIGNORE_LINES = [
     "agent-docs/specs/.running/",
     "agent-docs/specs/.seed/",
     ".harness/sessions/.running/",
+    ".harness/sessions/progress-*.json",
     ".harness/**/__pycache__",
 ]
 HOOK_MANAGER_FILES = [
@@ -60,7 +61,8 @@ AGENT_MODELS = ("sonnet", "opus")
 DEFAULT_AGENT_MODEL = "sonnet"
 MODEL_SELECTABLE_AGENTS = {"code-explorer", "implementer", "test-implementer", "test-verifier"}
 TARGET_CONFIG = ".harness/config.json"
-MANAGED_DOC_DIRS = ("try-n-fail", "handoff")
+MANAGED_DOC_DIRS = ("try-n-fail", "todos")
+PROGRESS_DOC_DIRS = ("progress", "progress-logs")
 
 COMMENT_APPROVAL_LABEL = "comments-approved"
 COMMENT_APPROVAL_LABEL_COLOR = "0E8A16"
@@ -671,6 +673,124 @@ def migrate_missing_stale_records(target: Path, dry_run: bool) -> list[str]:
     return planned
 
 
+HANDOFF_INDEX_FILES = ("index.md", "stale.md")
+
+
+def _handoff_records(handoff_dir: Path) -> list[Path]:
+    if not handoff_dir.is_dir():
+        return []
+    return sorted(
+        path for path in handoff_dir.rglob("*")
+        if (path.is_file() or path.is_symlink())
+        and not (path.parent == handoff_dir and path.name in HANDOFF_INDEX_FILES)
+    )
+
+
+def _stale_archive_blocks(content: str) -> list[str]:
+    if content.startswith(STALE_ARCHIVE_HEADER):
+        content = content[len(STALE_ARCHIVE_HEADER):]
+    elif content.startswith(STALE_ARCHIVE_TITLE):
+        content = content[len(STALE_ARCHIVE_TITLE):]
+    return _index_blocks(content)
+
+
+def _render_stale_archive(blocks: list[str]) -> str:
+    return STALE_ARCHIVE_HEADER + "".join(block.rstrip("\n") + "\n---\n" for block in blocks)
+
+
+def _stdin_readable() -> bool:
+    try:
+        return sys.stdin is not None and not sys.stdin.closed and sys.stdin.readable()
+    except (AttributeError, ValueError, OSError):
+        return False
+
+
+def move_handoff_to_todos(target: Path, input_fn: Callable[[str], str]) -> list[str]:
+    """Ask, separately from the migration approval, whether to move handoff records to todos/ (0.33.0).
+
+    No, EOF, or no readable stdin leaves agent-docs/handoff/ untouched; the answer never fails the update.
+    """
+    handoff_dir = target / "agent-docs" / "handoff"
+    todos_dir = target / "agent-docs" / "todos"
+    records = _handoff_records(handoff_dir)
+    if not any(path.name != ".gitkeep" for path in records):
+        return []
+    notice = (
+        "agent-docs/handoff/ is left untouched and is no longer managed or checked by the harness; "
+        "move its records to agent-docs/todos/ yourself when you want them checked"
+    )
+    print("agent-docs/handoff/ holds records from before harness 0.33.0:")
+    for path in records:
+        print(f"- {path.relative_to(target).as_posix()}")
+    answer = ""
+    if _stdin_readable():
+        try:
+            answer = input_fn(
+                "Move all of them (with stale/, index.md, and stale.md) to agent-docs/todos/? [y/N] "
+            ).strip().lower()
+        except (EOFError, OSError):
+            answer = ""
+    if answer not in ("y", "yes"):
+        print(notice)
+        return [notice]
+
+    moves = [(path, todos_dir / path.relative_to(handoff_dir)) for path in records]
+    conflicts = [destination for _source, destination in moves if destination.exists() or destination.is_symlink()]
+    if conflicts:
+        message = (
+            "agent-docs/handoff/ was not moved: "
+            + ", ".join(path.relative_to(target).as_posix() for path in conflicts)
+            + " already exist; " + notice
+        )
+        print(message)
+        return [message]
+    for source, destination in moves:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        source.rename(destination)
+    for name, read_blocks, render in (
+        ("index.md", _index_blocks, _write_index_blocks),
+        ("stale.md", _stale_archive_blocks, _render_stale_archive),
+    ):
+        source = handoff_dir / name
+        if not source.is_file():
+            continue
+        destination = todos_dir / name
+        if not destination.exists():
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            source.rename(destination)
+            continue
+        merged = read_blocks(destination.read_text(encoding="utf-8")) + read_blocks(source.read_text(encoding="utf-8"))
+        destination.write_text(render(merged), encoding="utf-8")
+        source.unlink()
+    for directory in sorted((path for path in handoff_dir.rglob("*") if path.is_dir()), reverse=True):
+        if not any(directory.iterdir()):
+            directory.rmdir()
+    if handoff_dir.is_dir() and not any(handoff_dir.iterdir()):
+        handoff_dir.rmdir()
+    message = f"moved {len(records)} file(s) from agent-docs/handoff/ to agent-docs/todos/"
+    print(message)
+    return [message]
+
+
+def migrate_progress_records(target: Path, dry_run: bool) -> list[str]:
+    planned = [
+        "replace the Handoff Rule with a Progress Rule (agent-docs/progress/, one per session; older ones move to "
+        "agent-docs/progress-logs/) and a Todo Rule (agent-docs/todos/, with index.md, stale.md, stale/)",
+        "Claude hooks record masked user prompts, rotate and check progress on write, remind before compaction, and "
+        "block a stop once when a session that changed files has no progress; post-merge moves merged-in progress "
+        "to progress-logs/; pre-commit blocks unmasked keys, emails, IPs, and internal hostnames in progress records",
+        "install the user-invoked continue-on skill and .harness/bin/progress.py",
+        "workflow-approach writes the session progress instead of a handoff; spec frontmatter `handoff` is optional",
+    ]
+    handoff_dir = target / "agent-docs" / "handoff"
+    if handoff_dir.is_dir():
+        planned.append(
+            "ask separately whether to move agent-docs/handoff/ records to agent-docs/todos/; "
+            "answering no leaves them untouched and unmanaged"
+        )
+    return planned
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -704,6 +824,7 @@ MIGRATIONS = (
     (parse_version("0.30.0"), "nudge commit messages toward Request/Intent and PR descriptions toward a standup intro", migrate_message_nudges),
     (parse_version("0.31.0"), "stop workflow-approach dispatch from telling test-implementer to run tests", migrate_test_implementer_dispatch),
     (parse_version("0.32.0"), "record isolation-candidate telemetry; lint gate in Test command; drop characterization-test rule", migrate_isolation_telemetry),
+    (parse_version("0.33.0"), "replace handoffs with session progress records and todos; add continue-on", migrate_progress_records),
 )
 
 
@@ -750,6 +871,8 @@ def run_migrations(
 
     for _migration_version, _label, migration, _planned in planned_migrations:
         migration(target, dry_run=False)
+        if migration is migrate_progress_records:
+            move_handoff_to_todos(target, input_fn)
     return True
 
 
@@ -987,6 +1110,8 @@ def check_write_path_obstructions(target: Path, owned: dict) -> list[str]:
         planned.add(f"agent-docs/{name}/index.md")
         planned.add(f"agent-docs/{name}/stale.md")
         planned.add(f"agent-docs/{name}/stale/.gitkeep")
+    for name in PROGRESS_DOC_DIRS:
+        planned.add(f"agent-docs/{name}/.gitkeep")
     planned.update(skill_links)
 
     conflicts = []
@@ -1244,12 +1369,13 @@ def ensure_agent_docs_dirs(target: Path, dry_run: bool, report: dict):
                 stale_gitkeep.parent.mkdir(parents=True, exist_ok=True)
                 stale_gitkeep.write_text("", encoding="utf-8")
             report["write"].append(str(stale_gitkeep.relative_to(target)))
-    gitkeep = target / "agent-docs" / "synced-comments" / ".gitkeep"
-    if not gitkeep.exists():
-        if not dry_run:
-            gitkeep.parent.mkdir(parents=True, exist_ok=True)
-            gitkeep.write_text("", encoding="utf-8")
-        report["write"].append(str(gitkeep.relative_to(target)))
+    for name in ("synced-comments", *PROGRESS_DOC_DIRS):
+        gitkeep = target / "agent-docs" / name / ".gitkeep"
+        if not gitkeep.exists():
+            if not dry_run:
+                gitkeep.parent.mkdir(parents=True, exist_ok=True)
+                gitkeep.write_text("", encoding="utf-8")
+            report["write"].append(str(gitkeep.relative_to(target)))
 
 
 def ensure_gitignore(target: Path, dry_run: bool, report: dict):

@@ -74,6 +74,14 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.harness/hooks/session_lock.py\""
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.harness/hooks/progress_hook.py\""
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -103,6 +111,15 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.harness/hooks/telemetry_hook.py\""
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.harness/hooks/progress_hook.py\""
+          }
+        ]
       }
     ],
     "PostToolUseFailure": [
@@ -112,6 +129,36 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.harness/hooks/telemetry_hook.py\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.harness/hooks/progress_hook.py\""
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.harness/hooks/progress_hook.py\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.harness/hooks/progress_hook.py\""
           }
         ]
       }

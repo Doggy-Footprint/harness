@@ -72,6 +72,32 @@
       "matcher": "Bash",
       "targets": ["claude"],
       "command": "python3 \"{root}/.harness/hooks/telemetry_hook.py\""
+    },
+    {
+      "event": "SessionStart",
+      "targets": ["claude"],
+      "command": "python3 \"{root}/.harness/hooks/progress_hook.py\""
+    },
+    {
+      "event": "UserPromptSubmit",
+      "targets": ["claude"],
+      "command": "python3 \"{root}/.harness/hooks/progress_hook.py\""
+    },
+    {
+      "event": "PostToolUse",
+      "matcher": "Write|Edit|MultiEdit",
+      "targets": ["claude"],
+      "command": "python3 \"{root}/.harness/hooks/progress_hook.py\""
+    },
+    {
+      "event": "PreCompact",
+      "targets": ["claude"],
+      "command": "python3 \"{root}/.harness/hooks/progress_hook.py\""
+    },
+    {
+      "event": "Stop",
+      "targets": ["claude"],
+      "command": "python3 \"{root}/.harness/hooks/progress_hook.py\""
     }
   ]
 }

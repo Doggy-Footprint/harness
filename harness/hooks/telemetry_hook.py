@@ -19,9 +19,9 @@ REPO_ROOT = config.REPO_ROOT
 SEED_SCRIPT = ".harness/bin/seed.py"
 # REPO_ROOT is symlink-resolved (config.py resolves __file__); tool_input
 # paths from the calling agent usually are not, so resolve() here too or
-# every spec/handoff write silently drops on a symlinked worktree (e.g. macOS /tmp).
+# every spec/progress write silently drops on a symlinked worktree (e.g. macOS /tmp).
 SPECS_DIR = PATHS.specs.resolve()
-HANDOFF_DIR = PATHS.handoff.resolve()
+PROGRESS_DIR = PATHS.progress.resolve()
 
 
 def resolve_path(path_str: str) -> Path:
@@ -78,8 +78,8 @@ def emit_path_write(payload: dict, path_str) -> None:
     path = resolve_path(path_str)
     if path.parent == SPECS_DIR and path.suffix == ".md":
         telemetry.emit(payload, "spec_write", spec=path.stem, version=parse_spec_version(path))
-    elif path.parent == HANDOFF_DIR and path.name not in ("index.md", "stale.md"):
-        telemetry.emit(payload, "handoff_write", file=path.name)
+    elif path.parent == PROGRESS_DIR and path.suffix == ".md":
+        telemetry.emit(payload, "progress_write", file=path.name)
 
 
 def bash_exit_code(tool_response):

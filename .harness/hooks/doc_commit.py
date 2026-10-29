@@ -39,8 +39,12 @@ def target_path(payload: dict) -> Path | None:
     if path.suffix != ".md" or path.name in UNSTAMPED_NAMES:
         return None
     try:
-        path.relative_to(DOCS_ROOT)
+        relative = path.relative_to(DOCS_ROOT)
     except ValueError:
+        return None
+    # progress_hook.py stamps progress files itself; Claude Code runs matching
+    # PostToolUse hooks concurrently, so two writers would lose an update.
+    if relative.parts[:1] == ("progress",):
         return None
     return path if path.is_file() else None
 

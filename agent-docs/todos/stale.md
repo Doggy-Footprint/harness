@@ -106,3 +106,8 @@ File: aea0d3ab56c57d53-adr-rejection-to-try-n-fail.md
 Summary: Move ADR and rejection records to try-n-fail as the user chooses after the 0.29.0 update.
 Related Files: agent-docs/adr/4a5b6c7d8e9f0123-versioned-migrations.md, agent-docs/adr/stale/5c4c01bdc91769f7-selfcheck-swe-bench-baseline.md
 Related Symbols: none
+---
+File: 5c55593c9e5cfe8a-progress-and-continue-on.md
+Summary: Draft spec for session progress records, progress-logs rotation, and the user-invoked continue-on skill awaits user review; includes the cross-session research evidence behind the design
+Related Files: agent-docs/specs/388ea2d9a2de1f5f-progress-and-continue-on.md, harness/instructions/harness-block.md, harness/skills/workflow-approach/SKILL.md, harness/hooks/hooks.spec.json, installer/harness.py
+Related Symbols: REQUIRED_HEADINGS, cmd_validate, doc_commit.stamped
