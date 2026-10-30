@@ -3,7 +3,7 @@ session: 67547623-25f1-4646-b667-f46c6b0cebaf
 before: agent-docs/progress-logs/e73a776390393450-progress-and-continue-on.md
 previous: none
 branch: feat/progress-on-claude-changes
-commit: 16258311a647f09f3ee84183d79028e26222e464
+commit: 7b37323433e6a5c306f5438a354858b32fe29aad
 ---
 
 # Require progress only when Claude Code changed the project (0.34.0, 0.34.1)
@@ -12,15 +12,15 @@ commit: 16258311a647f09f3ee84183d79028e26222e464
 
 ### State
 - 0.34.0 (committed in 15226e9): a progress is required only when this session's own tool calls changed the project: Write/Edit/MultiEdit/NotebookEdit inside the repository, or a Bash call (including a failed one) whose before/after fingerprint of HEAD, git status, and changed paths' mtime/size differs.
-  - commit: 15226e9; files: harness/hooks/progress_hook.py, harness/lib/progress.py, harness/hooks/hooks.spec.json, harness/instructions/harness-block.md
+  - commit: 7b37323; files: harness/hooks/progress_hook.py, harness/lib/progress.py, harness/hooks/hooks.spec.json, harness/instructions/harness-block.md
 - 0.34.1: Bash snapshots and the change marker live as files in `.harness/sessions/progress-<session>.d/` (`snap-<tool_use_id>`, `modified`) instead of the shared session JSON; edits to git-ignored paths do not count; SessionEnd removes leftover snapshots and keeps `modified` so a resumed session still sees it; SessionStart no longer records `start_head`. This repository is updated to 0.34.1.
-  - commit: 15226e9; files: harness/hooks/progress_hook.py, harness/lib/progress.py, harness/hooks/hooks.spec.json, harness/instructions/harness-block.md, installer/harness.py, harness/VERSION
+  - commit: 7b37323; files: harness/hooks/progress_hook.py, harness/lib/progress.py, harness/hooks/hooks.spec.json, harness/instructions/harness-block.md, installer/harness.py, harness/VERSION
 
 ### Next Step
-- Push branch feat/progress-on-claude-changes and open a PR if the user asks.
-  - commit: 15226e9; files: none
+- Review and merge PR #28 (feat/progress-on-claude-changes); after merge, a later session's first progress write rotates this one to progress-logs/.
+  - commit: 7b37323; files: none
 - Known limits stated in the Progress Rule or left open: background Bash is checked only until its tool call returns; a user edit made while a Bash call runs is attributed to that call.
-  - commit: 15226e9; files: harness/instructions/harness-block.md
+  - commit: 7b37323; files: harness/instructions/harness-block.md
 
 ### Constraints
 - "progress 작성 기준을 파일 변경 → 클로드 코드에 의한 프로젝트 변경시로 바꿔 (수정, 패치 등 작업)"
@@ -30,15 +30,15 @@ commit: 16258311a647f09f3ee84183d79028e26222e464
 
 ### Verify
 - Run `uv run --no-project --with pytest --with hypothesis python3 -m unittest discover -s tests`; 882 tests passed after 0.34.1 (system python3 lacks pytest and hypothesis). `test_o4_parallel_bash_calls_keep_every_snapshot_and_record_the_change` repeats the 8-way parallel case 5 times.
-  - commit: 15226e9; files: tests/test_progress.py, tests/test_installer.py
+  - commit: 7b37323; files: tests/test_progress.py, tests/test_installer.py
 
 ### Dead Ends
 - Storing Bash snapshots and the change flag in the shared session JSON via load/modify/write loses entries under parallel hooks (see Failed Attempts).
-  - commit: 15226e9; files: harness/hooks/progress_hook.py
+  - commit: 7b37323; files: harness/hooks/progress_hook.py
 
 ### Related
 - Spec log of the original progress feature, whose FR10 and A2 state the replaced "changed repository files" criterion.
-  - commit: 15226e9; files: agent-docs/spec-logs/388ea2d9a2de1f5f-progress-and-continue-on.md
+  - commit: 7b37323; files: agent-docs/spec-logs/388ea2d9a2de1f5f-progress-and-continue-on.md
 
 ## Record
 
@@ -132,3 +132,7 @@ commit: 16258311a647f09f3ee84183d79028e26222e464
 > 이 시나리오들을 하네스 테스트로 추가할 것. 병렬 시나리오는 20번 반복해도 모두 통과해야 한다.   
 > </pasted_content id="7246">
 > 
+
+#### 4 — 2026-10-30T05:25:31Z
+
+> 커밋하고, 반영하자.
