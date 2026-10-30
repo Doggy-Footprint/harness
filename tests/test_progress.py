@@ -120,6 +120,10 @@ class ProgressCase(InstallerTestCase):
         self.commit(repo, "base")
         return repo
 
+    def commit_with_hooks(self, repo, message="work"):
+        return subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", message],
+                              capture_output=True, text=True, env=self.env())
+
     def commit(self, repo, message):
         run_git(repo, "commit", "-q", "--no-verify", "--allow-empty", "-m", message)
         return self.head(repo)
@@ -766,6 +770,22 @@ class TestStopSessionStartPreCompact(ProgressCase):
         ignored = run_git(repo, "check-ignore", "--", *files).stdout.split()
         self.assertEqual(sorted(ignored), files)
 
+    def test_commit_stages_the_synced_progress_even_when_only_work_files_are_staged(self):
+        repo = self.new_repo()
+        self.start(repo)
+        head = self.head(repo)
+        path = self.put(repo, NAME1, build(session="sessa", stamp=head, next_step=[("alpha item", head, "none")], user_requests=""))
+        run_git(repo, "add", "-A")
+        parent = self.commit(repo, "progress")
+        self.prompt(repo, "last request before commit")
+        (repo / "src" / "a.py").write_text("a = 2\n")
+        run_git(repo, "add", "--", "src/a.py")
+        committed = self.commit_with_hooks(repo)
+        self.assertEqual(committed.returncode, 0, out(committed))
+        self.assertEqual(run_git(repo, "status", "--porcelain").stdout, "")
+        self.assertIn("> last request before commit", run_git(repo, "show", f"HEAD:{self.rel(repo, path)}").stdout)
+        self.assertIn(f"\ncommit: {parent}\n---", path.read_text())
+
     def test_o4_c13_changes_only_under_harness_or_outside_the_repository_do_not_count(self):
         repo = self.setup_session(False, "none")
         self.bash(repo, lambda: (repo / ".harness" / "scratch.txt").write_text("x\n"))
@@ -926,7 +946,7 @@ class TestErrors(ProgressCase):
                 self.assertIn("not a progress path", out(result))
                 self.assertNotIn("SECRET-NOTES-CONTENT", out(result))
 
-    def test_o5_row6_stop_without_state_file_does_not_block_and_appends_empty_subsection_only_if_missing(self):
+    def test_o5_row6_without_state_file_stop_does_not_block_and_commit_appends_empty_subsection_only_if_missing(self):
         repo = self.new_repo()
         head = self.head(repo)
         (repo / "src" / "new.py").write_text("x\n")
@@ -934,14 +954,18 @@ class TestErrors(ProgressCase):
         self.assertEqual((unblocked.returncode, unblocked.stdout, unblocked.stderr), (0, "", ""))
         missing = build(session="sessa", stamp=head, next_step=[("alpha item", head, "none")], user_requests=None)
         path = self.put(repo, NAME1, missing)
-        result = self.stop(repo)
-        self.assertEqual(result.returncode, 0, out(result))
+        self.assertEqual(self.stop(repo).returncode, 0)
+        self.assertEqual(path.read_text(), missing)
+        run_git(repo, "add", "-A")
+        committed = self.commit_with_hooks(repo)
+        self.assertEqual(committed.returncode, 0, out(committed))
         before, body, after = split_requests(path.read_text())
         self.assertEqual(body, [])
-        self.assertTrue(before.startswith(missing.rstrip("\n")))
-        kept = build(session="sessa", stamp=head, next_step=[("alpha item", head, "none")], user_requests=f"#### 1 {EM} 2026-01-01T00:00:00Z\n> kept text")
+        self.assertEqual(run_git(repo, "status", "--porcelain", "--", self.rel(repo, path)).stdout, "")
+        kept = build(session="sessa", stamp=self.head(repo), next_step=[("alpha item", head, "none")], user_requests=f"#### 1 {EM} 2026-01-01T00:00:00Z\n> kept text")
         path.write_text(kept)
-        self.stop(repo)
+        run_git(repo, "add", "-A")
+        self.assertEqual(self.commit_with_hooks(repo).returncode, 0)
         self.assertEqual(path.read_text(), kept)
 
     def test_o5_row7_unwritable_state_gives_notice_and_stores_nothing(self):
@@ -1366,7 +1390,7 @@ class TestPromptRecording(ProgressCase):
             for secret in secrets:
                 self.assertNotIn(secret.encode(), data, file)
 
-    def test_o14_c29_progress_write_then_stop_sync_user_requests(self):
+    def test_o14_c29_progress_write_then_commit_syncs_user_requests_and_stop_does_not(self):
         repo = self.new_repo()
         self.start(repo)
         path, original = self.own(repo, user_requests="")
@@ -1389,7 +1413,13 @@ class TestPromptRecording(ProgressCase):
         stopped = self.stop(repo, active=True)
 
         self.assertNotIn("Traceback", out(stopped))
+        self.assertEqual(path.read_text(), first_pass)
+        run_git(repo, "add", "-A")
+        committed = self.commit_with_hooks(repo)
+        self.assertEqual(committed.returncode, 0, out(committed))
+        self.assertEqual(run_git(repo, "status", "--porcelain").stdout, "")
         second_pass = path.read_text()
+        self.assertEqual(run_git(repo, "show", f"HEAD:{self.rel(repo, path)}").stdout, second_pass)
         _, body, _ = split_requests(second_pass)
         self.assertEqual(body, self.expected_requests(repo, 4))
         self.assertEqual(body[:len(self.expected_requests(repo, 3))], self.expected_requests(repo, 3))

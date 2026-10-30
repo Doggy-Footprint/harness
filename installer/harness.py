@@ -808,6 +808,9 @@ def migrate_progress_change_markers(target: Path, dry_run: bool) -> list[str]:
         "a Claude SessionEnd hook removes leftover Bash snapshots; SessionStart no longer records start_head",
         "add `.harness/sessions/progress-*.d/` to .gitignore so snapshot and marker files are never committed",
         "the Progress Rule states that background Bash commands are checked only until their tool call returns",
+        "pre-commit writes the session's recorded prompts into the current progress's User Requests and stages it; "
+        "Stop no longer rewrites the progress, so it is not left modified after the last commit",
+        "projects with a git hook manager that call `.harness/git/pre-commit` need no change",
     ]
 
 

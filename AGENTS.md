@@ -104,7 +104,7 @@ Required file structure:
 
 Every `## Next Session` bullet outside `### Constraints` is an entry followed by `  - commit: <sha checked against>; files: <comma-separated repo paths or none>`; record each entry's own commit. `### Constraints` bullets quote the user verbatim from `### User Requests` and carry `  - source: <where it was said>`. With nothing to continue, write `- none: <reason>`. `### Related` lists the exact records a later session needs; never point to records you did not check.
 
-A hook writes `### User Requests` from the session's masked prompts; do not edit it. Pre-commit blocks keys, tokens, emails, IP addresses, and internal hostnames in `progress/` and `progress-logs/`; replace each with `[masked:<category>]`.
+Hooks write `### User Requests` from the session's masked prompts when the progress is written and at each commit, which stages it; do not edit it. Pre-commit blocks keys, tokens, emails, IP addresses, and internal hostnames in `progress/` and `progress-logs/`; replace each with `[masked:<category>]`.
 
 To continue earlier work, read only the `## Next Session` of the chosen progress and the pointers under its `### Related` (`/continue-on`); never guess related records. Re-check entries the hooks flag as stale, and ask the user whether a flagged near-duplicate was re-verified or copied. Never edit a progress after its session ends.
 
