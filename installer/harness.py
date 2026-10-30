@@ -787,6 +787,17 @@ def migrate_progress_records(target: Path, dry_run: bool) -> list[str]:
     return planned
 
 
+def migrate_progress_session_changes(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "the Progress Rule requires a progress only when Claude Code changed the project in that session, not "
+        "whenever the working tree differs from the session start",
+        "the progress hook records a change on Write, Edit, MultiEdit, and NotebookEdit inside the repository, and "
+        "on a Bash call whose run changed git status, file stats of changed paths, or HEAD; paths under .harness/ "
+        "do not count",
+        "Claude hooks add PreToolUse and PostToolUseFailure on Bash and widen PostToolUse for progress_hook.py",
+    ]
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -821,6 +832,7 @@ MIGRATIONS = (
     (parse_version("0.31.0"), "stop workflow-approach dispatch from telling test-implementer to run tests", migrate_test_implementer_dispatch),
     (parse_version("0.32.0"), "record isolation-candidate telemetry; lint gate in Test command; drop characterization-test rule", migrate_isolation_telemetry),
     (parse_version("0.33.0"), "replace handoffs with session progress records and todos; add continue-on", migrate_progress_records),
+    (parse_version("0.34.0"), "require progress only when Claude Code changed the project", migrate_progress_session_changes),
 )
 
 

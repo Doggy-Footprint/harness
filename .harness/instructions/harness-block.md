@@ -83,7 +83,7 @@ Append rows for new attempts at the same goal; never delete or edit existing row
 
 ## Progress Rule
 
-Directory: `agent-docs/progress/`, holding at most one `<16-char-hex-id>-<kebab-case-name>.md`, the current session's. Every session that changes repository files writes one and commits it with the work. When a new session writes its progress, a hook moves the previous one to `agent-docs/progress-logs/` under the same name; a merge moves progress files it adds there too. One progress per session: merge into the existing one instead of writing a second. Parallel sessions on one checkout are not supported.
+Directory: `agent-docs/progress/`, holding at most one `<16-char-hex-id>-<kebab-case-name>.md`, the current session's. Every session in which Claude Code changes the project (edits, patches, commits, or other commands that change the working tree or HEAD) writes one and commits it with the work; files changed outside the session's own tool calls do not count. When a new session writes its progress, a hook moves the previous one to `agent-docs/progress-logs/` under the same name; a merge moves progress files it adds there too. One progress per session: merge into the existing one instead of writing a second. Parallel sessions on one checkout are not supported.
 
 Frontmatter: `session` (Claude Code session id), `before` (repo path of the progress moved to logs when this one was created, or `none`), `previous` (repo path of the progress this session continued through `/continue-on`, or `none`), `branch`, and the `commit` stamp. `before` records order only; `previous` records an explicit continuation.
 

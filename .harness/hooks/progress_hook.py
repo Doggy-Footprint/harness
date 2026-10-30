@@ -17,6 +17,7 @@ REPO_ROOT = config.REPO_ROOT
 PATHS = config.load_paths()
 PROGRESS_DIR = PATHS.progress
 CHECK_COMMAND = "python3 .harness/bin/progress.py check"
+EDIT_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 
 
 def rel(path: Path) -> str:
@@ -58,12 +59,78 @@ def session_state(session_id: str | None) -> dict | None:
     return progress.load_state(progress.state_path(REPO_ROOT, session_id))
 
 
-def changed_repository(session_id: str | None) -> bool:
+def modified_project(session_id: str | None) -> bool:
     state = session_state(session_id)
-    start_head = state.get("start_head") if state else None
-    if isinstance(start_head, str) and start_head and progress.git_head(REPO_ROOT) != start_head:
-        return True
-    return any(not path.startswith(".harness/") for path in progress.git_changed_paths(REPO_ROOT))
+    return bool(state and state.get("modified") is True)
+
+
+def update_state(session_id: str, change) -> None:
+    path = progress.state_path(REPO_ROOT, session_id)
+    state = progress.load_state(path) if path.exists() else {"session_id": session_id}
+    if state is None:
+        return
+    if change(state) is False:
+        return
+    try:
+        progress.write_state(path, state)
+    except OSError:
+        pass
+
+
+def mark_modified(session_id: str) -> None:
+    def change(state: dict):
+        if state.get("modified") is True:
+            return False
+        state["modified"] = True
+    update_state(session_id, change)
+
+
+def fingerprint() -> str:
+    return progress.git_worktree_fingerprint(REPO_ROOT, ".harness/")
+
+
+def edited_path(payload: dict) -> Path | None:
+    tool_input = payload.get("tool_input") or {}
+    file_path = tool_input.get("file_path") or tool_input.get("notebook_path")
+    if not isinstance(file_path, str) or not file_path:
+        return None
+    path = Path(file_path)
+    if not path.is_absolute():
+        path = Path(payload.get("cwd") or REPO_ROOT) / path
+    return path.resolve()
+
+
+def record_modification(payload: dict) -> None:
+    session_id = session_id_of(payload)
+    if not session_id:
+        return
+    tool = payload.get("tool_name")
+    if tool == "Bash":
+        tool_use_id = payload.get("tool_use_id")
+        if not isinstance(tool_use_id, str) or not tool_use_id:
+            return
+        state = session_state(session_id) or {}
+        snapshots = state.get("bash_snapshots")
+        before = snapshots.get(tool_use_id) if isinstance(snapshots, dict) else None
+        if before is None:
+            return
+        changed = fingerprint() != before
+
+        def change(state: dict):
+            snapshots = state.get("bash_snapshots")
+            if isinstance(snapshots, dict):
+                snapshots.pop(tool_use_id, None)
+            if changed:
+                state["modified"] = True
+        update_state(session_id, change)
+        return
+    if tool not in EDIT_TOOLS:
+        return
+    path = edited_path(payload)
+    root = REPO_ROOT.resolve()
+    if path is None or not path.is_relative_to(root) or path.is_relative_to(root / ".harness"):
+        return
+    mark_modified(session_id)
 
 
 def write_progress(path: Path, text: str, original: str) -> None:
@@ -196,7 +263,39 @@ def rotation_refusal(path: Path, session_id: str | None, own_session: str | None
     return None
 
 
+def on_pre_tool_use(payload: dict) -> int:
+    session_id = session_id_of(payload)
+    tool_use_id = payload.get("tool_use_id")
+    if payload.get("tool_name") != "Bash" or not session_id or not isinstance(tool_use_id, str) or not tool_use_id:
+        return 0
+    try:
+        before = fingerprint()
+    except progress.GitUnavailable:
+        return 0
+
+    def change(state: dict):
+        snapshots = state.get("bash_snapshots")
+        if not isinstance(snapshots, dict):
+            snapshots = state["bash_snapshots"] = {}
+        snapshots[tool_use_id] = before
+    update_state(session_id, change)
+    return 0
+
+
+def record_modification_safely(payload: dict) -> None:
+    try:
+        record_modification(payload)
+    except (OSError, progress.GitUnavailable):
+        pass
+
+
+def on_post_tool_use_failure(payload: dict) -> int:
+    record_modification_safely(payload)
+    return 0
+
+
 def on_post_tool_use(payload: dict) -> int:
+    record_modification_safely(payload)
     path = target_path(payload)
     if path is None:
         return 0
@@ -271,7 +370,7 @@ def on_pre_compact(payload: dict) -> int:
     own = own_progress(session_id)
     if own is not None:
         target = f"`## Next Session` of {rel(own)}"
-    elif changed_repository(session_id):
+    elif modified_project(session_id):
         target = f"this session's progress in {rel(PROGRESS_DIR)}/ (`## Next Session`)"
     else:
         return 0
@@ -295,9 +394,9 @@ def on_stop(payload: dict) -> int:
     if payload.get("stop_hook_active") is True:
         return 0
     if own is None:
-        if changed_repository(session_id):
+        if modified_project(session_id):
             print(
-                "harness: this session changed repository files, but no file in "
+                "harness: this session changed the project through tool calls, but no file in "
                 f"{rel(PROGRESS_DIR)}/ has `session: {session_id}`. Write "
                 f"{rel(PROGRESS_DIR)}/<16-hex-id>-<kebab-name>.md following the Progress Rule in AGENTS.md "
                 "before stopping.",
@@ -320,7 +419,9 @@ def on_stop(payload: dict) -> int:
 HANDLERS = {
     "SessionStart": on_session_start,
     "UserPromptSubmit": on_user_prompt_submit,
+    "PreToolUse": on_pre_tool_use,
     "PostToolUse": on_post_tool_use,
+    "PostToolUseFailure": on_post_tool_use_failure,
     "PreCompact": on_pre_compact,
     "Stop": on_stop,
 }

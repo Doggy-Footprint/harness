@@ -455,7 +455,7 @@ class LabelSetupTests(RepoTestCase):
         mp.write_text(json.dumps(manifest, indent=2) + "\n")
         r = self.run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\ny\ny\n")
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertEqual(re.findall(r"^migration (\S+):", r.stdout, re.MULTILINE), ["0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0"])
+        self.assertEqual(re.findall(r"^migration (\S+):", r.stdout, re.MULTILINE), ["0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0"])
         section = r.stdout.split("migration 0.26.0", 1)[1].split("Apply migration", 1)[0]
         self.assertIn("comments-approved", section)
         self.assertEqual([c.split("|", 2)[2].split()[:2] for c in self.gh_calls()], [["api", "repos/{owner}/{repo}/labels/comments-approved"], ["label", "create"]])
