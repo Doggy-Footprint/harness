@@ -2,25 +2,25 @@
 session: 67547623-25f1-4646-b667-f46c6b0cebaf
 before: agent-docs/progress-logs/e73a776390393450-progress-and-continue-on.md
 previous: none
-branch: master
+branch: feat/progress-on-claude-changes
 commit: 16258311a647f09f3ee84183d79028e26222e464
 ---
 
-# Require progress only when Claude Code changed the project (0.34.0)
+# Require progress only when Claude Code changed the project (0.34.0, 0.34.1)
 
 ## Next Session
 
 ### State
-- The progress hook now requires a progress only when this session's own tool calls changed the project: Write/Edit/MultiEdit/NotebookEdit inside the repository, or a Bash call (including a failed one) whose before/after fingerprint of HEAD, git status, and changed paths' mtime/size differs; paths under .harness/ do not count. The old check (HEAD differs from start_head or any dirty path) is removed. Work is uncommitted on master.
-  - commit: 1625831; files: harness/hooks/progress_hook.py, harness/lib/progress.py, harness/hooks/hooks.spec.json, harness/instructions/harness-block.md
-- Harness version is 0.34.0 with migration `migrate_progress_session_changes` (instruction strings only); this repository was updated with `python3 installer/harness.py update .`.
-  - commit: 1625831; files: harness/VERSION, installer/harness.py, .harness/manifest.json, .claude/settings.json, AGENTS.md
+- 0.34.0 (committed in 15226e9): a progress is required only when this session's own tool calls changed the project: Write/Edit/MultiEdit/NotebookEdit inside the repository, or a Bash call (including a failed one) whose before/after fingerprint of HEAD, git status, and changed paths' mtime/size differs.
+  - commit: 15226e9; files: harness/hooks/progress_hook.py, harness/lib/progress.py, harness/hooks/hooks.spec.json, harness/instructions/harness-block.md
+- 0.34.1: Bash snapshots and the change marker live as files in `.harness/sessions/progress-<session>.d/` (`snap-<tool_use_id>`, `modified`) instead of the shared session JSON; edits to git-ignored paths do not count; SessionEnd removes leftover snapshots and keeps `modified` so a resumed session still sees it; SessionStart no longer records `start_head`. This repository is updated to 0.34.1.
+  - commit: 15226e9; files: harness/hooks/progress_hook.py, harness/lib/progress.py, harness/hooks/hooks.spec.json, harness/instructions/harness-block.md, installer/harness.py, harness/VERSION
 
 ### Next Step
-- Commit the change on a branch and open a PR if the user asks; nothing is committed yet.
-  - commit: 1625831; files: none
-- This session's hooks were registered mid-session, so its Bash/Edit tracking only started after the update; the first session started after the update is the first live run of the new detection.
-  - commit: 1625831; files: harness/hooks/progress_hook.py
+- Push branch feat/progress-on-claude-changes and open a PR if the user asks.
+  - commit: 15226e9; files: none
+- Known limits stated in the Progress Rule or left open: background Bash is checked only until its tool call returns; a user edit made while a Bash call runs is attributed to that call.
+  - commit: 15226e9; files: harness/instructions/harness-block.md
 
 ### Constraints
 - "progress 작성 기준을 파일 변경 → 클로드 코드에 의한 프로젝트 변경시로 바꿔 (수정, 패치 등 작업)"
@@ -29,15 +29,16 @@ commit: 16258311a647f09f3ee84183d79028e26222e464
   - source: user, second prompt of this session
 
 ### Verify
-- Run `uv run --no-project --with pytest --with hypothesis python3 -m unittest discover -s tests`; 879 tests passed after the change (system python3 lacks pytest and hypothesis).
-  - commit: 1625831; files: tests/test_progress.py, tests/test_installer.py
+- Run `uv run --no-project --with pytest --with hypothesis python3 -m unittest discover -s tests`; 882 tests passed after 0.34.1 (system python3 lacks pytest and hypothesis). `test_o4_parallel_bash_calls_keep_every_snapshot_and_record_the_change` repeats the 8-way parallel case 5 times.
+  - commit: 15226e9; files: tests/test_progress.py, tests/test_installer.py
 
 ### Dead Ends
-- none: no approach failed in this session.
+- Storing Bash snapshots and the change flag in the shared session JSON via load/modify/write loses entries under parallel hooks (see Failed Attempts).
+  - commit: 15226e9; files: harness/hooks/progress_hook.py
 
 ### Related
 - Spec log of the original progress feature, whose FR10 and A2 state the replaced "changed repository files" criterion.
-  - commit: 1625831; files: agent-docs/spec-logs/388ea2d9a2de1f5f-progress-and-continue-on.md
+  - commit: 15226e9; files: agent-docs/spec-logs/388ea2d9a2de1f5f-progress-and-continue-on.md
 
 ## Record
 
@@ -49,6 +50,7 @@ commit: 16258311a647f09f3ee84183d79028e26222e464
 - installer/harness.py, harness/VERSION: 0.34.0 migration.
 - tests: new Stop cases (Bash commit/modify, failed Bash, edit tools, user changes and pre-existing dirty files ignored, per-session attribution, .harness and outside paths ignored); version and prompt-count updates.
 - Removed the untracked leftover agent-docs/progress-logs/e73a776390393450-progress-and-continue-on.md after the user chose to delete it, so rotation of the previous progress is not refused.
+- 0.34.1, from a review relayed from another installed session: per-call snapshot files and an idempotent `modified` marker in `progress-<session>.d/` (not `.harness/sessions/.running/`, whose non-integer entries `session_lock.sweep_stale` unlinks); `git_is_ignored` excludes ignored edits; SessionEnd hook for progress_hook.py; `start_head` removed; Progress Rule states the background-Bash limit; tests for ignored paths, 5x parallel Bash, and SessionEnd cleanup; installer tests given one more confirmation.
 
 ### Commands
 - `python3 installer/harness.py update .`
@@ -57,6 +59,7 @@ commit: 16258311a647f09f3ee84183d79028e26222e464
 ### Failed Attempts
 | attempt | failure evidence | cause |
 | --- | --- | --- |
+| Bash snapshots and `modified` in the shared session JSON updated by load/modify/write (0.34.0) | 8 parallel PreToolUse kept 6-8 of 8 snapshots and 1-2 remained after 8 parallel PostToolUse, over 5 runs (scratchpad race.py) | verified: no lock around read-modify-write of one JSON file |
 
 ### Sources
 - none

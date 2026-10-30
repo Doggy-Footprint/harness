@@ -4,6 +4,7 @@ UserPromptSubmit and PreCompact notices go to stdout with exit 0.
 """
 import datetime
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -60,29 +61,19 @@ def session_state(session_id: str | None) -> dict | None:
 
 
 def modified_project(session_id: str | None) -> bool:
-    state = session_state(session_id)
-    return bool(state and state.get("modified") is True)
+    return bool(session_id) and (progress.change_dir(REPO_ROOT, session_id) / "modified").is_file()
 
 
-def update_state(session_id: str, change) -> None:
-    path = progress.state_path(REPO_ROOT, session_id)
-    state = progress.load_state(path) if path.exists() else {"session_id": session_id}
-    if state is None:
-        return
-    if change(state) is False:
-        return
-    try:
-        progress.write_state(path, state)
-    except OSError:
-        pass
-
-
+# Hooks for parallel tool calls run concurrently; one file per call and an idempotent marker avoid a shared
+# read-modify-write that would lose snapshots.
 def mark_modified(session_id: str) -> None:
-    def change(state: dict):
-        if state.get("modified") is True:
-            return False
-        state["modified"] = True
-    update_state(session_id, change)
+    directory = progress.change_dir(REPO_ROOT, session_id)
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "modified").touch()
+
+
+def snapshot_path(session_id: str, tool_use_id: str) -> Path:
+    return progress.change_dir(REPO_ROOT, session_id) / f"snap-{progress.safe_session_id(tool_use_id)}"
 
 
 def fingerprint() -> str:
@@ -109,26 +100,22 @@ def record_modification(payload: dict) -> None:
         tool_use_id = payload.get("tool_use_id")
         if not isinstance(tool_use_id, str) or not tool_use_id:
             return
-        state = session_state(session_id) or {}
-        snapshots = state.get("bash_snapshots")
-        before = snapshots.get(tool_use_id) if isinstance(snapshots, dict) else None
-        if before is None:
+        snapshot = snapshot_path(session_id, tool_use_id)
+        try:
+            before = snapshot.read_text(encoding="utf-8")
+        except FileNotFoundError:
             return
-        changed = fingerprint() != before
-
-        def change(state: dict):
-            snapshots = state.get("bash_snapshots")
-            if isinstance(snapshots, dict):
-                snapshots.pop(tool_use_id, None)
-            if changed:
-                state["modified"] = True
-        update_state(session_id, change)
+        snapshot.unlink(missing_ok=True)
+        if fingerprint() != before:
+            mark_modified(session_id)
         return
     if tool not in EDIT_TOOLS:
         return
     path = edited_path(payload)
     root = REPO_ROOT.resolve()
     if path is None or not path.is_relative_to(root) or path.is_relative_to(root / ".harness"):
+        return
+    if progress.git_is_ignored(root, path.relative_to(root).as_posix()):
         return
     mark_modified(session_id)
 
@@ -159,8 +146,6 @@ def on_session_start(payload: dict) -> int:
         return 0
     path = progress.state_path(REPO_ROOT, session_id)
     state = progress.load_state(path) or {}
-    if not isinstance(state.get("start_head"), str):
-        state["start_head"] = progress.git_head(REPO_ROOT)
     if not isinstance(state.get("branch"), str):
         state["branch"] = progress.git_branch(REPO_ROOT)
     state["session_id"] = session_id
@@ -270,15 +255,24 @@ def on_pre_tool_use(payload: dict) -> int:
         return 0
     try:
         before = fingerprint()
-    except progress.GitUnavailable:
-        return 0
+        snapshot = snapshot_path(session_id, tool_use_id)
+        snapshot.parent.mkdir(parents=True, exist_ok=True)
+        temporary = snapshot.with_name(snapshot.name + f".{os.getpid()}.tmp")
+        temporary.write_text(before, encoding="utf-8")
+        os.replace(temporary, snapshot)
+    except (OSError, progress.GitUnavailable):
+        pass
+    return 0
 
-    def change(state: dict):
-        snapshots = state.get("bash_snapshots")
-        if not isinstance(snapshots, dict):
-            snapshots = state["bash_snapshots"] = {}
-        snapshots[tool_use_id] = before
-    update_state(session_id, change)
+
+def on_session_end(payload: dict) -> int:
+    session_id = session_id_of(payload)
+    if not session_id:
+        return 0
+    directory = progress.change_dir(REPO_ROOT, session_id)
+    if directory.is_dir():
+        for leftover in directory.glob("snap-*"):
+            leftover.unlink(missing_ok=True)
     return 0
 
 
@@ -424,6 +418,7 @@ HANDLERS = {
     "PostToolUseFailure": on_post_tool_use_failure,
     "PreCompact": on_pre_compact,
     "Stop": on_stop,
+    "SessionEnd": on_session_end,
 }
 
 

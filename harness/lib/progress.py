@@ -366,6 +366,13 @@ def git_worktree_fingerprint(repo_root: Path, excluded_prefix: str) -> str:
     return digest.hexdigest()
 
 
+def git_is_ignored(repo_root: Path, path: str) -> bool:
+    result = _git(repo_root, ["check-ignore", "-q", "--", path])
+    if result.returncode not in (0, 1):
+        raise GitUnavailable(result.stderr.strip() or "git check-ignore failed")
+    return result.returncode == 0
+
+
 def _resolve_commits(repo_root: Path, commits: list[str]) -> dict[str, str | None]:
     if not commits:
         return {}
@@ -630,6 +637,10 @@ def safe_session_id(session_id: str) -> str:
 
 def state_path(repo_root: Path, session_id: str) -> Path:
     return repo_root / ".harness" / "sessions" / f"progress-{safe_session_id(session_id)}.json"
+
+
+def change_dir(repo_root: Path, session_id: str) -> Path:
+    return repo_root / ".harness" / "sessions" / f"progress-{safe_session_id(session_id)}.d"
 
 
 def load_state(path: Path) -> dict | None:

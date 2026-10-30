@@ -798,6 +798,17 @@ def migrate_progress_session_changes(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_progress_change_markers(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "the progress hook keeps Bash snapshots and the changed-project marker as files under "
+        ".harness/sessions/progress-<session>.d/ instead of the shared session JSON, so parallel tool calls no longer "
+        "lose snapshots",
+        "Write, Edit, MultiEdit, and NotebookEdit on paths ignored by git no longer count as a project change",
+        "a Claude SessionEnd hook removes leftover Bash snapshots; SessionStart no longer records start_head",
+        "the Progress Rule states that background Bash commands are checked only until their tool call returns",
+    ]
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -833,6 +844,7 @@ MIGRATIONS = (
     (parse_version("0.32.0"), "record isolation-candidate telemetry; lint gate in Test command; drop characterization-test rule", migrate_isolation_telemetry),
     (parse_version("0.33.0"), "replace handoffs with session progress records and todos; add continue-on", migrate_progress_records),
     (parse_version("0.34.0"), "require progress only when Claude Code changed the project", migrate_progress_session_changes),
+    (parse_version("0.34.1"), "track project changes in per-call files; ignore git-ignored edits", migrate_progress_change_markers),
 )
 
 

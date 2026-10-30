@@ -708,6 +708,55 @@ class TestStopSessionStartPreCompact(ProgressCase):
         self.assertEqual(self.stop(repo, sid="sessa").returncode, 0)
         self.assertEqual(self.stop(repo, sid="sessb").returncode, 2)
 
+    def change_dir(self, repo, sid="sessa"):
+        return self.sessions_dir(repo) / f"progress-{sid}.d"
+
+    def snapshots(self, repo, sid="sessa"):
+        directory = self.change_dir(repo, sid)
+        return sorted(directory.glob("snap-*")) if directory.is_dir() else []
+
+    def bash_event(self, repo, event, tool_use_id, sid="sessa"):
+        return self.hook(repo, {"hook_event_name": event, "session_id": sid, "tool_name": "Bash",
+                                "tool_use_id": tool_use_id, "tool_input": {"command": "x"}})
+
+    def test_o4_git_ignored_paths_do_not_count(self):
+        repo = self.setup_session(False, "none")
+        (repo / ".gitignore").write_text("logs/\n")
+        self.touch_commit(repo, ".gitignore")
+        (repo / "logs").mkdir()
+        self.bash(repo, lambda: (repo / "logs" / "personal.log").write_text("x\n"))
+        self.post(repo, repo / "logs" / "personal.log")
+        self.hook(repo, {"hook_event_name": "PostToolUse", "session_id": "sessa", "tool_name": "Edit",
+                         "tool_input": {"file_path": "logs/personal.log"}})
+        result = self.stop(repo)
+        self.assertEqual((result.returncode, result.stdout, result.stderr), (0, "", ""))
+
+    def test_o4_parallel_bash_calls_keep_every_snapshot_and_record_the_change(self):
+        from concurrent.futures import ThreadPoolExecutor
+        ids = [f"toolu_p{i}" for i in range(8)]
+        for attempt in range(5):
+            with self.subTest(attempt=attempt):
+                repo = self.setup_session(False, "none")
+                with ThreadPoolExecutor(len(ids)) as pool:
+                    list(pool.map(lambda i: self.bash_event(repo, "PreToolUse", i), ids))
+                self.assertEqual(len(self.snapshots(repo)), len(ids))
+                (repo / "src" / "new.py").write_text("x\n")
+                with ThreadPoolExecutor(len(ids)) as pool:
+                    list(pool.map(lambda i: self.bash_event(repo, "PostToolUse", i), ids))
+                self.assertEqual(self.snapshots(repo), [])
+                self.assertEqual(self.stop(repo).returncode, 2)
+
+    def test_o4_session_end_removes_leftover_snapshots_and_keeps_the_change_marker(self):
+        repo = self.setup_session(False, "none")
+        self.bash(repo, lambda: (repo / "src" / "new.py").write_text("x\n"))
+        self.bash_event(repo, "PreToolUse", "toolu_interrupted")
+        self.assertEqual(len(self.snapshots(repo)), 1)
+        result = self.hook(repo, {"hook_event_name": "SessionEnd", "session_id": "sessa"})
+        self.assertEqual(result.returncode, 0, out(result))
+        self.assertEqual(self.snapshots(repo), [])
+        self.start(repo)
+        self.assertEqual(self.stop(repo).returncode, 2)
+
     def test_o4_c13_changes_only_under_harness_or_outside_the_repository_do_not_count(self):
         repo = self.setup_session(False, "none")
         self.bash(repo, lambda: (repo / ".harness" / "scratch.txt").write_text("x\n"))
@@ -736,21 +785,22 @@ class TestStopSessionStartPreCompact(ProgressCase):
         shown = self.show(repo, self.rel(repo, empty))
         self.assertRegex(shown.stdout.lower(), r"warning|no entr")
 
-    def test_o4_fr9_session_start_records_head_branch_and_empty_prompts(self):
+    def test_o4_fr9_session_start_records_branch_and_empty_prompts(self):
         repo = self.new_repo()
         result = self.start(repo)
         self.assertEqual(result.returncode, 0, out(result))
         state = self.state(repo)
-        self.assertEqual(state["start_head"], self.head(repo))
+        self.assertNotIn("start_head", state)
         self.assertEqual(state["branch"], self.branch(repo))
         self.assertEqual(state["prompts"], [])
 
     def test_o4_fr9_state_is_kept_per_session(self):
         repo = self.new_repo()
         self.start(repo, sid="sessa")
-        self.touch_commit(repo, "src/a.py")
         self.start(repo, sid="sessb")
-        self.assertNotEqual(self.state(repo, "sessa")["start_head"], self.state(repo, "sessb")["start_head"])
+        self.prompt(repo, "only for a", sid="sessa")
+        self.assertEqual([p["text"] for p in self.state(repo, "sessa")["prompts"]], ["only for a"])
+        self.assertEqual(self.state(repo, "sessb")["prompts"], [])
 
     def test_o4_fr15_precompact_reminder_decision_table(self):
         for progress_kind, changed, expected in (
@@ -1289,7 +1339,7 @@ class TestPromptRecording(ProgressCase):
             self.assertEqual(self.prompt(repo, text).returncode, 0)
         state = self.state(repo)
         self.assertEqual([p["text"] for p in state["prompts"]], ["one", "two", "three"])
-        self.assertEqual(state["start_head"], self.head(repo))
+        self.assertNotIn("start_head", state)
         self.assertEqual(state["branch"], self.branch(repo))
         ats = [p["at"] for p in state["prompts"]]
         self.assertEqual(ats, sorted(ats))

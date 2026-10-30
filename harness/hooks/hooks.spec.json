@@ -110,6 +110,11 @@
       "event": "Stop",
       "targets": ["claude"],
       "command": "python3 \"{root}/.harness/hooks/progress_hook.py\""
+    },
+    {
+      "event": "SessionEnd",
+      "targets": ["claude"],
+      "command": "python3 \"{root}/.harness/hooks/progress_hook.py\""
     }
   ]
 }
