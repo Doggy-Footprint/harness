@@ -378,11 +378,6 @@ def on_stop(payload: dict) -> int:
     if not session_id or not git_ready():
         return 0
     own = own_progress(session_id)
-    if own is not None:
-        try:
-            sync_requests(own, session_id)
-        except (OSError, UnicodeDecodeError):
-            pass
     if payload.get("stop_hook_active") is True:
         return 0
     if own is None:
