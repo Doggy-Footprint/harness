@@ -3,7 +3,7 @@ session: 67547623-25f1-4646-b667-f46c6b0cebaf
 before: agent-docs/progress-logs/e73a776390393450-progress-and-continue-on.md
 previous: none
 branch: feat/progress-on-claude-changes
-commit: 7b37323433e6a5c306f5438a354858b32fe29aad
+commit: 2c5f04ec20afba121f083c63c8584fe29570c2e8
 ---
 
 # Require progress only when Claude Code changed the project (0.34.0, 0.34.1)
@@ -51,6 +51,7 @@ commit: 7b37323433e6a5c306f5438a354858b32fe29aad
 - tests: new Stop cases (Bash commit/modify, failed Bash, edit tools, user changes and pre-existing dirty files ignored, per-session attribution, .harness and outside paths ignored); version and prompt-count updates.
 - Removed the untracked leftover agent-docs/progress-logs/e73a776390393450-progress-and-continue-on.md after the user chose to delete it, so rotation of the previous progress is not refused.
 - 0.34.1, from a review relayed from another installed session: per-call snapshot files and an idempotent `modified` marker in `progress-<session>.d/` (not `.harness/sessions/.running/`, whose non-integer entries `session_lock.sweep_stale` unlinks); `git_is_ignored` excludes ignored edits; SessionEnd hook for progress_hook.py; `start_head` removed; Progress Rule states the background-Bash limit; tests for ignored paths, 5x parallel Bash, and SessionEnd cleanup; installer tests given one more confirmation.
+- Removed the concurrency comment in progress_hook.py at the user's request (the parallel test guards the design). Added `.harness/sessions/progress-*.d/` to the installer's .gitignore lines after 7b37323 had committed this session's marker and a snapshot file; untracked them and added `test_o4_change_files_are_ignored_by_git`.
 
 ### Commands
 - `python3 installer/harness.py update .`
@@ -136,3 +137,18 @@ commit: 7b37323433e6a5c306f5438a354858b32fe29aad
 #### 4 — 2026-10-30T05:25:31Z
 
 > 커밋하고, 반영하자.
+
+#### 5 — 2026-10-30T05:43:21Z
+
+> push하고 PR 올려줘
+
+#### 6 — 2026-10-30T05:45:17Z
+
+> 한글로 적어줘
+
+#### 7 — 2026-10-30T05:46:26Z
+
+> - `.harness/hooks/progress_hook.py`: line(s) 67, 68
+> - `harness/hooks/progress_hook.py`: line(s) 67, 68
+>  
+> 이거 반드시 필요한 거야?

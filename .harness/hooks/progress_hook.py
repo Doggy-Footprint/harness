@@ -64,8 +64,6 @@ def modified_project(session_id: str | None) -> bool:
     return bool(session_id) and (progress.change_dir(REPO_ROOT, session_id) / "modified").is_file()
 
 
-# Hooks for parallel tool calls run concurrently; one file per call and an idempotent marker avoid a shared
-# read-modify-write that would lose snapshots.
 def mark_modified(session_id: str) -> None:
     directory = progress.change_dir(REPO_ROOT, session_id)
     directory.mkdir(parents=True, exist_ok=True)

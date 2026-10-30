@@ -757,6 +757,15 @@ class TestStopSessionStartPreCompact(ProgressCase):
         self.start(repo)
         self.assertEqual(self.stop(repo).returncode, 2)
 
+    def test_o4_change_files_are_ignored_by_git(self):
+        repo = self.setup_session(False, "none")
+        self.bash(repo, lambda: (repo / "src" / "new.py").write_text("x\n"))
+        self.bash_event(repo, "PreToolUse", "toolu_pending")
+        files = sorted(p.relative_to(repo).as_posix() for p in self.change_dir(repo).iterdir())
+        self.assertEqual(len(files), 2)
+        ignored = run_git(repo, "check-ignore", "--", *files).stdout.split()
+        self.assertEqual(sorted(ignored), files)
+
     def test_o4_c13_changes_only_under_harness_or_outside_the_repository_do_not_count(self):
         repo = self.setup_session(False, "none")
         self.bash(repo, lambda: (repo / ".harness" / "scratch.txt").write_text("x\n"))

@@ -15,7 +15,7 @@
     ".harness/agents/mutant-triager.md": "dd36ac9857f7970cf73e8e8a327dc85780a90208f6bafc7c0627dec174e8136d",
     ".harness/agents/implementer.md": "293450c495bf85f1acc1133828c652e8208431038a634486c64489f9bde6413e",
     ".harness/agents/test-verifier.md": "d5a4e0e15ee606b4e76f68a9144c368e03272b23376c2fc22041fd48aba0d191",
-    ".harness/hooks/progress_hook.py": "b6b9bf62c3a0a57283eff9a891996900029bc56cd674c666ce94d2f868154151",
+    ".harness/hooks/progress_hook.py": "52e11793ebd3926f6069569fdb1bd25a1191c68093386a709f752960327d35c5",
     ".harness/hooks/doc_commit.py": "69a255768bc8b2cafa60b4bee20d4124fbb11bbf8f55066c03c462f5f3e4edab",
     ".harness/hooks/spec_gate.py": "81a40d87ca6b97fec0c3fe608291aa85069ee233169c7fff0e24ad8b6d889db7",
     ".harness/hooks/session_lock.py": "0b446534f8c1246852ed758e482e0ba263f2297fb8a3cff3397470c9b86e1949",

@@ -30,6 +30,7 @@ GITIGNORE_LINES = [
     "agent-docs/specs/.seed/",
     ".harness/sessions/.running/",
     ".harness/sessions/progress-*.json",
+    ".harness/sessions/progress-*.d/",
     ".harness/**/__pycache__",
 ]
 HOOK_MANAGER_FILES = [
@@ -805,6 +806,7 @@ def migrate_progress_change_markers(target: Path, dry_run: bool) -> list[str]:
         "lose snapshots",
         "Write, Edit, MultiEdit, and NotebookEdit on paths ignored by git no longer count as a project change",
         "a Claude SessionEnd hook removes leftover Bash snapshots; SessionStart no longer records start_head",
+        "add `.harness/sessions/progress-*.d/` to .gitignore so snapshot and marker files are never committed",
         "the Progress Rule states that background Bash commands are checked only until their tool call returns",
     ]
 
