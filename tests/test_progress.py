@@ -171,6 +171,12 @@ class ProgressCase(InstallerTestCase):
         return self.hook(repo, {"hook_event_name": "PostToolUse", "session_id": sid, "tool_name": tool,
                                 "tool_input": {"file_path": str(path)}}, **kw)
 
+    def bash(self, repo, action, sid="sessa", tool_use_id="toolu_1", event="PostToolUse", **kw):
+        payload = {"session_id": sid, "tool_name": "Bash", "tool_use_id": tool_use_id, "tool_input": {"command": "x"}}
+        self.hook(repo, {**payload, "hook_event_name": "PreToolUse"}, **kw)
+        action()
+        return self.hook(repo, {**payload, "hook_event_name": event}, **kw)
+
     def stop(self, repo, sid="sessa", active=False, **kw):
         return self.hook(repo, {"hook_event_name": "Stop", "session_id": sid, "stop_hook_active": active}, **kw)
 
@@ -619,6 +625,7 @@ class TestStopSessionStartPreCompact(ProgressCase):
         self.assertEqual(result.returncode, 0, out(result))
         if changed:
             (repo / "src" / "new.py").write_text("new = 1\n")
+            self.post(repo, repo / "src" / "new.py")
         return repo
 
     def test_o4_stop_decision_table(self):
@@ -654,17 +661,118 @@ class TestStopSessionStartPreCompact(ProgressCase):
         self.assertIn("Next Session", result.stderr)
         self.assertIn("- none:", result.stderr)
 
-    def test_o4_c11_changed_by_new_commit_or_modified_tracked_file_blocks(self):
+    def test_o4_c11_bash_that_commits_or_modifies_a_file_blocks(self):
+        actions = {
+            "commit": lambda repo: self.touch_commit(repo, "src/a.py"),
+            "modify tracked": lambda repo: (repo / "src" / "a.py").write_text("a = 2\n"),
+            "modify already dirty": lambda repo: (repo / "src" / "a.py").write_text("a = 3, longer\n"),
+        }
+        for label, action in actions.items():
+            with self.subTest(change=label):
+                repo = self.setup_session(False, "none")
+                if label == "modify already dirty":
+                    (repo / "src" / "a.py").write_text("a = 2\n")
+                self.bash(repo, lambda: action(repo))
+                self.assertEqual(self.stop(repo).returncode, 2)
+
+    def test_o4_failed_bash_that_changed_the_tree_blocks(self):
         repo = self.setup_session(False, "none")
-        self.touch_commit(repo, "src/a.py")
-        self.assertEqual(self.stop(repo).returncode, 2)
-        repo = self.setup_session(False, "none")
-        (repo / "src" / "a.py").write_text("a = 2\n")
+        self.bash(repo, lambda: (repo / "src" / "new.py").write_text("x\n"), event="PostToolUseFailure")
         self.assertEqual(self.stop(repo).returncode, 2)
 
-    def test_o4_c13_changes_only_under_harness_do_not_count(self):
+    def test_o4_edit_tools_inside_the_repository_block(self):
+        for tool, key in (("Edit", "file_path"), ("MultiEdit", "file_path"), ("NotebookEdit", "notebook_path")):
+            with self.subTest(tool=tool):
+                repo = self.setup_session(False, "none")
+                self.hook(repo, {"hook_event_name": "PostToolUse", "session_id": "sessa", "tool_name": tool,
+                                 "tool_input": {key: "src/a.py"}})
+                self.assertEqual(self.stop(repo).returncode, 2)
+
+    def test_o4_changes_outside_the_sessions_tool_calls_do_not_count(self):
+        repo = self.new_repo()
+        (repo / "src" / "dirty.py").write_text("before session\n")
+        self.start(repo)
+        (repo / "src" / "a.py").write_text("a = 2\n")
+        self.touch_commit(repo, "src/b.py")
+        self.bash(repo, lambda: None)
+        self.hook(repo, {"hook_event_name": "PostToolUse", "session_id": "sessa", "tool_name": "Read",
+                         "tool_input": {"file_path": "src/a.py"}})
+        result = self.stop(repo)
+        self.assertEqual((result.returncode, result.stdout, result.stderr), (0, "", ""))
+
+    def test_o4_bash_change_is_attributed_to_its_own_session_only(self):
+        repo = self.new_repo()
+        self.start(repo, sid="sessa")
+        self.start(repo, sid="sessb")
+        self.bash(repo, lambda: (repo / "src" / "new.py").write_text("x\n"), sid="sessb")
+        self.assertEqual(self.stop(repo, sid="sessa").returncode, 0)
+        self.assertEqual(self.stop(repo, sid="sessb").returncode, 2)
+
+    def change_dir(self, repo, sid="sessa"):
+        return self.sessions_dir(repo) / f"progress-{sid}.d"
+
+    def snapshots(self, repo, sid="sessa"):
+        directory = self.change_dir(repo, sid)
+        return sorted(directory.glob("snap-*")) if directory.is_dir() else []
+
+    def bash_event(self, repo, event, tool_use_id, sid="sessa"):
+        return self.hook(repo, {"hook_event_name": event, "session_id": sid, "tool_name": "Bash",
+                                "tool_use_id": tool_use_id, "tool_input": {"command": "x"}})
+
+    def test_o4_git_ignored_paths_do_not_count(self):
         repo = self.setup_session(False, "none")
-        (repo / ".harness" / "scratch.txt").write_text("x\n")
+        (repo / ".gitignore").write_text("logs/\n")
+        self.touch_commit(repo, ".gitignore")
+        (repo / "logs").mkdir()
+        self.bash(repo, lambda: (repo / "logs" / "personal.log").write_text("x\n"))
+        self.post(repo, repo / "logs" / "personal.log")
+        self.hook(repo, {"hook_event_name": "PostToolUse", "session_id": "sessa", "tool_name": "Edit",
+                         "tool_input": {"file_path": "logs/personal.log"}})
+        result = self.stop(repo)
+        self.assertEqual((result.returncode, result.stdout, result.stderr), (0, "", ""))
+
+    def test_o4_parallel_bash_calls_keep_every_snapshot_and_record_the_change(self):
+        from concurrent.futures import ThreadPoolExecutor
+        ids = [f"toolu_p{i}" for i in range(8)]
+        for attempt in range(5):
+            with self.subTest(attempt=attempt):
+                repo = self.setup_session(False, "none")
+                with ThreadPoolExecutor(len(ids)) as pool:
+                    list(pool.map(lambda i: self.bash_event(repo, "PreToolUse", i), ids))
+                self.assertEqual(len(self.snapshots(repo)), len(ids))
+                (repo / "src" / "new.py").write_text("x\n")
+                with ThreadPoolExecutor(len(ids)) as pool:
+                    list(pool.map(lambda i: self.bash_event(repo, "PostToolUse", i), ids))
+                self.assertEqual(self.snapshots(repo), [])
+                self.assertEqual(self.stop(repo).returncode, 2)
+
+    def test_o4_session_end_removes_leftover_snapshots_and_keeps_the_change_marker(self):
+        repo = self.setup_session(False, "none")
+        self.bash(repo, lambda: (repo / "src" / "new.py").write_text("x\n"))
+        self.bash_event(repo, "PreToolUse", "toolu_interrupted")
+        self.assertEqual(len(self.snapshots(repo)), 1)
+        result = self.hook(repo, {"hook_event_name": "SessionEnd", "session_id": "sessa"})
+        self.assertEqual(result.returncode, 0, out(result))
+        self.assertEqual(self.snapshots(repo), [])
+        self.start(repo)
+        self.assertEqual(self.stop(repo).returncode, 2)
+
+    def test_o4_change_files_are_ignored_by_git(self):
+        repo = self.setup_session(False, "none")
+        self.bash(repo, lambda: (repo / "src" / "new.py").write_text("x\n"))
+        self.bash_event(repo, "PreToolUse", "toolu_pending")
+        files = sorted(p.relative_to(repo).as_posix() for p in self.change_dir(repo).iterdir())
+        self.assertEqual(len(files), 2)
+        ignored = run_git(repo, "check-ignore", "--", *files).stdout.split()
+        self.assertEqual(sorted(ignored), files)
+
+    def test_o4_c13_changes_only_under_harness_or_outside_the_repository_do_not_count(self):
+        repo = self.setup_session(False, "none")
+        self.bash(repo, lambda: (repo / ".harness" / "scratch.txt").write_text("x\n"))
+        self.post(repo, repo / ".harness" / "scratch.txt")
+        outside = Path(self.make_repo()) / "elsewhere.txt"
+        outside.write_text("x\n")
+        self.post(repo, outside)
         result = self.stop(repo)
         self.assertEqual((result.returncode, result.stdout, result.stderr), (0, "", ""))
 
@@ -676,6 +784,7 @@ class TestStopSessionStartPreCompact(ProgressCase):
         self.commit(repo, "progress")
         self.start(repo)
         (repo / "src" / "new.py").write_text("x\n")
+        self.post(repo, repo / "src" / "new.py")
         result = self.stop(repo)
         self.assertEqual((result.returncode, result.stdout, result.stderr), (0, "", ""))
         shown = self.show(repo, self.rel(repo, path))
@@ -685,21 +794,22 @@ class TestStopSessionStartPreCompact(ProgressCase):
         shown = self.show(repo, self.rel(repo, empty))
         self.assertRegex(shown.stdout.lower(), r"warning|no entr")
 
-    def test_o4_fr9_session_start_records_head_branch_and_empty_prompts(self):
+    def test_o4_fr9_session_start_records_branch_and_empty_prompts(self):
         repo = self.new_repo()
         result = self.start(repo)
         self.assertEqual(result.returncode, 0, out(result))
         state = self.state(repo)
-        self.assertEqual(state["start_head"], self.head(repo))
+        self.assertNotIn("start_head", state)
         self.assertEqual(state["branch"], self.branch(repo))
         self.assertEqual(state["prompts"], [])
 
     def test_o4_fr9_state_is_kept_per_session(self):
         repo = self.new_repo()
         self.start(repo, sid="sessa")
-        self.touch_commit(repo, "src/a.py")
         self.start(repo, sid="sessb")
-        self.assertNotEqual(self.state(repo, "sessa")["start_head"], self.state(repo, "sessb")["start_head"])
+        self.prompt(repo, "only for a", sid="sessa")
+        self.assertEqual([p["text"] for p in self.state(repo, "sessa")["prompts"]], ["only for a"])
+        self.assertEqual(self.state(repo, "sessb")["prompts"], [])
 
     def test_o4_fr15_precompact_reminder_decision_table(self):
         for progress_kind, changed, expected in (
@@ -816,13 +926,12 @@ class TestErrors(ProgressCase):
                 self.assertIn("not a progress path", out(result))
                 self.assertNotIn("SECRET-NOTES-CONTENT", out(result))
 
-    def test_o5_row6_stop_without_state_file_uses_git_status_and_appends_empty_subsection_only_if_missing(self):
+    def test_o5_row6_stop_without_state_file_does_not_block_and_appends_empty_subsection_only_if_missing(self):
         repo = self.new_repo()
         head = self.head(repo)
         (repo / "src" / "new.py").write_text("x\n")
-        blocked = self.stop(repo)
-        self.assertEqual(blocked.returncode, 2, out(blocked))
-        self.assertNotIn("Traceback", out(blocked))
+        unblocked = self.stop(repo)
+        self.assertEqual((unblocked.returncode, unblocked.stdout, unblocked.stderr), (0, "", ""))
         missing = build(session="sessa", stamp=head, next_step=[("alpha item", head, "none")], user_requests=None)
         path = self.put(repo, NAME1, missing)
         result = self.stop(repo)
@@ -1155,6 +1264,7 @@ class TestMessageQuality(ProgressCase):
             repo = self.new_repo()
             self.start(repo)
             (repo / "src" / "new.py").write_text("x\n")
+            self.post(repo, repo / "src" / "new.py")
             return self.stop(repo).stderr, ["agent-docs/progress"]
 
         def stop_empty_next_session():
@@ -1238,7 +1348,7 @@ class TestPromptRecording(ProgressCase):
             self.assertEqual(self.prompt(repo, text).returncode, 0)
         state = self.state(repo)
         self.assertEqual([p["text"] for p in state["prompts"]], ["one", "two", "three"])
-        self.assertEqual(state["start_head"], self.head(repo))
+        self.assertNotIn("start_head", state)
         self.assertEqual(state["branch"], self.branch(repo))
         ats = [p["at"] for p in state["prompts"]]
         self.assertEqual(ats, sorted(ats))
