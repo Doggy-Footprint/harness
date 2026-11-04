@@ -1,8 +1,8 @@
 {
-  "version": "0.34.1",
+  "version": "0.34.2",
   "files": {
     ".harness/config.default.json": "04aab9383dd877c1cea87ab9a9a1682da9f5de5e5d01fc2e9d871d9f2bb710c7",
-    ".harness/VERSION": "7f05cc1abd68df0bb6e371103933abca1865ece1ab9bca975114cd15af76fca4",
+    ".harness/VERSION": "a3895be4159564cc28f8ef155ba977b3f9102ecb39f0dfb77b73ff245b1c3a7c",
     ".harness/instructions/harness-block.md": "14eac1684b24653d28b29dec6bb5e3483cdd53b4c00c217bf95419a8642c1152",
     ".harness/bin/workflow_marker.py": "f6413c2d0d2121639d7cd13cd632d8b6578406163d22de6701cddbcdc3232308",
     ".harness/bin/spec_lifecycle.py": "fcc2ec2c5460c21fe0b19cb1ab24d6cf213f4475116c7ad34a0ab6008e5f8f16",
@@ -33,7 +33,7 @@
     ".harness/git/sync_progress.py": "7e56922fa76e31bcad158e2c1f860fba37f347955094a6acbeaf70cd04787010",
     ".harness/git/commit-msg": "94caf823782bad755bcb7b2f6a924d3a7093e659fb8ac121aa486a90f0d80650",
     ".harness/git/warn_new_comments.py": "b3cf080a3d2b1e0ff06efb71c19d66d41b71ae1549239242856592acdcb6ea5b",
-    ".harness/git/post-merge": "41d4a4b50ad7fbd5f2f6057d2929b67bc09bd44c1b52580271e59b270d1b5b5c",
+    ".harness/git/post-merge": "8d02120f8cf90dfaa8ebb5872d1a6b86769d2616b47a3b75012f00123f491c35",
     ".harness/git/pre-commit": "dd6fb08f7a8e7f0867b1d7af3aa185eeabc996fd01b964a2e2b637f7c91f5992",
     ".harness/git/verify_rules.py": "8dc285686cc02be7caef43dc875fe0470b9e176ba90547d6a7d38625d3c7af18",
     ".harness/skills/harness-import/SKILL.md": "425d6f33c0b7150fe69f6982344c728461107c831a48588755d2e4bcb8630d1d",

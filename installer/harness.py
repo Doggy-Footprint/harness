@@ -814,6 +814,15 @@ def migrate_progress_change_markers(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_post_merge_committed_copies(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "post-merge also moves a progress the merge modified when progress-logs/ already holds an untracked copy "
+        "of it whose content equals a committed version; that copy is deleted first because git history keeps it",
+        "this clears the duplicate left when a pull fast-forward moved a merged progress and a later merge of the "
+        "same branch brought a newer version back",
+    ]
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -850,6 +859,7 @@ MIGRATIONS = (
     (parse_version("0.33.0"), "replace handoffs with session progress records and todos; add continue-on", migrate_progress_records),
     (parse_version("0.34.0"), "require progress only when Claude Code changed the project", migrate_progress_session_changes),
     (parse_version("0.34.1"), "track project changes in per-call files; ignore git-ignored edits", migrate_progress_change_markers),
+    (parse_version("0.34.2"), "post-merge clears uncommitted copies of committed progress", migrate_post_merge_committed_copies),
 )
 
 

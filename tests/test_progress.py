@@ -1210,6 +1210,77 @@ class TestPostMerge(ProgressCase):
             self.assertIn(name, result.stdout)
         self.assertFalse(any((repo / "agent-docs" / "progress").glob("*.md")))
 
+    def feature_update(self, repo, rel, content):
+        main = self.branch(repo)
+        run_git(repo, "checkout", "-q", "feature")
+        (repo / rel).write_text(content)
+        run_git(repo, "add", "--", rel)
+        self.commit(repo, "feature update")
+        run_git(repo, "checkout", "-q", main)
+
+    def test_second_merge_of_same_branch_replaces_uncommitted_committed_copy(self):
+        for label, flags in (("fast-forward", ("--ff-only",)), ("true merge", ("--no-ff", "--no-edit"))):
+            with self.subTest(case=label):
+                repo = self.new_repo()
+                head = self.head(repo)
+                rel = f"agent-docs/progress/{NAME1}"
+                first = build(session="sessb", stamp=head, next_step=[("first item", head, "none")])
+                self.feature_branch(repo, {rel: first})
+                self.assertEqual(self.merge(repo, "--ff-only").returncode, 0)
+                destination = repo / "agent-docs" / "progress-logs" / NAME1
+                self.assertEqual(destination.read_text(), first)
+                second = first.replace("first item", "second item")
+                self.feature_update(repo, rel, second)
+
+                result = self.merge(repo, *flags)
+
+                self.assertEqual(result.returncode, 0, result.stdout)
+                self.assertEqual(destination.read_text(), second)
+                self.assertFalse((repo / rel).exists())
+                self.assertIn(f"removed agent-docs/progress-logs/{NAME1}", result.stdout)
+                self.assertIn(f"moved {rel} to agent-docs/progress-logs/{NAME1}", result.stdout)
+
+    def test_uncommitted_destination_that_matches_no_committed_version_is_kept(self):
+        for label, edit in (("modified", lambda text: text + "local note\n"), ("unrelated", lambda text: "other\n")):
+            with self.subTest(case=label):
+                repo = self.new_repo()
+                head = self.head(repo)
+                rel = f"agent-docs/progress/{NAME1}"
+                first = build(session="sessb", stamp=head, next_step=[("first item", head, "none")])
+                self.feature_branch(repo, {rel: first})
+                self.merge(repo, "--ff-only")
+                destination = repo / "agent-docs" / "progress-logs" / NAME1
+                destination.write_text(edit(first))
+                second = first.replace("first item", "second item")
+                self.feature_update(repo, rel, second)
+
+                result = self.merge(repo, "--ff-only")
+
+                self.assertEqual(result.returncode, 0, result.stdout)
+                self.assertEqual(destination.read_text(), edit(first))
+                self.assertEqual((repo / rel).read_text(), second)
+                self.assertNotIn("removed", result.stdout)
+
+    def test_tracked_destination_equal_to_committed_version_is_kept(self):
+        repo = self.new_repo()
+        head = self.head(repo)
+        rel = f"agent-docs/progress/{NAME2}"
+        original = build(session="sessa", stamp=head, next_step=[("main item", head, "none")])
+        self.put(repo, NAME2, original)
+        logged = self.put(repo, NAME2, original, directory="progress-logs")
+        run_git(repo, "add", "--", rel, self.rel(repo, logged))
+        self.commit(repo, "main progress and log")
+        modified = original.replace("main item", "edited item")
+        self.feature_branch(repo, {rel: modified})
+        self.touch_commit(repo, "src/main_only.py")
+
+        result = self.merge(repo, "--no-ff", "--no-edit")
+
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertEqual(logged.read_text(), original)
+        self.assertEqual((repo / rel).read_text(), modified)
+        self.assertNotIn("removed", result.stdout)
+
 
 VERBS = ("write", "merge", "add", "rename", "ask", "re-check", "replace", "end", "remove", "quote", "move", "update", "run", "fix")
 VERB_RE = re.compile(r"(?<![\w-])(" + "|".join(re.escape(v) for v in VERBS) + r")(?![\w-])", re.I)
