@@ -1,8 +1,3 @@
-"""Derived only from the spec text; the implementation is never read. Tests
-run the installed hooks/lib as subprocesses against a temp repo and inspect
-the resulting ~/.harness/telemetry/<repo-slug>.jsonl style file (redirected
-via HARNESS_TELEMETRY_DIR).
-"""
 import json
 import os
 import re

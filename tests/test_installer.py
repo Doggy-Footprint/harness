@@ -1822,9 +1822,6 @@ def load_installer_module():
 
 
 class TestGitignoreGuard(InstallerTestCase):
-    """Expected Conflict lines are written literally
-    from the spec's format "<relpath> is ignored by git (<source>:<n>:<pattern>)"."""
-
     HARNESS_BIN_LINES = [f".harness/bin/{name} is ignored by git (.gitignore:1:bin/)" for name in BIN_FILES]
 
     def ignore_lines(self, result):
@@ -1940,7 +1937,7 @@ class TestGitignoreGuard(InstallerTestCase):
         self.assertEqual(self.ignore_lines(result), [])
         self.assertTrue((repo / ".harness" / "bin" / "seed.py").exists())
 
-    # file-level negations, which check-ignore -v does print
+    # git check-ignore -v prints a matching file-level negation (!pattern) and exits 0; a directory-level negation prints nothing
     def test_c5_r3_file_level_negations_exempt_paths(self):
         repo = self.ignored_fresh_repo(
             ".harness/bin/*.py\n"

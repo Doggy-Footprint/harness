@@ -1,8 +1,4 @@
-"""Expected values are hand-derived from the spec text; the
-classifier is never reimplemented here. Unit tests import harness/lib directly
-(so coverage of harness/lib is measured); integration tests run the installed
-hooks as subprocesses against a temp repo with HARNESS_TELEMETRY_DIR set.
-"""
+"""Unit tests import harness/lib directly so that coverage of harness/lib is measured."""
 import importlib
 import json
 import os

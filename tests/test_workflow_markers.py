@@ -1,6 +1,3 @@
-"""The marker implementation is deliberately exercised only through an installed
-harness.  Assertions inspect its public CLI effects and emitted JSONL events.
-"""
 import json
 import os
 import re

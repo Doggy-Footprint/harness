@@ -1,6 +1,3 @@
-"""Expected values are hand-written from the spec's rule tables and Cases; the
-scanner is only driven through its CLI (python3 harness/bin/test_scan.py PATH).
-"""
 import json
 import os
 import subprocess
