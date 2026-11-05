@@ -850,6 +850,19 @@ def migrate_spec_ids_out_of_code(target: Path, dry_run: bool) -> list[str]:
         "review and remove them manually",
     ]
 
+
+def migrate_retire_progress_at_pr(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "`gh pr create` from a Claude Code session is blocked until the session's progress is moved to "
+        "progress-logs/ with `python3 .harness/bin/progress.py retire`, committed, and pushed; a session that "
+        "changed the project without writing a progress is blocked too",
+        "the session keeps editing its progress in progress-logs/ after the PR: edits get the same checks and "
+        "User Requests sync, and Stop blocks while that file is uncommitted or unpushed",
+        "a second progress in progress/ is refused while the session already owns one in progress-logs/",
+        "no data is migrated; progress of other sessions and PRs made outside Claude Code keep the post-merge fallback",
+    ]
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -890,6 +903,7 @@ MIGRATIONS = (
     (parse_version("0.34.3"), "refuse rotation only for progress of sessions still running", migrate_live_session_rotation),
     (parse_version("0.34.4"), "leave subagent hand-backs out of progress User Requests", migrate_agent_messages_out_of_requests),
     (parse_version("0.35.0"), "keep spec ids out of code comments written by implementer and test-implementer", migrate_spec_ids_out_of_code),
+    (parse_version("0.36.0"), "gate gh pr create on a retired, committed, and pushed session progress", migrate_retire_progress_at_pr),
 )
 
 

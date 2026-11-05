@@ -1141,7 +1141,7 @@ class TestEdge(TelemetryTestCase):
         manifest["version"] = "0.4.0"
         manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
 
-        result = run_installer("update", str(repo), input="y\ny\ny\n" * 20)
+        result = run_installer("update", str(repo), input="y\ny\ny\n" * 21)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         updated_manifest = json.loads(manifest_path.read_text())
@@ -1154,7 +1154,7 @@ class TestEdge(TelemetryTestCase):
 
 
     def test_c18_harness_version_is_0_9_0(self):
-        self.assertEqual(HARNESS_VERSION, "0.35.0")
+        self.assertEqual(HARNESS_VERSION, "0.36.0")
 
     def test_c20_update_preserves_pre_existing_post_tool_use_hook(self):
         repo = self.install()
@@ -1169,7 +1169,7 @@ class TestEdge(TelemetryTestCase):
         )
         settings_path.write_text(json.dumps(settings, indent=2) + "\n")
 
-        result = run_installer("update", str(repo), input="y\ny\ny\n" * 20)
+        result = run_installer("update", str(repo), input="y\ny\ny\n" * 21)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         post_tool_use = self.commands(
