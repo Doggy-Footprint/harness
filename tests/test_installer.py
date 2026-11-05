@@ -567,7 +567,6 @@ class TestNormal(InstallerTestCase):
         repo = self.install()
         self.assertEqual(json.loads((repo / ".harness" / "manifest.json").read_text())["version"], "0.34.3")
 
-    # live-session-rotation-refusal VO5 S1/S2 (C13): update from an installed 0.34.2 announces 0.34.3 last
     def test_vo5_s1_s2_update_from_0342_lists_0343_migration_last_and_sets_manifest(self):
         repo = self.install()
         manifest_path = repo / ".harness" / "manifest.json"
@@ -583,7 +582,6 @@ class TestNormal(InstallerTestCase):
         self.assertEqual(announced[-1], "0.34.3")
         self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.34.3")
 
-    # live-session-rotation-refusal VO5 S4 (C13): migration step text
     def test_vo5_s4_0343_migration_text_mentions_session_id_and_still_running(self):
         repo = self.install()
         manifest_path = repo / ".harness" / "manifest.json"
@@ -600,7 +598,6 @@ class TestNormal(InstallerTestCase):
         self.assertIn("session id", text)
         self.assertIn("still running", text)
 
-    # live-session-rotation-refusal VO5 S3
     def test_vo5_s3_version_file_reads_0343(self):
         self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.34.3")
 

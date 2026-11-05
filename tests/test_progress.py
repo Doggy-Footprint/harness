@@ -363,7 +363,6 @@ class TestRotation(ProgressCase):
 
 
 class TestLiveSessionRotationRefusal(ProgressCase):
-    """Spec 48b8b8950d2e14c7 v1: VO1 decision table, VO2 marker, VO3 malformed markers, VO4 message."""
 
     def setup_rotation(self, olds=(("sessa", NAME0),), own=None, live=None, extra=()):
         """olds: (session or None, name) of progress files to be moved; own/live: marker content (None = absent);
@@ -399,7 +398,6 @@ class TestLiveSessionRotationRefusal(ProgressCase):
         self.assertEqual(self.logs(repo), [])
         self.assertTrue(new.is_file())
 
-    # VO1 decision table
     def test_vo1_r1_only_own_marker_moves_old_and_links_before(self):
         repo, texts, new = self.setup_rotation(own="")
         result = self.post(repo, new, sid="sessb")
@@ -495,7 +493,6 @@ class TestLiveSessionRotationRefusal(ProgressCase):
         result = self.post(repo, new, sid="sessb")
         self.assert_refused(repo, texts, new, result)
 
-    # VO3 malformed live markers
     def check_malformed(self, content):
         repo, texts, new = self.setup_rotation(own="", live=(1, content))
         result = self.post(repo, new, sid="sessb")
@@ -525,7 +522,6 @@ class TestLiveSessionRotationRefusal(ProgressCase):
     def test_vo3_m6_non_utf8_bytes(self):
         self.check_malformed(b"\xff\xfe")
 
-    # VO4 refusal message of C2 (R3)
     def refusal_r3(self, live_name=1):
         repo, texts, new = self.setup_rotation(own="", live=(live_name, '{"session_id":"sessa"}'))
         result = self.post(repo, new, sid="sessb")
@@ -557,7 +553,6 @@ class TestLiveSessionRotationRefusal(ProgressCase):
         _, err = self.refusal_r3()
         self.assertIn("worktree", err.lower())
 
-    # VO2 SessionStart marker
     def own_marker(self, repo):
         return self.sessions_dir(repo) / ".running" / str(os.getpid())
 

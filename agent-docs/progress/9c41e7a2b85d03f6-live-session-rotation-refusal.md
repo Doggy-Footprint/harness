@@ -12,13 +12,13 @@ commit: 6bb07e09cabf4dc91f29ea40c4db4dfc7774816c
 
 ### State
 - Done: rotation is refused only when a progress to be moved belongs to a session whose claude process is still running (session id now recorded in the `.harness/sessions/.running/<pid>` marker); legacy/malformed markers and progress without `session:` keep the 0.34.2 refusal. Harness 0.34.3, spec complete and archived.
-  - commit: 6bb07e09cabf4dc91f29ea40c4db4dfc7774816c; files: harness/hooks/progress_hook.py, harness/hooks/session_lock.py, installer/harness.py, harness/instructions/harness-block.md, agent-docs/spec-logs/48b8b8950d2e14c7-live-session-rotation-refusal.md
+  - commit: 5ede694e905a4dcfadbc242a8670d3286f5d138d; files: harness/hooks/progress_hook.py, harness/hooks/session_lock.py, installer/harness.py, harness/instructions/harness-block.md, agent-docs/spec-logs/48b8b8950d2e14c7-live-session-rotation-refusal.md
 - Observed, not changed: the UserPromptSubmit hook records subagent hand-back messages (`<agent-message from=...>`) as user prompts in `### User Requests` (entries 6-11 of this progress).
-  - commit: 6bb07e09cabf4dc91f29ea40c4db4dfc7774816c; files: harness/hooks/progress_hook.py
+  - commit: 5ede694e905a4dcfadbc242a8670d3286f5d138d; files: harness/hooks/progress_hook.py
 
 ### Next Step
 - none: the requested change is implemented and verified; the User Requests recording of subagent hand-backs is an observation the user has not asked to fix.
-  - commit: 6bb07e09cabf4dc91f29ea40c4db4dfc7774816c; files: none
+  - commit: 5ede694e905a4dcfadbc242a8670d3286f5d138d; files: none
 
 ### Constraints
 - "응 그 방향으로 구현해줘"
@@ -28,15 +28,15 @@ commit: 6bb07e09cabf4dc91f29ea40c4db4dfc7774816c
 
 ### Verify
 - `uv run --with pytest --with hypothesis python -m pytest tests -q -p no:cacheprovider` passed: 1012 passed, 2005 subtests passed. `python3 -m unittest discover -s tests` cannot import test_session_metrics.py and test_isolation_telemetry.py without pytest/hypothesis.
-  - commit: 6bb07e09cabf4dc91f29ea40c4db4dfc7774816c; files: tests/test_progress.py, tests/test_installer.py
+  - commit: 5ede694e905a4dcfadbc242a8670d3286f5d138d; files: tests/test_progress.py, tests/test_installer.py
 
 ### Dead Ends
 - Removing the one-progress limit was analyzed and not pursued: `before:`, near-duplicate checks, `/continue-on` default target, ended-session detection, and pre-commit User Requests sync depend on it.
-  - commit: 6bb07e09cabf4dc91f29ea40c4db4dfc7774816c; files: harness/lib/progress.py, harness/bin/progress.py, harness/git/sync_progress.py, harness/git/verify_rules.py
+  - commit: 5ede694e905a4dcfadbc242a8670d3286f5d138d; files: harness/lib/progress.py, harness/bin/progress.py, harness/git/sync_progress.py, harness/git/verify_rules.py
 
 ### Related
 - agent-docs/spec-logs/48b8b8950d2e14c7-live-session-rotation-refusal.md
-  - commit: 6bb07e09cabf4dc91f29ea40c4db4dfc7774816c; files: agent-docs/spec-logs/48b8b8950d2e14c7-live-session-rotation-refusal.md
+  - commit: 5ede694e905a4dcfadbc242a8670d3286f5d138d; files: agent-docs/spec-logs/48b8b8950d2e14c7-live-session-rotation-refusal.md
 
 ## Record
 
@@ -49,6 +49,7 @@ commit: 6bb07e09cabf4dc91f29ea40c4db4dfc7774816c
 ### Commands
 - `echo y | python3 installer/harness.py update .` (the update prompt raises EOFError without stdin).
 - Hand mutations m1-m12 via `.harness/bin/seed.py backup/restore`, all detected after correction batch 2.
+- Removed spec-id-only test comments flagged by the pre-commit comment warning; tests/test_progress.py and tests/test_installer.py re-run: 352 passed, 502 subtests passed.
 
 ### Failed Attempts
 | attempt | failure evidence | cause |
