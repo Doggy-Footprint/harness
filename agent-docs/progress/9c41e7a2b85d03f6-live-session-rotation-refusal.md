@@ -12,13 +12,13 @@ commit: 8516bd1b2ea03a41591c2f11417ec5af7571bf25
 
 ### State
 - Done: rotation is refused only when a progress to be moved belongs to a session whose claude process is still running (session id now recorded in the `.harness/sessions/.running/<pid>` marker); legacy/malformed markers and progress without `session:` keep the 0.34.2 refusal. Harness 0.34.3, spec complete and archived.
-  - commit: 5ede694e905a4dcfadbc242a8670d3286f5d138d; files: harness/hooks/progress_hook.py, harness/hooks/session_lock.py, installer/harness.py, harness/instructions/harness-block.md, agent-docs/spec-logs/48b8b8950d2e14c7-live-session-rotation-refusal.md
+  - commit: 82d76210effd63a9853d27b75e177eb708100fb3; files: harness/hooks/progress_hook.py, harness/hooks/session_lock.py, installer/harness.py, harness/instructions/harness-block.md, agent-docs/spec-logs/48b8b8950d2e14c7-live-session-rotation-refusal.md
 - Done: prompts starting with `<agent-message from=` (subagent hand-backs) are not recorded and are left out when `### User Requests` is rendered (harness 0.34.4). Summarizing long user prompts was dropped by the user.
-  - commit: 527623eba2f25ef23014f1173d1008206a4079f5; files: harness/lib/progress.py, harness/hooks/progress_hook.py, harness/instructions/harness-block.md, installer/harness.py
+  - commit: 82d76210effd63a9853d27b75e177eb708100fb3; files: harness/lib/progress.py, harness/hooks/progress_hook.py, harness/instructions/harness-block.md, installer/harness.py
 
 ### Next Step
 - none: both requested changes are implemented and verified.
-  - commit: 5ede694e905a4dcfadbc242a8670d3286f5d138d; files: none
+  - commit: 82d76210effd63a9853d27b75e177eb708100fb3; files: none
 
 ### Constraints
 - "응 그 방향으로 구현해줘"
@@ -30,15 +30,15 @@ commit: 8516bd1b2ea03a41591c2f11417ec5af7571bf25
 
 ### Verify
 - `uv run --with pytest --with hypothesis python -m pytest tests -q -p no:cacheprovider` passed: 1016 passed, 2005 subtests passed (after the 0.34.4 change). `python3 -m unittest discover -s tests` cannot import test_session_metrics.py and test_isolation_telemetry.py without pytest/hypothesis.
-  - commit: 527623eba2f25ef23014f1173d1008206a4079f5; files: tests/test_progress.py, tests/test_installer.py
+  - commit: 82d76210effd63a9853d27b75e177eb708100fb3; files: tests/test_progress.py, tests/test_installer.py
 
 ### Dead Ends
 - Removing the one-progress limit was analyzed and not pursued: `before:`, near-duplicate checks, `/continue-on` default target, ended-session detection, and pre-commit User Requests sync depend on it.
-  - commit: 5ede694e905a4dcfadbc242a8670d3286f5d138d; files: harness/lib/progress.py, harness/bin/progress.py, harness/git/sync_progress.py, harness/git/verify_rules.py
+  - commit: 82d76210effd63a9853d27b75e177eb708100fb3; files: harness/lib/progress.py, harness/bin/progress.py, harness/git/sync_progress.py, harness/git/verify_rules.py
 
 ### Related
 - agent-docs/spec-logs/48b8b8950d2e14c7-live-session-rotation-refusal.md
-  - commit: 5ede694e905a4dcfadbc242a8670d3286f5d138d; files: agent-docs/spec-logs/48b8b8950d2e14c7-live-session-rotation-refusal.md
+  - commit: 82d76210effd63a9853d27b75e177eb708100fb3; files: agent-docs/spec-logs/48b8b8950d2e14c7-live-session-rotation-refusal.md
 
 ## Record
 
