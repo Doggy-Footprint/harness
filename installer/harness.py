@@ -833,6 +833,15 @@ def migrate_live_session_rotation(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_agent_messages_out_of_requests(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "subagent hand-backs (prompts starting with `<agent-message from=`) are no longer recorded as user prompts, "
+        "and ones already recorded are left out when ### User Requests is rewritten",
+        "a progress of a session running across the update may renumber its User Requests entries; re-check "
+        "`source: ### User Requests #<n>` lines under ### Constraints",
+    ]
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -871,6 +880,7 @@ MIGRATIONS = (
     (parse_version("0.34.1"), "track project changes in per-call files; ignore git-ignored edits", migrate_progress_change_markers),
     (parse_version("0.34.2"), "post-merge clears uncommitted copies of committed progress", migrate_post_merge_committed_copies),
     (parse_version("0.34.3"), "refuse rotation only for progress of sessions still running", migrate_live_session_rotation),
+    (parse_version("0.34.4"), "leave subagent hand-backs out of progress User Requests", migrate_agent_messages_out_of_requests),
 )
 
 

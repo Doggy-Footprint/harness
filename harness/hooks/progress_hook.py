@@ -157,7 +157,7 @@ def on_session_start(payload: dict) -> int:
 
 def on_user_prompt_submit(payload: dict) -> int:
     prompt = payload.get("prompt")
-    if not isinstance(prompt, str):
+    if not isinstance(prompt, str) or progress.is_agent_message(prompt):
         return 0
     session_id = session_id_of(payload)
     reason = None

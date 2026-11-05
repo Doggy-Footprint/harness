@@ -1783,6 +1783,61 @@ class TestPromptRecording(ProgressCase):
         self.assertIn("> mine", path.read_text())
         self.assertNotIn("theirs-UNIQUE", path.read_text())
 
+    AGENT_MESSAGE = '<agent-message from="a234a4a2ae0ee0d01">\n  [Subagent hand-back] HANDBACK-UNIQUE report\n</agent-message>'
+
+    def test_subagent_hand_back_prompt_is_not_recorded(self):
+        repo = self.new_repo()
+        self.start(repo)
+        self.prompt(repo, "before")
+        for text in (self.AGENT_MESSAGE, "  " + self.AGENT_MESSAGE):
+            result = self.prompt(repo, text)
+            self.assertEqual((result.returncode, result.stdout), (0, ""), out(result))
+            self.assertEqual([p["text"] for p in self.state(repo)["prompts"]], ["before"])
+        self.prompt(repo, "after")
+        self.assertEqual([p["text"] for p in self.state(repo)["prompts"]], ["before", "after"])
+
+    def test_user_prompt_quoting_an_agent_message_later_in_the_text_is_recorded(self):
+        repo = self.new_repo()
+        self.start(repo)
+        text = "look at this:\n" + self.AGENT_MESSAGE
+        self.prompt(repo, text)
+        self.assertEqual([p["text"] for p in self.state(repo)["prompts"]], [text])
+
+    def test_already_recorded_hand_backs_are_left_out_and_user_prompts_renumbered(self):
+        repo = self.new_repo()
+        self.start(repo)
+        path, _ = self.own(repo, user_requests="")
+        state = self.state(repo)
+        state["prompts"] = [
+            {"at": "2026-01-01T00:00:00Z", "text": "first"},
+            {"at": "2026-01-01T00:01:00Z", "text": self.AGENT_MESSAGE},
+            {"at": "2026-01-01T00:02:00Z", "text": "second"},
+        ]
+        self.state_path(repo).write_text(json.dumps(state))
+        self.post(repo, path)
+        _, body, _ = split_requests(path.read_text())
+        self.assertEqual(body, [f"#### 1 {EM} 2026-01-01T00:00:00Z", "> first",
+                                f"#### 2 {EM} 2026-01-01T00:02:00Z", "> second"])
+        self.assertNotIn("HANDBACK-UNIQUE", path.read_text())
+
+    def test_commit_sync_leaves_recorded_hand_backs_out(self):
+        repo = self.new_repo()
+        self.start(repo)
+        path, _ = self.own(repo, user_requests="")
+        run_git(repo, "add", "-A")
+        self.commit(repo, "progress")
+        state = self.state(repo)
+        state["prompts"] = [{"at": "2026-01-01T00:00:00Z", "text": "typed"},
+                            {"at": "2026-01-01T00:01:00Z", "text": self.AGENT_MESSAGE}]
+        self.state_path(repo).write_text(json.dumps(state))
+        (repo / "src" / "a.py").write_text("a = 2\n")
+        run_git(repo, "add", "--", "src/a.py")
+        committed = self.commit_with_hooks(repo)
+        self.assertEqual(committed.returncode, 0, out(committed))
+        shown = run_git(repo, "show", f"HEAD:{self.rel(repo, path)}").stdout
+        self.assertIn("> typed", shown)
+        self.assertNotIn("HANDBACK-UNIQUE", shown)
+
     def test_o14_unsafe_session_id_cannot_write_outside_the_sessions_directory(self):
         repo = self.new_repo()
         self.start(repo)

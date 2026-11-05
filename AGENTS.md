@@ -6,7 +6,7 @@ It ships documentation rules (the managed block below), the workflow-approach sk
 Source: `harness/` (payload), `installer/harness.py` (install / update / doctor), `tests/`, `evaluation/` (archived harness evaluation experiments `selfcheck/` and `reference_mutation/`, not installed). This repo installs itself into `.harness/` for dogfooding.
 Edit `harness/`, never `.harness/` or the generated `.claude/`, `.codex/`, `.agents/` files; then run `python3 installer/harness.py update .`. `update` MUST provide version-by-version migration steps.
 
-<!-- harness:begin 0.34.3 -->
+<!-- harness:begin 0.34.4 -->
 # Documentation Guide
 
 "Documentation" refers to standalone docs, inline comments, and docstrings.
@@ -104,7 +104,7 @@ Required file structure:
 
 Every `## Next Session` bullet outside `### Constraints` is an entry followed by `  - commit: <sha checked against>; files: <comma-separated repo paths or none>`; record each entry's own commit. `### Constraints` bullets quote the user verbatim from `### User Requests` and carry `  - source: <where it was said>`. With nothing to continue, write `- none: <reason>`. `### Related` lists the exact records a later session needs; never point to records you did not check.
 
-Hooks write `### User Requests` from the session's masked prompts when the progress is written and at each commit, which stages it; do not edit it. Pre-commit blocks keys, tokens, emails, IP addresses, and internal hostnames in `progress/` and `progress-logs/`; replace each with `[masked:<category>]`.
+`### User Requests` records, masked, the prompts the user sent in this session; subagent hand-backs that arrive as prompts are left out. Hooks rewrite it when the progress is written and at each commit, which stages it, so never edit it. Pre-commit blocks keys, tokens, emails, IP addresses, and internal hostnames in `progress/` and `progress-logs/`; replace each with `[masked:<category>]`.
 
 To continue earlier work, read only the `## Next Session` of the chosen progress and the pointers under its `### Related` (`/continue-on`); never guess related records. Re-check entries the hooks flag as stale, and ask the user whether a flagged near-duplicate was re-verified or copied. Never edit a progress after its session ends.
 
