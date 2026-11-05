@@ -3,7 +3,7 @@ session: c1f287a5-a426-4d56-b060-6dd4a3cff513
 before: none
 previous: none
 branch: feat/retire-progress-at-pr
-commit: f6acba9a94af757e8b4371891ed56e25cf3cec38
+commit: 37169b55dc1b82a12d12f484289d30a1e83eee4e
 ---
 
 # Retire progress to progress-logs before gh pr create
@@ -17,7 +17,7 @@ commit: f6acba9a94af757e8b4371891ed56e25cf3cec38
   - commit: f6acba9; files: .harness/hooks/progress_hook.py, AGENTS.md
 
 ### Next Step
-- Review and merge the PR from feat/retire-progress-at-pr. After `git pull` on master, `git status --porcelain` should be empty: this is the first live check of the change.
+- Review and merge PR #31 (https://github.com/Doggy-Footprint/harness/pull/31) from feat/retire-progress-at-pr. After `git pull` on master, `git status --porcelain` should be empty: this is the first live check of the change.
   - commit: f6acba9; files: none
 
 ### Constraints
