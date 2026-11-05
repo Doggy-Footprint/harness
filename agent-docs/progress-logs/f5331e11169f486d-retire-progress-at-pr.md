@@ -12,13 +12,13 @@ commit: 37169b55dc1b82a12d12f484289d30a1e83eee4e
 
 ### State
 - Harness 0.36.0 is implemented and committed on feat/retire-progress-at-pr. `gh pr create` from a Claude Code session is blocked until the session's progress is retired with `python3 .harness/bin/progress.py retire`, committed, and pushed. After that the session keeps editing its progress in progress-logs/, and Stop blocks while it is uncommitted or unpushed. Spec 8f325620aefa53a8 completed at v3 and is archived; verifier round 2 passed, and 15 hand mutations were all detected.
-  - commit: f6acba9; files: harness/hooks/progress_hook.py, harness/bin/progress.py, harness/lib/progress.py, harness/git/sync_progress.py, harness/hooks/doc_commit.py, tests/test_progress_retire.py
+  - commit: 37169b5; files: harness/hooks/progress_hook.py, harness/bin/progress.py, harness/lib/progress.py, harness/git/sync_progress.py, harness/hooks/doc_commit.py, tests/test_progress_retire.py
 - This repository is updated to 0.36.0 (`python3 installer/harness.py update .`). This progress was retired with the new command before the PR was opened.
-  - commit: f6acba9; files: .harness/hooks/progress_hook.py, AGENTS.md
+  - commit: 37169b5; files: .harness/hooks/progress_hook.py, AGENTS.md
 
 ### Next Step
 - Review and merge PR #31 (https://github.com/Doggy-Footprint/harness/pull/31) from feat/retire-progress-at-pr. After `git pull` on master, `git status --porcelain` should be empty: this is the first live check of the change.
-  - commit: f6acba9; files: none
+  - commit: 37169b5; files: none
 
 ### Constraints
 - "PR 생성 시점에 브랜치 안에서 미리 progress-logs/로 옮기기"
@@ -28,15 +28,15 @@ commit: 37169b55dc1b82a12d12f484289d30a1e83eee4e
 
 ### Verify
 - Run `uv run --no-project --with pytest --with hypothesis python3 -m pytest tests -q -p no:cacheprovider`; 1073 tests passed in about 6 minutes.
-  - commit: f6acba9; files: tests/test_progress_retire.py
+  - commit: 37169b5; files: tests/test_progress_retire.py
 
 ### Dead Ends
 - An "other session's logs file unchanged" assertion cannot catch a wrong commit-time sync while that session's recorded prompts already match its file; the hand mutation survived until the test recorded an extra prompt for the other session.
-  - commit: f6acba9; files: tests/test_progress_retire.py
+  - commit: 37169b5; files: tests/test_progress_retire.py
 
 ### Related
 - agent-docs/spec-logs/8f325620aefa53a8-retire-progress-at-pr.md (requirements, user decisions A1–A5, defaults A6–A14, execution ledger with the mutation results)
-  - commit: f6acba9; files: agent-docs/spec-logs/8f325620aefa53a8-retire-progress-at-pr.md
+  - commit: 37169b5; files: agent-docs/spec-logs/8f325620aefa53a8-retire-progress-at-pr.md
 
 ## Record
 
