@@ -842,6 +842,14 @@ def migrate_agent_messages_out_of_requests(target: Path, dry_run: bool) -> list[
     ]
 
 
+def migrate_spec_ids_out_of_code(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "implementer and test-implementer keep spec, requirement, Case and obligation ids in their reports "
+        "and out of code comments and docstrings; test cases are labelled through test names or parameter ids",
+        "id-tag comments already in this repository's code (e.g. `# O1 EP1`, `\"\"\"Spec <id> v1 VO9 (FR7)\"\"\"`) are left in place; "
+        "review and remove them manually",
+    ]
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -881,6 +889,7 @@ MIGRATIONS = (
     (parse_version("0.34.2"), "post-merge clears uncommitted copies of committed progress", migrate_post_merge_committed_copies),
     (parse_version("0.34.3"), "refuse rotation only for progress of sessions still running", migrate_live_session_rotation),
     (parse_version("0.34.4"), "leave subagent hand-backs out of progress User Requests", migrate_agent_messages_out_of_requests),
+    (parse_version("0.35.0"), "keep spec ids out of code comments written by implementer and test-implementer", migrate_spec_ids_out_of_code),
 )
 
 

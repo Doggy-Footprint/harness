@@ -1,8 +1,5 @@
-"""Independent oracle for spec f0e1103f974f1301 v2 (VO1-VO8, VO10).
-
-Expected values are hand-written from the spec's FR/rule tables/Cases; the
+"""Expected values are hand-written from the spec's rule tables and Cases; the
 scanner is only driven through its CLI (python3 harness/bin/test_scan.py PATH).
-VO9 lives in tests/test_installer.py; VO11 is a review procedure.
 """
 import json
 import os
@@ -565,7 +562,6 @@ DIRECT_FLAGS = {
 
 
 class TestVO4RuleTables(RuleScanCase):
-    # VO4 (FR7, FR8, N2): decision table, every trigger/non-trigger snippet
     def test_vo4_direct_flag_rows(self):
         for lang, rows in RULES.items():
             for flag, triggers, non_triggers in rows:
@@ -632,7 +628,6 @@ class TestVO4RuleTables(RuleScanCase):
 
 
 class TestVO6AssertionClassification(RuleScanCase):
-    # VO6 (FR5, G1): decision table over S, M, A
     COMBOS = {
         "python": {"A": "assert x == 1", "M": "m.assert_called()", "S": "assert result == snapshot", "none": "x = 1"},
         "javascript": {"A": "expect(x).toEqual(1);", "M": "expect(fn).toHaveBeenCalled();",
@@ -702,7 +697,6 @@ GUARD_ND = {
 
 
 class TestVO7Guards(RuleScanCase):
-    # VO7 (FR9, B5): guard anywhere in the file suppresses nondeterministic
     def test_vo7_each_guard_suppresses_and_absence_sets_the_flag(self):
         for lang, guards in GUARDS.items():
             def build(guard):
@@ -735,7 +729,6 @@ class TestVO7Guards(RuleScanCase):
 
 
 class TestVO1FileDetection(ScanTestCase):
-    # VO1 (FR1, E2): equivalence partitioning, 19 globs + 6 content-requirement items
     GLOBS = {
         "src/FooTest.kt": ("kotlin", "class FooTest {\n    @Test\n    fun a() {\n    }\n}\n"),
         "src/FooTests.kt": ("kotlin", "class FooTests {\n    @Test\n    fun a() {\n    }\n}\n"),
@@ -845,7 +838,6 @@ class TestVO1FileDetection(ScanTestCase):
 
 
 class TestVO2StartForms(ScanTestCase):
-    # VO2 (FR2, N1, G2, G3): equivalence partitioning over every start form
 
     def check(self, path, lines, expected, text=None):
         root = self.tmp()
@@ -1084,7 +1076,6 @@ ND_BOUNDARY = {
 
 
 class TestVO3BodyModel(RuleScanCase):
-    # VO3 (FR3, FR4, B3, B4, G4): 2-value boundary analysis
 
     def flags(self, lang, tests, **kw):
         _, found = self.scan_text(lang, render(lang, tests, **kw))
@@ -1280,7 +1271,6 @@ class TestVO3BodyModel(RuleScanCase):
 
 
 class TestVO5GroupPropagation(RuleScanCase):
-    # VO5 (FR6, B1, B2): inside the group -> flag, outside -> none
 
     def flags_by_name(self, lang, text):
         _, found = self.scan_text(lang, text)
@@ -1428,7 +1418,6 @@ NEW_RUNNERS = ["dotnet", "rspec", "rake", "swift", "phpunit", "composer", "ctest
 
 
 class TestVO8Runners(ScanTestCase):
-    # VO8 (FR10, N3): equivalence partitioning over the 7 new runner candidates
     def entries(self, root):
         return self.scan(root)["runner_candidates"]
 
@@ -1579,7 +1568,6 @@ class TestVO8Runners(ScanTestCase):
 
 
 class TestVO10Robustness(ScanTestCase):
-    # VO10 (Errors, E1, E2, QR2, QR3): error guessing; no coverage target
     OTHER = "def test_ok():\n    assert 1\n"
 
     def snapshot(self, root):
@@ -1686,7 +1674,6 @@ GENERIC_NESTED = "if (x) {\n            f();\n        }"
 
 
 class TestBatch2BraceDepthAndGuards(RuleScanCase):
-    # V2 (FR3(c), FR6): brace depth; V3 (FR9): guards outside any test; V4/V5/V6; A4
     def test_v2_nested_block_inside_body_then_trigger_vs_trigger_after_closer(self):
         for lang in BRACE_LANGS:
             nested = NESTED.get(lang, GENERIC_NESTED)

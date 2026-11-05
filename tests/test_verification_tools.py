@@ -112,11 +112,9 @@ class ToolsTestCase(unittest.TestCase):
 
 
 class TestLanguageDetection(ToolsTestCase):
-    # VO1 EP-none / C9
     def test_no_manifest_gives_no_plan(self):
         self.assertEqual(verification_tools.detect_plans(self.repo, FakeWhich()), [])
 
-    # VO1 EP-py, EP-js, EP-go, EP-rust: each manifest alone
     def test_each_manifest_alone_detects_exactly_its_language(self):
         cases = {
             "python": {"pyproject.toml": PYPROJECT, "uv.lock": ""},
@@ -132,7 +130,6 @@ class TestLanguageDetection(ToolsTestCase):
                 plans = self.plans(mapping)
                 self.assertEqual([p.language for p in plans], [language])
 
-    # VO1 EP-all4: order python, javascript, go, rust regardless of creation order
     def test_all_four_manifests_are_ordered_python_javascript_go_rust(self):
         plans = self.plans({
             "Cargo.toml": "[package]\nname = \"x\"\n",
@@ -143,12 +140,10 @@ class TestLanguageDetection(ToolsTestCase):
         })
         self.assertEqual([p.language for p in plans], ["python", "javascript", "go", "rust"])
 
-    # VO1 FR1: only target root files are inspected
     def test_manifest_in_subdirectory_is_ignored(self):
         plans = self.plans({"sub/package.json": "{}", "sub/go.mod": "module x\n", "sub/pyproject.toml": PYPROJECT})
         self.assertEqual(plans, [])
 
-    # VO1 FR8 / C9: every tool present -> no Plan, for each language
     def test_language_with_all_tools_present_has_no_plan(self):
         plans = self.plans({
             "pyproject.toml": '[project]\nname = "d"\ndependencies = ["hypothesis", "mutmut"]\n',
@@ -158,7 +153,6 @@ class TestLanguageDetection(ToolsTestCase):
         })
         self.assertEqual(plans, [])
 
-    # VO1 FR8: a satisfied language disappears while others remain
     def test_only_missing_languages_remain(self):
         plans = self.plans({
             "package.json": json.dumps({"devDependencies": {"fast-check": "1", "@stryker-mutator/core": "1"}}),
@@ -177,7 +171,6 @@ class TestManagerSelection(ToolsTestCase):
         self.assertIsNone(plan.blocker)
         return plan.commands
 
-    # VO2 python rows / C1
     def test_python_uv(self):
         self.assertEqual(self.python_commands(["uv.lock"]), (("uv", "add", "--dev", "hypothesis", "mutmut"),))
 
@@ -190,7 +183,6 @@ class TestManagerSelection(ToolsTestCase):
     def test_python_pdm(self):
         self.assertEqual(self.python_commands(["pdm.lock"]), (("pdm", "add", "-dG", "dev", "hypothesis", "mutmut"),))
 
-    # VO2 C10: uv beats poetry (and pdm)
     def test_python_uv_wins_over_poetry(self):
         self.assertEqual(
             self.python_commands(["uv.lock", "poetry.lock"]),
@@ -203,7 +195,6 @@ class TestManagerSelection(ToolsTestCase):
             (("poetry", "add", "--group", "dev", "hypothesis", "mutmut"),),
         )
 
-    # VO2 python none -> blocker
     def test_python_without_lockfile_is_blocker(self):
         plan = self.single({"pyproject.toml": PYPROJECT})
         self.assertEqual(plan.language, "python")
@@ -218,7 +209,6 @@ class TestManagerSelection(ToolsTestCase):
 
     JS = ("fast-check", "@stryker-mutator/core")
 
-    # VO2 js rows / C3, C11
     def test_js_pnpm(self):
         self.assertEqual(self.js_commands(["pnpm-lock.yaml"]), (("pnpm", "add", "-D") + self.JS,))
 
@@ -237,7 +227,6 @@ class TestManagerSelection(ToolsTestCase):
     def test_js_package_lock_alone_uses_npm(self):
         self.assertEqual(self.js_commands(["package-lock.json"]), (("npm", "install", "--save-dev") + self.JS,))
 
-    # VO2 C11: yarn beats bun
     def test_js_yarn_wins_over_bun(self):
         self.assertEqual(self.js_commands(["yarn.lock", "bun.lock"]), (("yarn", "add", "-D") + self.JS,))
 
@@ -250,7 +239,6 @@ class TestManagerSelection(ToolsTestCase):
     def test_js_bun_wins_over_npm_lock(self):
         self.assertEqual(self.js_commands(["package-lock.json", "bun.lock"]), (("bun", "add", "-d") + self.JS,))
 
-    # VO2 C1: Plan content for both tools missing
     def test_c1_plan_fields(self):
         plan = self.single({"pyproject.toml": PYPROJECT, "uv.lock": ""})
         self.assertEqual(
@@ -265,7 +253,6 @@ class TestPresence(ToolsTestCase):
     def py(self, pyproject, lock="uv.lock"):
         return self.plans({"pyproject.toml": pyproject, lock: ""})
 
-    # VO3 py: none / partial / all
     def test_python_partial_hypothesis_present_case_insensitive_c2(self):
         plans = self.py('[dependency-groups]\ndev = ["Hypothesis>=6"]\n', "poetry.lock")
         self.assertEqual(plans[0].commands, (("poetry", "add", "--group", "dev", "mutmut"),))
@@ -293,7 +280,6 @@ class TestPresence(ToolsTestCase):
     def test_python_all_present_gives_no_plan(self):
         self.assertEqual(self.py('[project]\nname = "d"\ndependencies = ["hypothesis", "mutmut"]\n'), [])
 
-    # VO3 js: each of the four dependency tables for one tool
     def test_js_fast_check_in_each_dependency_table(self):
         for table in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
             with self.subTest(table=table):
@@ -320,7 +306,6 @@ class TestPresence(ToolsTestCase):
         plans = self.plans({"package.json": json.dumps({"devDependencies": {"fast-check": "3"}}), "pnpm-lock.yaml": ""})
         self.assertEqual(plans[0].commands, (("pnpm", "add", "-D", "@stryker-mutator/core"),))
 
-    # VO3 go / C4
     def test_c4_go_missing(self):
         plan = self.single({"go.mod": "module example.com/x\n\ngo 1.22\n"})
         self.assertEqual(plan.language, "go")
@@ -332,7 +317,6 @@ class TestPresence(ToolsTestCase):
         self.assertEqual(self.plans({"go.mod": "module x\n\ntool github.com/avito-tech/go-mutesting/cmd/go-mutesting\n"}), [])
         self.assertEqual(self.plans({"go.mod": "module x\n\nrequire github.com/avito-tech/go-mutesting v1.0.0\n"}), [])
 
-    # VO3 rust: proptest {absent, present} x cargo-mutants {absent, present}
     CARGO = "[package]\nname = \"x\"\n"
     ADD = ("cargo", "add", "--dev", "proptest")
     INSTALL = ("cargo", "install", "cargo-mutants")
@@ -374,7 +358,6 @@ class TestBlockers(ToolsTestCase):
         self.assertTrue(plan.blocker)
         return plan
 
-    # VO4 / C13 / C14
     def test_broken_toml_python(self):
         self.assert_blocker({"pyproject.toml": "[project\nname =", "uv.lock": ""}, "python")
 
@@ -406,7 +389,6 @@ class TestBlockers(ToolsTestCase):
         plan = self.single({"package.json": "{}"})
         self.assertIsNone(plan.blocker)
 
-    # VO4 Errors: the failing language does not stop the others
     def test_broken_language_does_not_stop_other_languages(self):
         plans = self.plans({"pyproject.toml": "[broken", "uv.lock": "", "package.json": "{}", "go.mod": "module x\n"})
         self.assertEqual([p.language for p in plans], ["python", "javascript", "go"])
@@ -414,7 +396,6 @@ class TestBlockers(ToolsTestCase):
         self.assertIsNone(plans[1].blocker)
         self.assertIsNone(plans[2].blocker)
 
-    # VO4 FR9 via offer: blockers are reported, never asked
     def test_offer_reports_missing_executable_without_asking_c14_style(self):
         self.files({"pyproject.toml": PYPROJECT, "uv.lock": ""})
         report, fake_input, fake_run = self.offer(which=FakeWhich(missing=["uv"]))
@@ -447,7 +428,6 @@ class TestAnswers(ToolsTestCase):
         self.files({"pyproject.toml": PYPROJECT, "uv.lock": ""})
         self.uv = ("uv", "add", "--dev", "hypothesis", "mutmut")
 
-    # VO5 install answers: y, yes, "  YES ", C12
     def test_affirmative_answers_install(self):
         for answer in ("y", "yes", "  YES ", "Y", "\tyEs\n"):
             with self.subTest(answer=answer):
@@ -458,7 +438,6 @@ class TestAnswers(ToolsTestCase):
                 self.assertIn("python", write)
                 self.assertFalse(verification_tools.is_never(self.repo))
 
-    # VO5 skip answers: "", n, N, x, "yy", "ye"
     def test_other_answers_skip(self):
         for answer in ("", "n", "N", "x", "yy", "ye", "no", " "):
             with self.subTest(answer=answer):
@@ -470,7 +449,6 @@ class TestAnswers(ToolsTestCase):
                 self.assertFalse(verification_tools.is_never(self.repo))
                 self.assertFalse(self.prefs.exists())
 
-    # VO5 never answers: never, Never
     def test_never_answers_store_preference(self):
         for answer in ("never", "Never", " NEVER "):
             with self.subTest(answer=answer):
@@ -481,7 +459,6 @@ class TestAnswers(ToolsTestCase):
                 self.assertEqual(report["write"], [])
                 self.assertTrue(verification_tools.is_never(self.repo))
 
-    # VO5 EOFError / C18: two languages, both skipped, both asked
     def test_eof_skips_each_language(self):
         self.files({"package.json": "{}"})
         report, fake_input, fake_run = self.offer(EOFError(), EOFError())
@@ -490,7 +467,6 @@ class TestAnswers(ToolsTestCase):
         self.assertEqual(len(report["skip"]), 2, report)
         self.assertFalse(verification_tools.is_never(self.repo))
 
-    # VO5 C19: never ends the questions
     def test_never_on_first_language_stops_further_questions(self):
         self.files({"package.json": "{}"})
         report, fake_input, fake_run = self.offer("never")
@@ -498,7 +474,6 @@ class TestAnswers(ToolsTestCase):
         self.assertEqual(fake_run.calls, [])
         self.assertTrue(verification_tools.is_never(self.repo))
 
-    # VO5/FR13: one question per language, answers apply per language
     def test_yes_then_no_applies_per_language(self):
         self.files({"package.json": "{}"})
         report, fake_input, fake_run = self.offer("y", "n")
@@ -508,7 +483,6 @@ class TestAnswers(ToolsTestCase):
         self.assertNotIn("javascript", text_of(report, "write").lower())
         self.assertEqual(len(report["skip"]), 1)
 
-    # VO5/C9, FR18: nothing to ask
     def test_no_plans_never_reads_input(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
@@ -534,7 +508,6 @@ class TestInstallExecution(ToolsTestCase):
         self.files(self.RUST)
         return self.offer("y", run=FakeRun(*outcomes), which=FakeWhich(missing=["cargo-mutants"]))
 
-    # VO6 all success / C6 / QR4
     def test_success_runs_in_order_with_safe_arguments(self):
         report, _, fake_run = self.rust_offer(0, 0)
         self.assertEqual(fake_run.commands(), [self.ADD, self.INSTALL])
@@ -558,7 +531,6 @@ class TestInstallExecution(ToolsTestCase):
         for token in ("python", "hypothesis", "mutmut"):
             self.assertIn(token, write)
 
-    # VO6 / C15: first command returncode 1
     def test_first_command_failure_stops_and_reports(self):
         report, _, fake_run = self.rust_offer((1, "out-line", "boom reason\nsecond line"))
         self.assertEqual(fake_run.commands(), [self.ADD])
@@ -571,7 +543,6 @@ class TestInstallExecution(ToolsTestCase):
         self.assertEqual(report["write"], [])
         self.assertFalse(verification_tools.is_never(self.repo))
 
-    # VO6 FR14: reason falls back to the first stdout line when stderr is empty
     def test_failure_reason_uses_first_stdout_line_when_stderr_empty(self):
         report, _, _ = self.rust_offer((1, "boom\nmore", ""))
         review = text_of(report, "manual review")
@@ -586,7 +557,6 @@ class TestInstallExecution(ToolsTestCase):
         self.assertIn("cargo install cargo-mutants", review)
         self.assertEqual(report["write"], [])
 
-    # VO6 / C16: OSError and TimeoutExpired
     def test_oserror_is_reported_without_exception(self):
         report, _, fake_run = self.rust_offer(FileNotFoundError("nope-missing-binary"))
         self.assertEqual(len(fake_run.calls), 1)
@@ -620,7 +590,6 @@ class TestStateTransitions(ToolsTestCase):
         self.files({"pyproject.toml": PYPROJECT, "uv.lock": ""})
         self.uv = ("uv", "add", "--dev", "hypothesis", "mutmut")
 
-    # VO7 T1 -> T2 / C7
     def test_never_then_next_offer_skips_silently_with_one_line(self):
         self.offer("never")
         self.assertTrue(verification_tools.is_never(self.repo))
@@ -631,7 +600,6 @@ class TestStateTransitions(ToolsTestCase):
         self.assertIn("--ask-tools", text_of(report, "skip"))
         self.assertEqual(report["write"], [])
 
-    # VO7 T3 / C8: never + ask_tools clears and asks; answering n keeps it cleared
     def test_ask_tools_clears_never_and_asks(self):
         self.offer("never")
         report, fake_input, fake_run = self.offer("n", ask_tools=True)
@@ -651,7 +619,6 @@ class TestStateTransitions(ToolsTestCase):
         self.assertEqual(len(fake_input.prompts), 1)
         self.assertEqual(fake_run.commands(), [self.uv])
 
-    # VO7 T4 / C20 / FR12
     def test_dry_run_with_never_and_ask_tools_changes_nothing(self):
         self.offer("never")
         before = self.prefs.read_bytes()
@@ -685,8 +652,6 @@ class TestStateTransitions(ToolsTestCase):
         report, _, _ = self.offer(dry_run=True)
         self.assertEqual(report["info"], [])
 
-    # VO7 FR10: skip line only when something would have been asked
-    # VO7 FR12 precedence: dry_run beats the FR10 never skip
     def test_dry_run_with_never_and_no_ask_tools_shows_info_not_skip(self):
         self.offer("never")
         before = self.prefs.read_bytes()
@@ -735,7 +700,6 @@ class TestPreferences(ToolsTestCase):
     def read(self):
         return json.loads(self.prefs.read_text())
 
-    # VO8 preferences_file: env read at call time, home default
     def test_preferences_file_reads_environment_at_call_time(self):
         self.assertEqual(Path(verification_tools.preferences_file()), self.prefs)
         other = self.root / "elsewhere.json"
@@ -752,12 +716,10 @@ class TestPreferences(ToolsTestCase):
                 Path(env["HOME"]) / ".harness" / "preferences.json",
             )
 
-    # VO8 absent
     def test_absent_file_is_not_never_and_not_created_by_read(self):
         self.assertFalse(verification_tools.is_never(self.repo))
         self.assertFalse(self.prefs.exists())
 
-    # VO8 normal: exact format, parent creation
     def test_set_never_writes_exact_format_and_creates_parents(self):
         self.assertFalse(self.prefs.parent.exists())
         self.assertTrue(verification_tools.set_never(self.repo))
@@ -777,7 +739,6 @@ class TestPreferences(ToolsTestCase):
         self.assertFalse(verification_tools.is_never(self.repo))
         self.assertNotIn(str(self.repo.resolve()), self.read().get("repositories", {}))
 
-    # VO8 FR15: clear_never without an entry succeeds and writes nothing
     def test_clear_never_without_entry_returns_true_and_writes_nothing(self):
         self.assertTrue(verification_tools.clear_never(self.repo))
         self.assertFalse(self.prefs.exists())
@@ -788,7 +749,6 @@ class TestPreferences(ToolsTestCase):
         self.assertTrue(verification_tools.clear_never(self.repo))
         self.assertEqual(self.prefs.read_text(), content)
 
-    # VO8 FR15: valid object without "repositories"
     def test_object_without_repositories_key_is_usable(self):
         self.prefs.parent.mkdir(parents=True)
         self.prefs.write_text(json.dumps({"other": 1}))
@@ -802,7 +762,6 @@ class TestPreferences(ToolsTestCase):
         self.assertTrue(verification_tools.clear_never(self.repo))
         self.assertEqual(self.read(), {"other": 1})
 
-    # VO8 FR15: nested missing parent chain
     def test_set_never_creates_nested_parent_directories(self):
         nested = self.root / "a" / "b" / "prefs.json"
         with mock.patch.dict(os.environ, {"HARNESS_PREFERENCES_FILE": str(nested)}):
@@ -810,7 +769,6 @@ class TestPreferences(ToolsTestCase):
             self.assertTrue(nested.is_file())
             self.assertTrue(verification_tools.is_never(self.repo))
 
-    # VO8 C21 preservation
     def test_other_keys_and_repositories_survive_set_and_clear(self):
         other_repo = {"verification_tools_prompt": "never", "note": 1}
         self.prefs.parent.mkdir(parents=True)
@@ -837,7 +795,6 @@ class TestPreferences(ToolsTestCase):
         self.prefs.write_text(json.dumps({"repositories": {str(self.repo.resolve()): {"verification_tools_prompt": "ask"}}}))
         self.assertFalse(verification_tools.is_never(self.repo))
 
-    # VO8 C17: malformed content is never overwritten
     def assert_untouched_malformed(self, content):
         self.prefs.parent.mkdir(parents=True, exist_ok=True)
         self.prefs.write_text(content)
@@ -861,7 +818,6 @@ class TestPreferences(ToolsTestCase):
         self.prefs.write_text(json.dumps({"repositories": {str(self.repo.resolve()): "never"}}))
         self.assertFalse(verification_tools.is_never(self.repo))
 
-    # VO8 write errors
     def test_parent_path_blocked_by_a_file_returns_false(self):
         blocker = self.root / "blocker"
         blocker.write_text("x")
@@ -890,7 +846,6 @@ class TestPreferences(ToolsTestCase):
         self.assertFalse(verification_tools.set_never(other))
         self.assertEqual(self.prefs.read_bytes(), original)
 
-    # VO8 FR16: set_never failure inside offer
     def offer_with_unwritable_preferences(self):
         blocker = self.root / "blocker"
         blocker.write_text("x")
@@ -930,7 +885,6 @@ class TestPromptText(ToolsTestCase):
             for argument in command:
                 self.assertIn(argument, prompt)
 
-    # VO10 single command
     def test_single_command_prompts_for_each_language(self):
         cases = [
             ("python", {"pyproject.toml": PYPROJECT, "uv.lock": ""}, [("uv", "add", "--dev", "hypothesis", "mutmut")]),
@@ -948,7 +902,6 @@ class TestPromptText(ToolsTestCase):
                 self.assertEqual(len(prompts), 1)
                 self.assert_prompt_shows(prompts[0], language, commands)
 
-    # VO10 two commands joined by " && "
     def test_two_commands_are_joined_with_and(self):
         prompts = self.prompts_for({"Cargo.toml": "[package]\nname = \"x\"\n"}, ["cargo-mutants"])
         self.assertEqual(len(prompts), 1)
@@ -966,7 +919,6 @@ class TestPromptText(ToolsTestCase):
 
 
 class TestRobustness(ToolsTestCase):
-    # VO12 QR3: error guessing, no exception propagates
     def test_empty_package_json(self):
         plans = self.plans({"package.json": ""})
         self.assertEqual(len(plans), 1)

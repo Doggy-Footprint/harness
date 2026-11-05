@@ -1,6 +1,4 @@
-"""Independent oracle for spec 5aee51c6eb1cf672 v1 (VO1-VO8).
-
-Expected values are hand-written from the spec's FR/Cases; the scanner is
+"""Expected values are hand-written from the spec's Cases; the scanner is
 only driven through its CLI (python3 harness/bin/test_scan.py PATH).
 """
 import ast
@@ -86,7 +84,6 @@ def line_of(lines, needle):
 
 
 class TestVO1FileDetection(ScanTestCase):
-    # VO1 (FR1, N2, G1): equivalence partitioning, 10 pattern classes + 1 non-target
     def build(self):
         root = self.tmp()
         py_test = "def test_a():\n    assert 1\n"
@@ -149,7 +146,6 @@ class TestVO1FileDetection(ScanTestCase):
 
 
 class TestVO2TestExtraction(ScanTestCase):
-    # VO2 (FR2, N1, N2): equivalence partitioning over 5 languages x extraction forms
     def test_python_functions_and_methods_with_lines(self):
         root = self.tmp()
         lines = [
@@ -308,7 +304,6 @@ class TestVO2TestExtraction(ScanTestCase):
 
 
 class TestVO3Flags(ScanTestCase):
-    # VO3 (FR3, B1, G2): decision table, 8 flags true/false + heavy_mock 4/5 boundary
     PY = "\n".join([
         "import time",
         "import unittest",
@@ -373,7 +368,7 @@ class TestVO3Flags(ScanTestCase):
     def test_plain_python_test_has_no_flags(self):
         _, flags, _ = self.py_flags()
         self.assertEqual(flags["test_plain"], [])
-        self.assertEqual(flags["test_mock_four"], [])  # B1: 4 mocks -> no heavy_mock
+        self.assertEqual(flags["test_mock_four"], [])
 
     def test_flag_lists_are_sorted_and_unique(self):
         _, _, tests = self.py_flags()
@@ -444,7 +439,6 @@ class TestVO3Flags(ScanTestCase):
 
 
 class TestVO4Git(ScanTestCase):
-    # VO4 (FR4, B2, E3): 3-value boundary on harness first-commit time T, plus non-git
     T = 1_700_000_000
 
     def make_git_scenario(self):
@@ -524,7 +518,6 @@ class TestVO4Git(ScanTestCase):
 
 
 class TestVO5Runners(ScanTestCase):
-    # VO5 (FR5, N3): equivalence partitioning, 7 runners + gradlew presence
     def candidates(self, root):
         return {(c["runner"], c["command"]) for c in self.scan(root)["runner_candidates"]}
 
@@ -609,7 +602,6 @@ class TestVO5Runners(ScanTestCase):
 
 
 class TestVO6Inventory(ScanTestCase):
-    # VO6 (FR6): 4 directory names, non-FR1 files only, sorted
     def test_inventory_lists_non_test_files_under_test_dirs_sorted(self):
         root = self.tmp()
         for rel in (
@@ -640,7 +632,6 @@ class TestVO6Inventory(ScanTestCase):
 
 
 class TestVO7Errors(ScanTestCase):
-    # VO7 (Errors, E1, E2, QR2): equivalence partitioning over the 4 error classes
     def test_e1_missing_path_exits_2_with_empty_stdout_and_stderr_message(self):
         root = self.tmp()
         result = run_scan(root / "does-not-exist")
@@ -686,7 +677,6 @@ class TestVO7Errors(ScanTestCase):
 
 
 class TestVO8Quality(ScanTestCase):
-    # VO8 (QR1, QR3): error guessing; experience-based, no coverage target
     def test_qr1_scanner_imports_only_stdlib_modules(self):
         tree = ast.parse(SCANNER.read_text())
         roots = set()
