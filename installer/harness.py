@@ -808,6 +808,37 @@ def migrate_progress_change_markers(target: Path, dry_run: bool) -> list[str]:
         "a Claude SessionEnd hook removes leftover Bash snapshots; SessionStart no longer records start_head",
         "add `.harness/sessions/progress-*.d/` to .gitignore so snapshot and marker files are never committed",
         "the Progress Rule states that background Bash commands are checked only until their tool call returns",
+        "pre-commit writes the session's recorded prompts into the current progress's User Requests and stages it; "
+        "Stop no longer rewrites the progress, so it is not left modified after the last commit",
+        "projects with a git hook manager that call `.harness/git/pre-commit` need no change",
+    ]
+
+
+def migrate_post_merge_committed_copies(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "post-merge also moves a progress the merge modified when progress-logs/ already holds an untracked copy "
+        "of it whose content equals a committed version; that copy is deleted first because git history keeps it",
+        "this clears the duplicate left when a pull fast-forward moved a merged progress and a later merge of the "
+        "same branch brought a newer version back",
+    ]
+
+
+def migrate_live_session_rotation(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "the SessionStart marker in .harness/sessions/.running/ now records the session id",
+        "rotation to progress-logs/ is refused only when a progress to be moved belongs to a session still running "
+        "in another process; a progress of an ended session rotates even while an unrelated session runs",
+        "markers written by sessions started before the update carry no session id and keep the previous refusal "
+        "until those sessions restart",
+    ]
+
+
+def migrate_agent_messages_out_of_requests(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "subagent hand-backs (prompts starting with `<agent-message from=`) are no longer recorded as user prompts, "
+        "and ones already recorded are left out when ### User Requests is rewritten",
+        "a progress of a session running across the update may renumber its User Requests entries; re-check "
+        "`source: ### User Requests #<n>` lines under ### Constraints",
     ]
 
 
@@ -847,6 +878,9 @@ MIGRATIONS = (
     (parse_version("0.33.0"), "replace handoffs with session progress records and todos; add continue-on", migrate_progress_records),
     (parse_version("0.34.0"), "require progress only when Claude Code changed the project", migrate_progress_session_changes),
     (parse_version("0.34.1"), "track project changes in per-call files; ignore git-ignored edits", migrate_progress_change_markers),
+    (parse_version("0.34.2"), "post-merge clears uncommitted copies of committed progress", migrate_post_merge_committed_copies),
+    (parse_version("0.34.3"), "refuse rotation only for progress of sessions still running", migrate_live_session_rotation),
+    (parse_version("0.34.4"), "leave subagent hand-backs out of progress User Requests", migrate_agent_messages_out_of_requests),
 )
 
 
