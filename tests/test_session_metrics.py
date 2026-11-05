@@ -1,10 +1,4 @@
-"""Independent oracle for spec d63550ad0d3f333d v1 (per-version run metrics).
-
-Expected values are hand-derived from the spec text (F1-F10, C1-C10); the
-classifier is never reimplemented here. Unit tests import harness/lib directly
-(so coverage of harness/lib is measured); integration tests run the installed
-hooks as subprocesses against a temp repo with HARNESS_TELEMETRY_DIR set.
-"""
+"""Unit tests import harness/lib directly so that coverage of harness/lib is measured."""
 import importlib
 import json
 import os
@@ -42,7 +36,6 @@ def kinds(tool, tool_input):
     return [k for k, _ in sm().classify_tool(tool, tool_input, ROOT)]
 
 
-# --------------------------------------------------------------------- O1
 CODE_EXTS = ".py .js .ts .tsx .jsx .go .rs .java .kt .c .cc .cpp .h .hpp .rb .php .swift .cs .scala .sh".split()
 
 
@@ -93,7 +86,6 @@ def test_c3_boundary_table():
     assert got == ["noncode", "noncode", "code", "code"]
 
 
-# --------------------------------------------------------------------- O2
 @pytest.mark.parametrize("tool", ["Read", "Grep", "Glob", "LS"])
 def test_o2_explore_tools(tool):
     assert sm().classify_tool(tool, {"file_path": "/fake/repo/src/a.py", "pattern": "x"}, ROOT) == [("explore", None)]
@@ -117,33 +109,32 @@ def test_o2_unknown_tool_is_empty():
     assert sm().classify_tool("TodoWrite", {}, ROOT) == []
 
 
-# --------------------------------------------------------------------- O3
 BASH_CASES = [
-    ("redirect_code", "echo x > src/b.py", ["code_write"]),  # C2
+    ("redirect_code", "echo x > src/b.py", ["code_write"]),
     ("redirect_noncode", "echo x > notes.md", ["noncode_write"]),
     ("append_code", "echo x >> src/c.rs", ["code_write"]),
     ("append_noncode", "echo x >> log.txt", ["noncode_write"]),
     ("tee_code", "echo x | tee out.py", ["code_write"]),
     ("tee_noncode", "echo x | tee out.md", ["noncode_write"]),
-    ("tee_a", "echo x | tee -a log.txt", ["noncode_write"]),  # C10
+    ("tee_a", "echo x | tee -a log.txt", ["noncode_write"]),
     ("tee_a_code", "echo x | tee -a run.sh", ["code_write"]),
     ("sed_i", "sed -i 's/a/b/' x.go", ["code_write"]),
     ("sed_i_noncode", "sed -i 's/a/b/' x.md", ["noncode_write"]),
-    ("sed_i_bak", "sed -i.bak 's/a/b/' x.go", ["code_write"]),  # C10
+    ("sed_i_bak", "sed -i.bak 's/a/b/' x.go", ["code_write"]),
     ("sed_i_bak_noncode", "sed -i.bak 's/a/b/' x.txt", ["noncode_write"]),
     ("sed_no_inplace", "sed -n 's/a/b/p' x.go", ["explore"]),
-    ("devnull_redirect", "ls > /dev/null", ["explore"]),  # C4
-    ("devnull_stderr", "cat a 2>/dev/null", ["explore"]),  # C4
+    ("devnull_redirect", "ls > /dev/null", ["explore"]),
+    ("devnull_stderr", "cat a 2>/dev/null", ["explore"]),
     ("devnull_stderr_space", "cat a 2> /dev/null", ["explore"]),
     ("devnull_amp", "make &> /dev/null", ["explore"]),
     ("python_c", "python -c \"print(1)\"", ["unclassified_shell_write"]),
-    ("python3_c", "python3 -c \"open('a.py','w')\"", ["unclassified_shell_write"]),  # C5
+    ("python3_c", "python3 -c \"open('a.py','w')\"", ["unclassified_shell_write"]),
     ("node_e", "node -e \"console.log(1)\"", ["unclassified_shell_write"]),
     ("perl_i", "perl -i -pe 's/a/b/' f.txt", ["unclassified_shell_write"]),
     ("perl_e", "perl -e 'print 1'", ["unclassified_shell_write"]),
     ("ruby_e", "ruby -e 'puts 1'", ["unclassified_shell_write"]),
     ("heredoc_no_target", "cat <<EOF\nhello\nEOF", ["unclassified_shell_write"]),
-    ("heredoc_with_target", "cat <<EOF > notes.md\nhello\nEOF", ["noncode_write"]),  # C5
+    ("heredoc_with_target", "cat <<EOF > notes.md\nhello\nEOF", ["noncode_write"]),
     ("heredoc_with_code_target", "cat <<EOF > src/n.py\nx\nEOF", ["code_write"]),
     ("target_beats_marker", "python3 -c 'print(1)' > out.py", ["code_write"]),
     ("marker_with_stderr_devnull", "python3 -c x 2>/dev/null", ["unclassified_shell_write"]),
@@ -171,7 +162,6 @@ def test_o3_code_target_in_excluded_prefix_is_noncode():
     assert kinds("Bash", {"command": "echo x > agent-docs/x.py"}) == ["noncode_write"]
 
 
-# --------------------------------------------------------------------- O9
 _TOKENS = [">", ">>", "tee", "-a", "sed", "-i", "-i.bak", "/dev/null", "2>", "&>", "python", "python3",
            "-c", "node", "-e", "perl", "ruby", "<<", "EOF", "a.py", "b.md", "'", '"', "\n", ";", "|", "&&", "\\", "x"]
 
@@ -247,7 +237,6 @@ class MetricsCase(TelemetryTestCase):
         return {k: event[k] for k in METRIC_FIELDS - {"workflow_run_ids"}}
 
 
-# --------------------------------------------------------------------- O4
 class TestConcurrentRecord(MetricsCase):
     def test_parallel_post_tool_use_hooks_lose_no_increments(self):
         payload = json.dumps({
@@ -415,7 +404,6 @@ class TestO4Scenarios(MetricsCase):
         self.assertEqual(sorted(self.metrics()[0]["workflow_run_ids"]), ["run-1", "run-2"])
 
 
-# --------------------------------------------------------------------- O5
 class TestO5Orphans(MetricsCase):
     def test_c7_orphan_flushed_unclean_and_own_session_untouched(self):
         baseline = self.state_files()
@@ -489,7 +477,6 @@ class TestO5OrphanIdentity(MetricsCase):
         self.assertEqual(events[0]["workflow_run_ids"], ["run-9"])
 
 
-# --------------------------------------------------------------------- O6
 class TestO6ExistingEvents(MetricsCase):
     def test_spec_write_and_test_command_emitted_once_alongside_counting(self):
         spec = self.write_spec(self.repo, name="x", version=3, test_command="python3 -m unittest")
@@ -505,7 +492,6 @@ class TestO6ExistingEvents(MetricsCase):
         self.assertEqual(self.metrics()[0]["tool_calls"], 2)
 
 
-# --------------------------------------------------------------------- O7
 class TestO7Errors(MetricsCase):
     def assertSilent(self, result):
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -581,7 +567,6 @@ class TestO7Errors(MetricsCase):
         self.assertEqual(self.metrics(), [])
 
 
-# -------------------------------------------------------------------- O10
 class TestO10Performance(MetricsCase):
     def test_q1_read_payload_median_wall_time_at_most_250ms(self):
         payload = json.dumps({
@@ -600,13 +585,12 @@ class TestO10Performance(MetricsCase):
         self.assertLessEqual(statistics.median(samples), 250, sorted(samples))
 
 
-# -------------------------------------------------------------------- O11
 class TestO11Packaging(MetricsCase):
     def hooks(self):
         return json.loads((self.repo / ".claude" / "settings.json").read_text())["hooks"]
 
     def test_version_is_0_26_0(self):
-        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.34.4")
+        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.35.0")
 
     def test_installed_post_tool_use_matcher(self):
         groups = [g for g in self.hooks()["PostToolUse"] if "telemetry_hook.py" in self.commands([g])[0]]

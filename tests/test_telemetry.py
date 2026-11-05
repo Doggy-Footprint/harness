@@ -1,10 +1,3 @@
-"""Independent oracle for agent-docs/specs/telemetry-markers.md (v1).
-
-Derived only from the spec text; the implementation is never read. Tests
-run the installed hooks/lib as subprocesses against a temp repo and inspect
-the resulting ~/.harness/telemetry/<repo-slug>.jsonl style file (redirected
-via HARNESS_TELEMETRY_DIR).
-"""
 import json
 import os
 import re
@@ -1161,7 +1154,7 @@ class TestEdge(TelemetryTestCase):
 
 
     def test_c18_harness_version_is_0_9_0(self):
-        self.assertEqual(HARNESS_VERSION, "0.34.4")
+        self.assertEqual(HARNESS_VERSION, "0.35.0")
 
     def test_c20_update_preserves_pre_existing_post_tool_use_hook(self):
         repo = self.install()
