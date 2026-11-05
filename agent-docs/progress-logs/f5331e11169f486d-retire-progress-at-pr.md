@@ -12,7 +12,7 @@ commit: e9a6ed21ae25fba8d156573df8a21b61fe2a4be9
 
 ### State
 - Harness 0.36.0 is implemented and committed on feat/retire-progress-at-pr. `gh pr create` from a Claude Code session is blocked until the session's progress is retired with `python3 .harness/bin/progress.py retire`, committed, and pushed. After that the session keeps editing its progress in progress-logs/, and Stop blocks while it is uncommitted or unpushed. Spec 8f325620aefa53a8 completed at v3 and is archived; verifier round 2 passed, and 15 hand mutations were all detected.
-  - commit: 37169b5; files: harness/hooks/progress_hook.py, harness/bin/progress.py, harness/lib/progress.py, harness/git/sync_progress.py, harness/hooks/doc_commit.py, tests/test_progress_retire.py
+  - commit: bf28c8f; files: harness/hooks/progress_hook.py, harness/bin/progress.py, harness/lib/progress.py, harness/git/sync_progress.py, harness/hooks/doc_commit.py, tests/test_progress_retire.py
 - This repository is updated to 0.36.0 (`python3 installer/harness.py update .`). This progress was retired with the new command before the PR was opened.
   - commit: 37169b5; files: .harness/hooks/progress_hook.py, AGENTS.md
 
