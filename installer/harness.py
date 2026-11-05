@@ -823,6 +823,16 @@ def migrate_post_merge_committed_copies(target: Path, dry_run: bool) -> list[str
     ]
 
 
+def migrate_live_session_rotation(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "the SessionStart marker in .harness/sessions/.running/ now records the session id",
+        "rotation to progress-logs/ is refused only when a progress to be moved belongs to a session still running "
+        "in another process; a progress of an ended session rotates even while an unrelated session runs",
+        "markers written by sessions started before the update carry no session id and keep the previous refusal "
+        "until those sessions restart",
+    ]
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -860,6 +870,7 @@ MIGRATIONS = (
     (parse_version("0.34.0"), "require progress only when Claude Code changed the project", migrate_progress_session_changes),
     (parse_version("0.34.1"), "track project changes in per-call files; ignore git-ignored edits", migrate_progress_change_markers),
     (parse_version("0.34.2"), "post-merge clears uncommitted copies of committed progress", migrate_post_merge_committed_copies),
+    (parse_version("0.34.3"), "refuse rotation only for progress of sessions still running", migrate_live_session_rotation),
 )
 
 

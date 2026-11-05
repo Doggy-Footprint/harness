@@ -214,6 +214,19 @@ class ProgressCase(InstallerTestCase):
         directory.mkdir(parents=True, exist_ok=True)
         (directory / str(name)).write_text("")
 
+    def put_marker(self, repo, name, content):
+        """content: str or bytes is written as the file; None creates a directory."""
+        directory = self.sessions_dir(repo) / ".running"
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / str(name)
+        if content is None:
+            path.mkdir()
+        elif isinstance(content, bytes):
+            path.write_bytes(content)
+        else:
+            path.write_text(content)
+        return path
+
     def dead_pid(self):
         proc = subprocess.Popen([sys.executable, "-c", "pass"])
         proc.wait()
@@ -347,6 +360,240 @@ class TestRotation(ProgressCase):
         self.assertEqual(existing.read_text(), "an earlier log with the same name\n")
         self.assertTrue(new.is_file())
         self.assertNotIn("Traceback", result.stderr)
+
+
+class TestLiveSessionRotationRefusal(ProgressCase):
+    """Spec 48b8b8950d2e14c7 v1: VO1 decision table, VO2 marker, VO3 malformed markers, VO4 message."""
+
+    def setup_rotation(self, olds=(("sessa", NAME0),), own=None, live=None, extra=()):
+        """olds: (session or None, name) of progress files to be moved; own/live: marker content (None = absent);
+        live is a (pid name, content) pair; extra: further (session, name) files already present."""
+        repo = self.new_repo()
+        if own is not None:
+            self.put_marker(repo, os.getpid(), own)
+        if live is not None:
+            self.put_marker(repo, live[0], live[1])
+        head = self.head(repo)
+        texts = {}
+        for session, name in tuple(olds) + tuple(extra):
+            texts[name] = build(session=session, stamp=head, next_step=[(f"item {name[:4]}", head, "none")])
+            self.put(repo, name, texts[name])
+        new = self.put(repo, NAME2, build(session="sessb", stamp=head, next_step=[("new item", head, "none")]))
+        return repo, texts, new
+
+    def logs(self, repo):
+        return list((repo / "agent-docs" / "progress-logs").glob("*.md"))
+
+    def assert_moved(self, repo, texts, new, result):
+        self.assertEqual(result.returncode, 2, out(result))
+        for name, text in texts.items():
+            self.assertEqual((repo / "agent-docs" / "progress-logs" / name).read_bytes(), text.encode())
+            self.assertFalse((repo / "agent-docs" / "progress" / name).exists())
+        self.assertEqual(frontmatter(new)["before"], f"agent-docs/progress-logs/{sorted(texts)[-1]}")
+
+    def assert_refused(self, repo, texts, new, result):
+        self.assertEqual(result.returncode, 2, out(result))
+        self.assertNotIn("Traceback", result.stderr)
+        for name, text in texts.items():
+            self.assertEqual((repo / "agent-docs" / "progress" / name).read_bytes(), text.encode(), name)
+        self.assertEqual(self.logs(repo), [])
+        self.assertTrue(new.is_file())
+
+    # VO1 decision table
+    def test_vo1_r1_only_own_marker_moves_old_and_links_before(self):
+        repo, texts, new = self.setup_rotation(own="")
+        result = self.post(repo, new, sid="sessb")
+        self.assert_moved(repo, texts, new, result)
+
+    def test_vo1_r2_live_marker_with_other_session_moves_old(self):
+        repo, texts, new = self.setup_rotation(own="", live=(1, '{"session_id":"sessc"}'))
+        result = self.post(repo, new, sid="sessb")
+        self.assert_moved(repo, texts, new, result)
+
+    def test_vo1_r3_live_marker_with_old_session_refuses(self):
+        repo, texts, new = self.setup_rotation(own="", live=(1, '{"session_id":"sessa"}'))
+        result = self.post(repo, new, sid="sessb")
+        self.assert_refused(repo, texts, new, result)
+
+    def test_vo1_r4_live_legacy_content_refuses_with_parallel_message(self):
+        repo, texts, new = self.setup_rotation(own="", live=(1, "startup"))
+        result = self.post(repo, new, sid="sessb")
+        self.assert_refused(repo, texts, new, result)
+        self.assertIn("parallel", result.stderr.lower())
+
+    def test_vo1_r5_live_empty_content_refuses_with_parallel_message(self):
+        repo, texts, new = self.setup_rotation(own="", live=(1, ""))
+        result = self.post(repo, new, sid="sessb")
+        self.assert_refused(repo, texts, new, result)
+        self.assertIn("parallel", result.stderr.lower())
+
+    def test_vo1_r6_old_without_session_and_live_id_marker_refuses(self):
+        repo, texts, new = self.setup_rotation(olds=((None, NAME0),), own="", live=(1, '{"session_id":"sessc"}'))
+        result = self.post(repo, new, sid="sessb")
+        self.assert_refused(repo, texts, new, result)
+
+    def test_vo1_r7_two_old_files_one_matching_live_session_moves_neither(self):
+        repo, texts, new = self.setup_rotation(olds=(("sessa", NAME0), ("sessd", NAME1)), own="",
+                                               live=(1, '{"session_id":"sessd"}'))
+        result = self.post(repo, new, sid="sessb")
+        self.assert_refused(repo, texts, new, result)
+
+    def test_vo1_r8_dead_marker_with_old_session_moves_old(self):
+        repo, texts, new = self.setup_rotation(own="", live=(self.dead_pid(), '{"session_id":"sessa"}'))
+        result = self.post(repo, new, sid="sessb")
+        self.assert_moved(repo, texts, new, result)
+
+    def test_vo1_r9_own_marker_with_old_session_moves_old(self):
+        repo, texts, new = self.setup_rotation(own='{"session_id":"sessa"}')
+        result = self.post(repo, new, sid="sessb")
+        self.assert_moved(repo, texts, new, result)
+
+    def test_vo1_r10_same_session_file_present_gives_same_session_refusal_first(self):
+        repo, texts, new = self.setup_rotation(olds=(("sessa", NAME0),), own="", live=(1, '{"session_id":"sessa"}'),
+                                               extra=(("sessb", NAME1),))
+        result = self.post(repo, new, sid="sessb")
+        self.assert_refused(repo, texts, new, result)
+        self.assertEqual(sorted(p.name for p in (repo / "agent-docs" / "progress").glob("*.md")),
+                         [NAME0, NAME1, NAME2])
+        self.assertIn("merge", result.stderr.lower())
+        self.assertNotIn("worktree", result.stderr.lower())
+
+    def live_child(self):
+        proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+        self.addCleanup(proc.wait)
+        self.addCleanup(proc.kill)
+        return proc.pid
+
+    def test_vo1_r11_two_live_markers_one_matching_refuses_in_either_arrangement(self):
+        for label, matching_on_one in (("matching on pid 1", True), ("matching on child pid", False)):
+            with self.subTest(arrangement=label):
+                child = self.live_child()
+                match, other = ('{"session_id":"sessa"}', '{"session_id":"sessc"}')
+                first, second = (match, other) if matching_on_one else (other, match)
+                repo, texts, new = self.setup_rotation(own="", live=(1, first))
+                self.put_marker(repo, child, second)
+                result = self.post(repo, new, sid="sessb")
+                self.assert_refused(repo, texts, new, result)
+
+    def test_vo1_r12_live_id_marker_plus_live_legacy_marker_refuses_with_parallel(self):
+        for label, legacy_on_one in (("legacy on pid 1", True), ("legacy on child pid", False)):
+            with self.subTest(arrangement=label):
+                child = self.live_child()
+                legacy, ided = "startup", '{"session_id":"sessc"}'
+                first, second = (legacy, ided) if legacy_on_one else (ided, legacy)
+                repo, texts, new = self.setup_rotation(own="", live=(1, first))
+                self.put_marker(repo, child, second)
+                result = self.post(repo, new, sid="sessb")
+                self.assert_refused(repo, texts, new, result)
+                self.assertIn("parallel", result.stderr.lower())
+
+    def test_vo1_r13_old_with_invalid_frontmatter_and_live_id_marker_refuses(self):
+        repo, texts, new = self.setup_rotation(olds=(("sessa", NAME0),), own="", live=(1, '{"session_id":"sessc"}'))
+        bad = "not frontmatter\n" + texts[NAME0]
+        self.put(repo, NAME0, bad)
+        texts[NAME0] = bad
+        result = self.post(repo, new, sid="sessb")
+        self.assert_refused(repo, texts, new, result)
+
+    # VO3 malformed live markers
+    def check_malformed(self, content):
+        repo, texts, new = self.setup_rotation(own="", live=(1, content))
+        result = self.post(repo, new, sid="sessb")
+        self.assertEqual(result.returncode, 2, out(result))
+        self.assertIn("parallel", result.stderr.lower())
+        self.assertNotIn("Traceback", result.stderr)
+        for name, text in texts.items():
+            self.assertEqual((repo / "agent-docs" / "progress" / name).read_bytes(), text.encode(), name)
+        self.assertEqual(self.logs(repo), [])
+        self.assertTrue(new.is_file())
+
+    def test_vo3_m1_truncated_json(self):
+        self.check_malformed("{")
+
+    def test_vo3_m2_json_array(self):
+        self.check_malformed("[]")
+
+    def test_vo3_m3_non_string_session_id(self):
+        self.check_malformed('{"session_id": 5}')
+
+    def test_vo3_m4_empty_session_id(self):
+        self.check_malformed('{"session_id": ""}')
+
+    def test_vo3_m5_marker_is_a_directory(self):
+        self.check_malformed(None)
+
+    def test_vo3_m6_non_utf8_bytes(self):
+        self.check_malformed(b"\xff\xfe")
+
+    # VO4 refusal message of C2 (R3)
+    def refusal_r3(self, live_name=1):
+        repo, texts, new = self.setup_rotation(own="", live=(live_name, '{"session_id":"sessa"}'))
+        result = self.post(repo, new, sid="sessb")
+        self.assert_refused(repo, texts, new, result)
+        return repo, result.stderr
+
+    def test_vo4_e1_names_written_progress_path(self):
+        _, err = self.refusal_r3()
+        self.assertIn(f"agent-docs/progress/{NAME2}", err)
+
+    def test_vo4_e2_names_blocking_progress_path(self):
+        _, err = self.refusal_r3()
+        self.assertIn(f"agent-docs/progress/{NAME0}", err)
+
+    def test_vo4_e3_names_blocking_session_id(self):
+        _, err = self.refusal_r3()
+        self.assertIn("sessa", err)
+
+    def test_vo4_e4_names_marker_pid(self):
+        _, err = self.refusal_r3()
+        self.assertRegex(err, r"(?<![0-9A-Za-z-])1(?![0-9A-Za-z])")
+        proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+        self.addCleanup(proc.wait)
+        self.addCleanup(proc.kill)
+        _, err = self.refusal_r3(live_name=proc.pid)
+        self.assertIn(str(proc.pid), err)
+
+    def test_vo4_e5_tells_to_use_separate_worktree(self):
+        _, err = self.refusal_r3()
+        self.assertIn("worktree", err.lower())
+
+    # VO2 SessionStart marker
+    def own_marker(self, repo):
+        return self.sessions_dir(repo) / ".running" / str(os.getpid())
+
+    def test_vo2_p1_session_id_and_source_are_recorded(self):
+        repo = self.install()
+        result = self.run_session_lock(repo, "SessionStart", {"session_id": "s1", "source": "startup"})
+        self.assertEqual(result.returncode, 0, out(result))
+        data = json.loads(self.own_marker(repo).read_text())
+        self.assertIsInstance(data, dict)
+        self.assertEqual(data["session_id"], "s1")
+        self.assertEqual(data["source"], "startup")
+
+    def test_vo2_p2_missing_session_id_leaves_no_usable_id(self):
+        repo = self.install()
+        result = self.run_session_lock(repo, "SessionStart", {"source": "startup"})
+        self.assertEqual(result.returncode, 0, out(result))
+        data = json.loads(self.own_marker(repo).read_text())
+        self.assertIsInstance(data, dict)
+        value = data.get("session_id")
+        self.assertFalse(isinstance(value, str) and value, data)
+
+    def test_vo2_p3_missing_source_is_recorded_as_empty_string(self):
+        repo = self.install()
+        result = self.run_session_lock(repo, "SessionStart", {"session_id": "s1"})
+        self.assertEqual(result.returncode, 0, out(result))
+        data = json.loads(self.own_marker(repo).read_text())
+        self.assertEqual(data["session_id"], "s1")
+        self.assertEqual(data["source"], "")
+
+    def test_vo2_p4_start_replaces_previous_own_marker_content(self):
+        repo = self.install()
+        self.put_marker(repo, os.getpid(), '{"session_id":"old"}')
+        result = self.run_session_lock(repo, "SessionStart", {"session_id": "new", "source": "clear"})
+        self.assertEqual(result.returncode, 0, out(result))
+        data = json.loads(self.own_marker(repo).read_text())
+        self.assertEqual(data["session_id"], "new")
 
 
 class TestFreshness(ProgressCase):
