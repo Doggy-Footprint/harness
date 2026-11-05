@@ -3,7 +3,7 @@ session: 17233f01-50e1-4880-b898-8446cabc8bdf
 before: agent-docs/progress-logs/014f982c329b53af-post-merge-committed-copies.md
 previous: none
 branch: fix/progress
-commit: 527623eba2f25ef23014f1173d1008206a4079f5
+commit: 8516bd1b2ea03a41591c2f11417ec5af7571bf25
 ---
 
 # Narrow the live-session rotation refusal; keep subagent hand-backs out of User Requests
@@ -48,6 +48,7 @@ commit: 527623eba2f25ef23014f1173d1008206a4079f5
 - installer/harness.py: 0.34.3 migration `migrate_live_session_rotation`; harness/VERSION 0.34.3; Progress Rule sentence in harness/instructions/harness-block.md; regenerated `.harness/` and AGENTS.md with `update .`.
 - harness/lib/progress.py `is_agent_message()` and `state_prompts()` filter; harness/hooks/progress_hook.py skips recording such prompts; User Requests paragraph of the Progress Rule rewritten; 0.34.4 migration; four TestPromptRecording tests.
 - tests: new TestLiveSessionRotationRefusal (R1-R13, M1-M6, E1-E5, P1-P4) and VO5 installer tests; version-bump updates in six test files.
+- Removed the parameter docstrings of `put_marker` and `setup_rotation` in tests/test_progress.py; kept only the external-system comment on `AGENT_MESSAGE_PREFIX` in harness/lib/progress.py.
 
 ### Commands
 - `echo y | python3 installer/harness.py update .` (the update prompt raises EOFError without stdin).
@@ -119,3 +120,20 @@ commit: 527623eba2f25ef23014f1173d1008206a4079f5
 #### 12 — 2026-11-05T06:14:55Z
 
 > 요약 기능은 빼고, 하위 에이전트 보고가 들어오는 것만 빼줘
+
+#### 13 — 2026-11-05T06:35:28Z
+
+> RP은 한글로 해줘
+
+#### 14 — 2026-11-05T06:36:53Z
+
+> 필수인 주석만 남겨
+> 
+> 
+> 
+> <pasted_content id="571f">
+> - `.harness/lib/progress.py`: line(s) 661, 662
+> - `harness/lib/progress.py`: line(s) 661, 662
+> - `tests/test_progress.py`: line(s) 218, 368, 369
+> </pasted_content id="571f">
+> 

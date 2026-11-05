@@ -215,7 +215,6 @@ class ProgressCase(InstallerTestCase):
         (directory / str(name)).write_text("")
 
     def put_marker(self, repo, name, content):
-        """content: str or bytes is written as the file; None creates a directory."""
         directory = self.sessions_dir(repo) / ".running"
         directory.mkdir(parents=True, exist_ok=True)
         path = directory / str(name)
@@ -365,8 +364,6 @@ class TestRotation(ProgressCase):
 class TestLiveSessionRotationRefusal(ProgressCase):
 
     def setup_rotation(self, olds=(("sessa", NAME0),), own=None, live=None, extra=()):
-        """olds: (session or None, name) of progress files to be moved; own/live: marker content (None = absent);
-        live is a (pid name, content) pair; extra: further (session, name) files already present."""
         repo = self.new_repo()
         if own is not None:
             self.put_marker(repo, os.getpid(), own)
