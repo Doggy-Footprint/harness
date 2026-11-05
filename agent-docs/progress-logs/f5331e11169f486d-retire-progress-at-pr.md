@@ -3,7 +3,7 @@ session: c1f287a5-a426-4d56-b060-6dd4a3cff513
 before: none
 previous: none
 branch: feat/retire-progress-at-pr
-commit: 37169b55dc1b82a12d12f484289d30a1e83eee4e
+commit: d27451c4af3f8534d98e75dff9139c5838e98283
 ---
 
 # Retire progress to progress-logs before gh pr create
@@ -49,6 +49,7 @@ commit: 37169b55dc1b82a12d12f484289d30a1e83eee4e
   - A second progress in progress/ is refused while the session owns a logs file.
   - The Progress Rule text is updated, and a message-only migration is added.
 - tests/test_progress_retire.py is new (57 tests). Version pins and update answer counts were raised in six test files.
+- harness/hooks/doc_commit.py: the separate comment on the own-logs-file skip was folded into the existing concurrent-writer comment above it, at the user's request ("응 그렇게 바꿔줘").
 
 ### Commands
 - `uv run --no-project --with pytest --with hypothesis python3 -m pytest tests -q -p no:cacheprovider` → 1016 passed at f6acba9, then 1064 and 1073 passed after each test batch.
@@ -109,3 +110,16 @@ commit: 37169b55dc1b82a12d12f484289d30a1e83eee4e
 > <status>completed</status>
 > <summary>Background command "Run 10 hand mutations one at a time with restore" completed (exit code 0)</summary>
 > </task-notification>
+
+#### 6 — 2026-11-05T14:36:55Z
+
+> PR 한글로 해줘
+
+#### 7 — 2026-11-05T14:38:18Z
+
+> harness/hooks/doc_commit.py 50
+> 이거 필수인 주석이야?
+
+#### 8 — 2026-11-05T14:38:49Z
+
+> 응 그렇게 바꿔줘
