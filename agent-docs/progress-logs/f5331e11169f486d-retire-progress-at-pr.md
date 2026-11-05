@@ -3,7 +3,7 @@ session: c1f287a5-a426-4d56-b060-6dd4a3cff513
 before: none
 previous: none
 branch: feat/retire-progress-at-pr
-commit: d27451c4af3f8534d98e75dff9139c5838e98283
+commit: e9a6ed21ae25fba8d156573df8a21b61fe2a4be9
 ---
 
 # Retire progress to progress-logs before gh pr create
@@ -49,7 +49,7 @@ commit: d27451c4af3f8534d98e75dff9139c5838e98283
   - A second progress in progress/ is refused while the session owns a logs file.
   - The Progress Rule text is updated, and a message-only migration is added.
 - tests/test_progress_retire.py is new (57 tests). Version pins and update answer counts were raised in six test files.
-- harness/hooks/doc_commit.py: the separate comment on the own-logs-file skip was folded into the existing concurrent-writer comment above it, at the user's request ("응 그렇게 바꿔줘").
+- harness/hooks/doc_commit.py: the comment added for the own-logs-file skip was removed. The pre-existing concurrent-writer comment is kept as it was before this branch (user: "그럼 지워").
 
 ### Commands
 - `uv run --no-project --with pytest --with hypothesis python3 -m pytest tests -q -p no:cacheprovider` → 1016 passed at f6acba9, then 1064 and 1073 passed after each test batch.
@@ -123,3 +123,11 @@ commit: d27451c4af3f8534d98e75dff9139c5838e98283
 #### 8 — 2026-11-05T14:38:49Z
 
 > 응 그렇게 바꿔줘
+
+#### 9 — 2026-11-05T14:42:36Z
+
+> 저거 필요한거야???
+
+#### 10 — 2026-11-05T14:42:49Z
+
+> 그럼 지워

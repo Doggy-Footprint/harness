@@ -43,9 +43,8 @@ def target_path(payload: dict) -> Path | None:
         relative = path.relative_to(DOCS_ROOT)
     except ValueError:
         return None
-    # progress_hook.py stamps progress files itself, including the session's own
-    # retired file in progress-logs/; Claude Code runs matching PostToolUse hooks
-    # concurrently, so two writers would lose an update.
+    # progress_hook.py stamps progress files itself; Claude Code runs matching
+    # PostToolUse hooks concurrently, so two writers would lose an update.
     if relative.parts[:1] == ("progress",):
         return None
     session_id = payload.get("session_id")

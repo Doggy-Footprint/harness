@@ -16,7 +16,7 @@
     ".harness/agents/implementer.md": "839f07bb0144969e5572489a3198fe227b6029b70eb004977d69300e691046a6",
     ".harness/agents/test-verifier.md": "d5a4e0e15ee606b4e76f68a9144c368e03272b23376c2fc22041fd48aba0d191",
     ".harness/hooks/progress_hook.py": "f7b9a3cc53056e5ca54fbef5b39cb0e6a46d5f20430fc4dcf89bf5ac9c6acab4",
-    ".harness/hooks/doc_commit.py": "07033d8798643a60648fbaba36e6d0769423771e7824a59ea2f2f35a8f5a9319",
+    ".harness/hooks/doc_commit.py": "f3027e72682261e97c6cf13f1d2243f5b5eb231b0a4678bf2445933d06f185de",
     ".harness/hooks/spec_gate.py": "81a40d87ca6b97fec0c3fe608291aa85069ee233169c7fff0e24ad8b6d889db7",
     ".harness/hooks/session_lock.py": "858677ada28f00bfb920b26710bc114774b72a3007e45fc80bfc2fd05f4a6564",
     ".harness/hooks/telemetry_hook.py": "b6c9333ff752bae1b1fdab03efbd6e8addae307bf223004dd5a503d0b8038510",
