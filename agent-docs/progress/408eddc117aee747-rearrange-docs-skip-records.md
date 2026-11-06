@@ -3,7 +3,7 @@ session: f2f45dd9-4022-476a-89bb-a7ffaa2e4aa4
 before: none
 previous: none
 branch: master
-commit: a75fb6f3d1424e3948293eafed85b7fa28678a7d
+commit: 4fa897a50bc6635aaf0bc117c0598d8b1bdfe8b0
 ---
 
 # Leave spec, progress, and stale records out of rearrange-docs
@@ -17,8 +17,8 @@ commit: a75fb6f3d1424e3948293eafed85b7fa28678a7d
   - commit: a75fb6f3d1424e3948293eafed85b7fa28678a7d; files: harness/skills/rearrange-docs/SKILL.md
 
 ### Next Step
-- The user did not answer whether agent-docs/specs/ should go back to the never-edit-but-report list; ask before changing it.
-  - commit: a75fb6f3d1424e3948293eafed85b7fa28678a7d; files: harness/skills/rearrange-docs/SKILL.md
+- none: the user chose to keep agent-docs/specs/ fully excluded (option 1) over moving it back to the never-edit-but-report list; nothing is left to do.
+  - commit: 4fa897a; files: harness/skills/rearrange-docs/SKILL.md
 
 ### Constraints
 - "rearrange-docs  - spec-logs, progress-logs 등은 제외하도록 해줘"
@@ -63,3 +63,11 @@ commit: a75fb6f3d1424e3948293eafed85b7fa28678a7d
 #### 2 — 2026-11-06T07:09:39Z
 
 > 커밋하고 master에 바로 push해.
+
+#### 3 — 2026-11-06T07:11:48Z
+
+> 지난번에 여쭌 agent-docs/specs/ 건 - 이게 뭐였지?
+
+#### 4 — 2026-11-06T07:12:10Z
+
+> 1
