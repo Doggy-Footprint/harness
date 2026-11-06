@@ -870,6 +870,15 @@ def migrate_rearrange_docs_skip_records(target: Path, dry_run: bool) -> list[str
         "no data is migrated; existing agent-docs/sync-state.json entries for those paths are left in place",
     ]
 
+def migrate_progress_rule_layout(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "the Progress Rule states that a `- none: <reason>` bullet is not an entry and carries no commit line",
+        "\"never edit a progress after its session ends\" becomes \"a session edits only its own progress\"; "
+        "parallel sessions are directed to separate git worktrees",
+        "hook-driven behavior moves to a `### Hook Behavior` list and the PR steps become a numbered list",
+        "no data is migrated; existing progress files and validation are unchanged",
+    ]
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -912,6 +921,7 @@ MIGRATIONS = (
     (parse_version("0.35.0"), "keep spec ids out of code comments written by implementer and test-implementer", migrate_spec_ids_out_of_code),
     (parse_version("0.36.0"), "gate gh pr create on a retired, committed, and pushed session progress", migrate_retire_progress_at_pr),
     (parse_version("0.37.0"), "leave spec, progress, and stale records out of rearrange-docs", migrate_rearrange_docs_skip_records),
+    (parse_version("0.38.0"), "exempt none bullets from commit lines; split hook behavior out of the Progress Rule", migrate_progress_rule_layout),
 )
 
 
