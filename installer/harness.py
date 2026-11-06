@@ -863,6 +863,13 @@ def migrate_retire_progress_at_pr(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_rearrange_docs_skip_records(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "rearrange-docs no longer searches, reads, edits, or reports on agent-docs/specs/, spec-logs/, progress/, "
+        "progress-logs/, or the stale.md and stale/ archives of agent-managed directories",
+        "no data is migrated; existing agent-docs/sync-state.json entries for those paths are left in place",
+    ]
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -904,6 +911,7 @@ MIGRATIONS = (
     (parse_version("0.34.4"), "leave subagent hand-backs out of progress User Requests", migrate_agent_messages_out_of_requests),
     (parse_version("0.35.0"), "keep spec ids out of code comments written by implementer and test-implementer", migrate_spec_ids_out_of_code),
     (parse_version("0.36.0"), "gate gh pr create on a retired, committed, and pushed session progress", migrate_retire_progress_at_pr),
+    (parse_version("0.37.0"), "leave spec, progress, and stale records out of rearrange-docs", migrate_rearrange_docs_skip_records),
 )
 
 

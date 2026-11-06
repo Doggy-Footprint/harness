@@ -850,10 +850,10 @@ class TestMergeScenarios(RetireCase):
 
 
 class TestVersionAndMigration(RetireCase):
-    def test_u1_version_file_reads_0_36_0(self):
-        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.36.0")
+    def test_u1_version_file_reads_current_version(self):
+        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.37.0")
 
-    def test_u2_update_from_0_35_0_announces_only_the_0_36_0_migration(self):
+    def test_u2_update_from_0_35_0_announces_the_0_36_0_migration(self):
         repo = self.install()
         manifest_path = repo / ".harness" / "manifest.json"
         manifest = json.loads(manifest_path.read_text())
@@ -863,14 +863,14 @@ class TestVersionAndMigration(RetireCase):
         result = run_installer("update", str(repo), input="y\n" * 6)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.36.0"])
+        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.36.0", "0.37.0"])
         match = re.search(r"migration 0\.36\.0:(.*?)Apply migration", result.stdout, re.DOTALL)
         self.assertIsNotNone(match, result.stdout)
         text = match.group(1).lower()
         self.assertIn("gh pr create", text)
         self.assertIn("retire", text)
         self.assertIn("progress-logs", text)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.36.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.37.0")
 
 
 class TestConfiguredDocsRoot(RetireCase):
