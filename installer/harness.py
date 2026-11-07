@@ -879,6 +879,14 @@ def migrate_progress_rule_layout(target: Path, dry_run: bool) -> list[str]:
         "no data is migrated; existing progress files and validation are unchanged",
     ]
 
+def migrate_verifier_tests_diff(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "workflow-approach Verify: main writes a Tests-only diff since base_commit (plus untracked Tests files) "
+        "outside the working tree and passes its path to test-verifier, which has no shell",
+        "test-verifier reads only Tests, imported test helpers, and that file",
+        "no data is migrated; active specs and audit state are unchanged",
+    ]
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -922,6 +930,7 @@ MIGRATIONS = (
     (parse_version("0.36.0"), "gate gh pr create on a retired, committed, and pushed session progress", migrate_retire_progress_at_pr),
     (parse_version("0.37.0"), "leave spec, progress, and stale records out of rearrange-docs", migrate_rearrange_docs_skip_records),
     (parse_version("0.38.0"), "exempt none bullets from commit lines; split hook behavior out of the Progress Rule", migrate_progress_rule_layout),
+    (parse_version("0.39.0"), "pass test-verifier a Tests-only diff file it can read without a shell", migrate_verifier_tests_diff),
 )
 
 
