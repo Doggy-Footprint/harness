@@ -11,18 +11,18 @@ commit: f0470794e9321c7efa4119fa1ad45d8075f1c31c
 ## Next Session
 
 ### State
-- Harness 0.39.0, uncommitted on master: workflow-approach Verify step now has main write `git diff <base_commit> -- <Tests paths>` plus untracked Tests files (`git ls-files --others --exclude-standard -- <Tests paths>`) to a file outside the working tree and pass its path to test-verifier; test-verifier's inputs list that file and it reads only Tests, imported test helpers, and that file. The audit-state paragraph says the verifier checks the impact assessment against the Tests diff file. Migration `migrate_verifier_tests_diff` announces it; `update .` regenerated `.harness/`, `.claude/`, `.codex/`, `.agents/`.
+- Harness 0.39.0, committed on master as d1339e8 and pushed to origin/master at the user's request (no PR): workflow-approach Verify step now has main write `git diff <base_commit> -- <Tests paths>` plus untracked Tests files (`git ls-files --others --exclude-standard -- <Tests paths>`) to a file outside the working tree and pass its path to test-verifier; test-verifier's inputs list that file and it reads only Tests, imported test helpers, and that file. The audit-state paragraph says the verifier checks the impact assessment against the Tests diff file. Migration `migrate_verifier_tests_diff` announces it; `update .` regenerated `.harness/`, `.claude/`, `.codex/`, `.agents/`.
   - commit: f0470794e9321c7efa4119fa1ad45d8075f1c31c; files: harness/skills/workflow-approach/SKILL.md, harness/agents/test-verifier.md, installer/harness.py, harness/VERSION
 - test-verifier still has only Read, Grep, Glob; no hook enforces its read paths, so the tool list is the isolation boundary.
   - commit: f0470794e9321c7efa4119fa1ad45d8075f1c31c; files: harness/agents/test-verifier.md, harness/hooks/spec_gate.py
 
 ### Next Step
-- Commit when the user asks; no workflow run has yet exercised the new Verify instruction.
+- No workflow run has yet exercised the new Verify instruction; check the first test-verifier dispatch reads the Tests diff file.
   - commit: f0470794e9321c7efa4119fa1ad45d8075f1c31c; files: harness/skills/workflow-approach/SKILL.md
 
 ### Constraints
 - "1번 안이 좋겠네. 지시 수정은 append 말고 의도에 맞게 rewrite해"
-  - source: ### User Requests #2
+  - source: ### User Requests #3
 
 ### Verify
 - `.venv/bin/python -m unittest discover -s tests`: 982 tests OK. `python3 installer/harness.py doctor .` exit 0; `git diff --check` clean.
