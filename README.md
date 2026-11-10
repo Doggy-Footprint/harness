@@ -64,7 +64,7 @@ python3 installer/harness.py doctor <target>
 
 ## 문서 관리
 
-에이전트는 `AGENTS.md`의 관리 블록에 따라 문서를 씁니다. 전문은 [`harness-block.md`](harness/instructions/harness-block.md)에 있습니다.
+에이전트는 `AGENTS.md`의 관리 블록에 따라 문서를 씁니다. 관리 블록은 규칙 본문이 아니라 `.harness/instructions/harness-block.md`를 가져오는 import 한 줄(`@.harness/instructions/harness-block.md`)이며, 버전이 바뀌어도 `AGENTS.md`는 달라지지 않습니다. 규칙 전문은 [`harness-block.md`](harness/instructions/harness-block.md)에 있습니다.
 
 | 문서 | 위치 | 언제 쓰나 |
 | --- | --- | --- |
@@ -83,7 +83,7 @@ python3 installer/harness.py doctor <target>
 ## 갱신과 점검
 
 ```bash
-python3 installer/harness.py update <target> [--dry-run]
+python3 installer/harness.py update <target> [--dry-run] [--no-commit]
 python3 installer/harness.py update <target-a> <target-b>
 python3 installer/harness.py update --all
 python3 installer/harness.py doctor <target>
@@ -93,6 +93,8 @@ python3 installer/harness.py import <target> --json
 | 명령 | 동작 |
 | --- | --- |
 | `update` | 버전별 migration을 하나씩 확인받고 적용합니다. 사용자가 수정한 파일은 건너뛰고 보고합니다. |
+| `update` 자동 커밋 | 적용이 끝나면 이번 실행이 바꾼 파일만 모아 `Update harness <이전> -> <현재>` 커밋 하나를 만듭니다. 실행 전에 이미 수정된(staged, unstaged, untracked) 후보 파일이 하나라도 있으면 실행 전에 `warning: auto-commit skipped:` 줄로 알리고, 갱신은 적용하되 커밋은 하지 않으며 커밋할 파일을 `manual review`에 나열합니다. 커밋이 실패해도 파일은 남고 종료 코드는 바뀌지 않습니다. Git hook은 그대로 실행됩니다. `install`은 커밋하지 않습니다. |
+| `update --no-commit` | 경고와 커밋 없이 갱신만 합니다. |
 | `update --all` | 지금까지 `install`/`update`한 저장소(`.harness-targets.json`)를 모두 갱신합니다. |
 | `doctor` | manifest SHA, hook 설정, 관리 블록, Git hook 연결을 읽기 전용으로 점검합니다. |
 | `import` | 설치본과 원본의 차이를 보여 줍니다. 반영 여부는 [`harness-import`](harness/skills/harness-import/SKILL.md) 스킬로 검토합니다. |
@@ -104,7 +106,7 @@ python3 installer/harness.py import <target> --json
 `harness/`만 수정합니다. `.harness/`, `.claude/`, `.codex/`, `.agents/`는 생성 결과물이므로 직접 고치지 마세요.
 
 ```bash
-python3 installer/harness.py update .
+python3 installer/harness.py update . --no-commit
 python3 -m unittest discover -s tests
 ```
 

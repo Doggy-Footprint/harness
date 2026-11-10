@@ -17,3 +17,4 @@ analytics/frontend/dist/
 .hypothesis/
 .harness/sessions/progress-*.json
 .harness/sessions/progress-*.d/
+.harness/sessions/installer-run.json

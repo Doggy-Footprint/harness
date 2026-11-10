@@ -109,7 +109,13 @@ def record_modification(payload: dict) -> None:
         except FileNotFoundError:
             return
         snapshot.unlink(missing_ok=True)
-        if fingerprint() != before:
+        current = fingerprint()
+        if current != before:
+            try:
+                if progress.consume_installer_run(REPO_ROOT, before, current):
+                    return
+            except Exception:
+                pass
             mark_modified(session_id)
         return
     if tool not in EDIT_TOOLS:

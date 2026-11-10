@@ -2262,5 +2262,139 @@ class TestHookTiming(ProgressCase):
         self.assertNotIn("Traceback", result.stderr)
 
 
+class TestInstallerRunExemption(ProgressCase):
+    RECORD = ".harness/sessions/installer-run.json"
+
+    def fingerprint(self, repo):
+        return load_progress().git_worktree_fingerprint(repo, ".harness/")
+
+    def record_path(self, repo):
+        return repo / self.RECORD
+
+    def session_with_change(self, make_record, record_bytes=None):
+        repo = self.new_repo()
+        self.assertEqual(self.start(repo).returncode, 0)
+        before = self.fingerprint(repo)
+
+        def action():
+            (repo / "src" / "new.py").write_text("x\n")
+            after = self.fingerprint(repo)
+            if record_bytes is not None:
+                self.record_path(repo).write_bytes(record_bytes)
+            elif make_record is not None:
+                make_record(repo, before, after)
+
+        result = self.bash(repo, action)
+        return repo, result
+
+    def test_record_constant_names_the_sessions_file(self):
+        self.assertEqual(load_progress().INSTALLER_RUN_RECORD, self.RECORD)
+
+    def test_write_installer_run_stores_before_and_after(self):
+        repo = self.new_repo()
+        self.sessions_dir(repo).mkdir(parents=True, exist_ok=True)
+
+        load_progress().write_installer_run(repo, "fp-before", "fp-after")
+
+        self.assertEqual(json.loads(self.record_path(repo).read_text()), {"before": "fp-before", "after": "fp-after"})
+
+    def test_consume_installer_run_matches_deletes_and_is_single_use(self):
+        repo = self.new_repo()
+        progress = load_progress()
+        self.sessions_dir(repo).mkdir(parents=True, exist_ok=True)
+        progress.write_installer_run(repo, "b", "a")
+
+        self.assertIs(progress.consume_installer_run(repo, "b", "a"), True)
+        self.assertFalse(self.record_path(repo).exists())
+        self.assertIs(progress.consume_installer_run(repo, "b", "a"), False)
+
+    def test_consume_installer_run_mismatch_returns_false_and_keeps_record(self):
+        progress = load_progress()
+        for label, before, after in (("after differs", "b", "x"), ("before differs", "x", "a"), ("both differ", "x", "y"),
+                                     ("swapped", "a", "b")):
+            with self.subTest(case=label):
+                repo = self.new_repo()
+                self.sessions_dir(repo).mkdir(parents=True, exist_ok=True)
+                progress.write_installer_run(repo, "b", "a")
+                kept = self.record_path(repo).read_bytes()
+
+                self.assertIs(progress.consume_installer_run(repo, before, after), False)
+                self.assertEqual(self.record_path(repo).read_bytes(), kept)
+
+    def test_consume_installer_run_without_or_with_bad_record_returns_false_without_raising(self):
+        progress = load_progress()
+        repo = self.new_repo()
+        self.assertIs(progress.consume_installer_run(repo, "b", "a"), False)
+        for label, data in (("malformed json", b"{not json"), ("not an object", b"[]"), ("missing after", b'{"before": "b"}'),
+                            ("missing before", b'{"after": "a"}'), ("wrong types", b'{"before": 1, "after": 2}'),
+                            ("empty file", b"")):
+            with self.subTest(case=label):
+                self.sessions_dir(repo).mkdir(parents=True, exist_ok=True)
+                self.record_path(repo).write_bytes(data)
+                self.assertIs(progress.consume_installer_run(repo, "b", "a"), False)
+                self.assertEqual(self.record_path(repo).read_bytes(), data)
+
+    def test_h1_matching_record_leaves_session_unmarked_and_deletes_record(self):
+        repo, result = self.session_with_change(lambda r, b, a: load_progress().write_installer_run(r, b, a))
+
+        self.assertEqual(result.returncode, 0, out(result))
+        self.assertFalse(self.record_path(repo).exists())
+        self.assertEqual(self.stop(repo).returncode, 0)
+
+    def test_h2_record_with_other_after_marks_session_and_keeps_record(self):
+        repo, result = self.session_with_change(lambda r, b, a: load_progress().write_installer_run(r, b, "not-the-after"))
+
+        self.assertEqual(result.returncode, 0, out(result))
+        self.assertEqual(json.loads(self.record_path(repo).read_text())["after"], "not-the-after")
+        self.assertEqual(self.stop(repo).returncode, 2)
+
+    def test_h3_record_with_other_before_marks_session_and_keeps_record(self):
+        repo, result = self.session_with_change(lambda r, b, a: load_progress().write_installer_run(r, "not-the-before", a))
+
+        self.assertEqual(result.returncode, 0, out(result))
+        self.assertEqual(json.loads(self.record_path(repo).read_text())["before"], "not-the-before")
+        self.assertEqual(self.stop(repo).returncode, 2)
+
+    def test_h4_malformed_record_marks_session_and_hook_exits_normally(self):
+        for label, data in (("malformed json", b"{not json"), ("missing keys", b'{"before": "x"}'), ("not an object", b"[1]"),
+                            ("binary", b"\xff\xfe\x00")):
+            with self.subTest(case=label):
+                repo, result = self.session_with_change(None, record_bytes=data)
+
+                self.assertEqual(result.returncode, 0, out(result))
+                self.assertNotIn("Traceback", result.stderr)
+                self.assertEqual(self.stop(repo).returncode, 2)
+
+    def test_h5_no_record_keeps_existing_behavior_for_a_changing_bash_call(self):
+        repo, result = self.session_with_change(None)
+
+        self.assertEqual(result.returncode, 0, out(result))
+        self.assertFalse(self.record_path(repo).exists())
+        self.assertEqual(self.stop(repo).returncode, 2)
+
+    def test_h6_real_update_between_hook_payloads_does_not_mark_session_and_commits_once(self):
+        repo = self.new_repo()
+        manifest_path = repo / ".harness" / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["version"] = "0.39.0"
+        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+        run_git(repo, "add", "-A")
+        before_head = self.commit(repo, "older install")
+        self.assertEqual(self.start(repo).returncode, 0)
+        outcome = {}
+
+        def action():
+            outcome["update"] = run_installer("update", str(repo), "--no-ci", input="y\n" * 10, env=self.env(), exact=True)
+
+        result = self.bash(repo, action)
+
+        update = outcome["update"]
+        self.assertEqual(update.returncode, 0, update.stdout + update.stderr)
+        self.assertEqual(result.returncode, 0, out(result))
+        self.assertEqual(run_git(repo, "rev-list", "--count", f"{before_head}..HEAD").stdout.strip(), "1")
+        self.assertFalse(self.record_path(repo).exists())
+        self.assertEqual(self.stop(repo).returncode, 0)
+
+
 if __name__ == "__main__":
     unittest.main()

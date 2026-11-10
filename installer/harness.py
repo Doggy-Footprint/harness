@@ -7,6 +7,7 @@ import os
 import re
 import secrets
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -17,6 +18,8 @@ import generate  # noqa: E402
 import verification_tools  # noqa: E402
 
 SOURCE_HARNESS = Path(__file__).resolve().parents[1] / "harness"
+sys.path.insert(0, str(SOURCE_HARNESS / "lib"))
+import progress  # noqa: E402
 VERSION = (SOURCE_HARNESS / "VERSION").read_text(encoding="utf-8").strip()
 TARGETS_FILE = Path(
     os.environ.get("HARNESS_TARGETS_FILE") or Path(__file__).resolve().parents[1] / ".harness-targets.json"
@@ -31,6 +34,7 @@ GITIGNORE_LINES = [
     ".harness/sessions/.running/",
     ".harness/sessions/progress-*.json",
     ".harness/sessions/progress-*.d/",
+    ".harness/sessions/installer-run.json",
     ".harness/**/__pycache__",
 ]
 HOOK_MANAGER_FILES = [
@@ -887,6 +891,16 @@ def migrate_verifier_tests_diff(target: Path, dry_run: bool) -> list[str]:
         "no data is migrated; active specs and audit state are unchanged",
     ]
 
+def migrate_import_block_and_update_commit(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "the AGENTS.md managed block becomes an import of .harness/instructions/harness-block.md",
+        "update commits the files it changed, skips the commit when any of them was already modified, "
+        "and --no-commit disables it",
+        "changes made by harness.py update alone inside one Claude Code Bash call no longer require a session progress",
+        "no data is migrated; the regular update step rewrites the managed block",
+    ]
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -931,6 +945,11 @@ MIGRATIONS = (
     (parse_version("0.37.0"), "leave spec, progress, and stale records out of rearrange-docs", migrate_rearrange_docs_skip_records),
     (parse_version("0.38.0"), "exempt none bullets from commit lines; split hook behavior out of the Progress Rule", migrate_progress_rule_layout),
     (parse_version("0.39.0"), "pass test-verifier a Tests-only diff file it can read without a shell", migrate_verifier_tests_diff),
+    (
+        parse_version("0.40.0"),
+        "import the managed block; auto-commit updates; exempt update changes from progress",
+        migrate_import_block_and_update_commit,
+    ),
 )
 
 
@@ -1331,6 +1350,8 @@ HEADING_RE = re.compile(r"(?m)^#{1,2}\s+(.+?)\s*$")
 MARKER_RE = re.compile(r"<!-- harness:begin [^\n]*-->\n(.*?)<!-- harness:end -->\n?", re.DOTALL)
 
 
+MANAGED_BLOCK_IMPORT = "@.harness/instructions/harness-block.md"
+MANAGED_BLOCK = f"<!-- harness:begin -->\n{MANAGED_BLOCK_IMPORT}\n<!-- harness:end -->\n"
 DEFINITION_TODO = "[#TODO]Alert user to set up definition & north-start of the project."
 DEFINITION_HEADING_RE = re.compile(
     r"^(project\s+)?(definition|overview|description|summary|purpose|introduction|intro|goals?|mission|vision)$"
@@ -1379,9 +1400,7 @@ def archive_agents_md(target: Path, content: str, dry_run: bool) -> Path:
 
 def install_or_merge_agents_md(target: Path, dry_run: bool, report: dict, fresh_install: bool = False):
     block_body = (SOURCE_HARNESS / "instructions" / "harness-block.md").read_text(encoding="utf-8")
-    begin = f"<!-- harness:begin {VERSION} -->"
-    end = "<!-- harness:end -->"
-    wrapped = f"{begin}\n{block_body.rstrip(chr(10))}\n{end}\n"
+    wrapped = MANAGED_BLOCK
     path = target / "AGENTS.md"
     block_headings = {m.group(1).strip().lower() for m in HEADING_RE.finditer(block_body)}
 
@@ -1661,7 +1680,109 @@ def cmd_install(target: Path, dry_run: bool, no_ci: bool, ask_tools: bool = Fals
     return 1 if dry_run_ignored else 0
 
 
-def cmd_update(target: Path, dry_run: bool, no_ci: bool, ask_tools: bool = False, model: str | None = None) -> int:
+def _path_signature(target: Path, relpath: str) -> str:
+    path = target / relpath
+    try:
+        mode = os.lstat(path).st_mode
+    except OSError:
+        return "absent"
+    if stat.S_ISLNK(mode):
+        return "link:" + os.readlink(path)
+    if stat.S_ISREG(mode):
+        return "file:" + sha256_of(path)
+    return "other"
+
+
+def git_status_signatures(target: Path) -> tuple[dict[str, str], str | None]:
+    result = run_git(
+        target, ["-c", "core.quotePath=false", "status", "--porcelain=v1", "-z", "--untracked-files=all"]
+    )
+    if result.returncode != 0:
+        return {}, first_output_line(result)
+    tokens = result.stdout.split("\0")
+    paths = []
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        index += 1
+        if not token:
+            continue
+        paths.append(token[3:])
+        # Rename and copy entries carry the origin path as a separate NUL-terminated field.
+        if ("R" in token[:2] or "C" in token[:2]) and index < len(tokens):
+            paths.append(tokens[index])
+            index += 1
+    return {path: _path_signature(target, path) for path in paths}, None
+
+
+def first_output_line(result) -> str:
+    for stream in (result.stderr, result.stdout):
+        for line in stream.splitlines():
+            if line.strip():
+                return line.strip()
+    return ""
+
+
+def commit_candidates(owned: dict, old_files: dict) -> set[str]:
+    candidates = set(owned) | set(old_files) | {
+        ".harness/manifest.json", TARGET_CONFIG, "AGENTS.md", "CLAUDE.md",
+        ".claude/settings.json", ".codex/hooks.json", ".gitignore",
+    }
+    for name in MANAGED_DOC_DIRS:
+        candidates.update(
+            f"agent-docs/{name}/{leaf}" for leaf in ("index.md", "stale.md", "stale/.gitkeep")
+        )
+    for name in PROGRESS_DOC_DIRS:
+        candidates.add(f"agent-docs/{name}/.gitkeep")
+    candidates.update(f".claude/skills/{skill_src.name}" for skill_src in iter_skill_dirs())
+    return candidates
+
+
+def commit_message(old_version, new_version: str) -> str:
+    subject = f"Update harness to {new_version}" if old_version == new_version else (
+        f"Update harness {old_version} -> {new_version}"
+    )
+    return f"{subject}\n\nRequest: harness.py update\nIntent: commit the files this harness update wrote\n"
+
+
+def auto_commit(target: Path, changed: list[str], old_version, report: dict) -> None:
+    listing = ", ".join(changed)
+    pathspecs = "\0".join(changed) + "\0"
+    pathspec_args = ["--pathspec-from-file=-", "--pathspec-file-nul"]
+    had_head = run_git(target, ["rev-parse", "--verify", "--quiet", "HEAD"]).returncode == 0
+    result = run_git(target, ["--literal-pathspecs", "add", "-A"] + pathspec_args, stdin=pathspecs)
+    if result.returncode == 0:
+        result = run_git(
+            target,
+            ["--literal-pathspecs", "commit", "--only", "-m", commit_message(old_version, VERSION)] + pathspec_args,
+            stdin=pathspecs,
+        )
+    if result.returncode == 0:
+        head = run_git(target, ["rev-parse", "HEAD"]).stdout.strip()
+        report["info"].append(f"auto-commit: {head}")
+        return
+    report["manual review"].append(
+        f"auto-commit failed: {first_output_line(result)}; commit these files yourself: {listing}"
+    )
+    restore = ["reset", "-q"] if had_head else ["rm", "-r", "-q", "--cached", "--ignore-unmatch"]
+    run_git(target, ["--literal-pathspecs"] + restore + pathspec_args, stdin=pathspecs)
+
+
+def _safe_fingerprint(target: Path) -> str | None:
+    try:
+        return progress.git_worktree_fingerprint(target, ".harness/")
+    except progress.GitUnavailable:
+        return None
+
+
+def cmd_update(
+    target: Path,
+    dry_run: bool,
+    no_ci: bool,
+    ask_tools: bool = False,
+    model: str | None = None,
+    commit: bool = True,
+) -> int:
     report = new_report()
 
     if not is_git_worktree(target):
@@ -1682,7 +1803,29 @@ def cmd_update(target: Path, dry_run: bool, no_ci: bool, ask_tools: bool = False
         print_report(report)
         return 1
 
+    fingerprint_before = None if dry_run else _safe_fingerprint(target)
+    try:
+        return _update_after_manifest(target, dry_run, no_ci, ask_tools, model, commit, report, manifest)
+    finally:
+        if fingerprint_before is not None:
+            fingerprint_after = _safe_fingerprint(target)
+            if fingerprint_after is not None:
+                progress.write_installer_run(target, fingerprint_before, fingerprint_after)
+
+
+def _update_after_manifest(
+    target: Path,
+    dry_run: bool,
+    no_ci: bool,
+    ask_tools: bool,
+    model: str | None,
+    commit: bool,
+    report: dict,
+    manifest: dict,
+) -> int:
+    manifest_path = target / ".harness" / "manifest.json"
     old_files = manifest.get("files", {})
+    old_version = manifest.get("version")
     agent_model = model or stored_agent_model(target)
     owned = render_owned_files(no_ci, agent_model)
     guarded_paths = list(owned) + list(GUARDED_MANAGED_PATHS)
@@ -1700,6 +1843,16 @@ def cmd_update(target: Path, dry_run: bool, no_ci: bool, ask_tools: bool = False
     if report["conflict"]:
         print_report(report)
         return 1
+
+    candidates = commit_candidates(owned, old_files)
+    status_before: dict[str, str] = {}
+    status_failure = None
+    pre_dirty: list[str] = []
+    if commit:
+        status_before, status_failure = git_status_signatures(target)
+        pre_dirty = sorted(candidates & set(status_before))
+        if pre_dirty:
+            print(f"warning: auto-commit skipped: already modified: {', '.join(pre_dirty)}")
 
     dry_run_ignored = dry_run and bool(ignored)
     if dry_run_ignored and not add_gitignore_exceptions(target, ignored, ignored_directories, guarded_paths, True, report):
@@ -1745,8 +1898,51 @@ def cmd_update(target: Path, dry_run: bool, no_ci: bool, ask_tools: bool = False
         )
     report["write"].append(".harness/manifest.json")
 
+    if commit:
+        if dry_run:
+            report["info"].append("auto-commit: would skip" if pre_dirty else "auto-commit: would commit the files this update writes")
+        else:
+            finish_auto_commit(target, report, old_version, candidates, status_before, status_failure, pre_dirty)
+
     print_report(report)
     return 1 if dry_run_ignored else 0
+
+
+def finish_auto_commit(
+    target: Path,
+    report: dict,
+    old_version,
+    candidates: set[str],
+    status_before: dict[str, str],
+    status_failure: str | None,
+    pre_dirty: list[str],
+) -> None:
+    status_after, after_failure = git_status_signatures(target)
+    failure = status_failure or after_failure
+    if failure is not None:
+        report["manual review"].append(f"auto-commit failed: {failure}; commit the files this update wrote yourself")
+        return
+    changed = sorted(
+        path
+        for path in set(status_before) | set(status_after)
+        if status_before.get(path) != status_after.get(path)
+    )
+    listing = ", ".join(changed)
+    if pre_dirty:
+        if changed:
+            report["manual review"].append(f"auto-commit skipped; commit these files yourself: {listing}")
+        return
+    if not changed:
+        report["skip"].append("auto-commit: nothing to commit")
+        return
+    unexpected = [path for path in changed if path in status_before and path not in candidates]
+    if unexpected:
+        report["manual review"].append(
+            "auto-commit skipped: this update changed files that were already modified: "
+            f"{', '.join(unexpected)}; commit these files yourself: {listing}"
+        )
+        return
+    auto_commit(target, changed, old_version, report)
 
 
 def cmd_doctor(target: Path) -> int:
@@ -1794,7 +1990,6 @@ def cmd_doctor(target: Path) -> int:
                     if group not in existing_groups:
                         report["conflict"].append(f"{relpath}: missing harness hook entry for {event}")
 
-    block_body = (SOURCE_HARNESS / "instructions" / "harness-block.md").read_text(encoding="utf-8")
     agents_md = target / "AGENTS.md"
     if not agents_md.exists():
         report["conflict"].append("AGENTS.md missing")
@@ -1803,8 +1998,10 @@ def cmd_doctor(target: Path) -> int:
         match = MARKER_RE.search(text)
         if not match:
             report["conflict"].append("AGENTS.md: managed block missing")
-        elif match.group(1).rstrip("\n") != block_body.rstrip("\n"):
-            report["conflict"].append("AGENTS.md: managed block content differs from harness/instructions/harness-block.md")
+        elif match.group(1) != MANAGED_BLOCK_IMPORT + "\n":
+            report["conflict"].append(
+                f"AGENTS.md: managed block does not import {MANAGED_BLOCK_IMPORT[1:]}"
+            )
 
     claude_md = target / "CLAUDE.md"
     if not claude_md.exists():
@@ -1961,6 +2158,7 @@ def main(argv) -> int:
     parser.add_argument(
         "--ask-tools", action="store_true", help="ask again about installing verification tools after answering never"
     )
+    parser.add_argument("--no-commit", action="store_true", help="do not commit the files update changed (update only)")
     parser.add_argument("--json", action="store_true", help="machine-readable output (import only)")
     parser.add_argument(
         "--model", choices=AGENT_MODELS, help="model for workflow subagents, stored in .harness/config.json (install and update)"
@@ -1976,6 +2174,8 @@ def main(argv) -> int:
         parser.error("--ask-tools is only valid with install or update")
     if args.model and args.command not in ("install", "update"):
         parser.error("--model is only valid with install or update")
+    if args.no_commit and args.command != "update":
+        parser.error("--no-commit is only valid with update")
     multi = args.command in ("update", "doctor")
     if len(args.target) > 1 and not multi:
         parser.error(f"{args.command} accepts exactly one directory")
@@ -1999,7 +2199,7 @@ def main(argv) -> int:
             return 1
 
     def update(directory: Path) -> int:
-        code = cmd_update(directory, args.dry_run, args.no_ci, args.ask_tools, args.model)
+        code = cmd_update(directory, args.dry_run, args.no_ci, args.ask_tools, args.model, commit=not args.no_commit)
         if code == 0 and not args.dry_run:
             remember_target(directory)
         return code

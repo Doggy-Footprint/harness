@@ -23,14 +23,14 @@ Confirm every hypothesis with the user before the Diagnose step. If the diff con
 # Scope
 
 In scope are documents governed by the harness rules in `AGENTS.md` (standalone docs, inline comments, and docstrings):
-- `AGENTS.md` and `CLAUDE.md`, outside the managed block (`<!-- harness:begin … -->` to `<!-- harness:end -->`);
+- `AGENTS.md` and `CLAUDE.md`, outside the managed block (`<!-- harness:begin -->` to `<!-- harness:end -->`), which is only an import line; the rules live in `.harness/instructions/harness-block.md`, a manifest file;
 - README files and other standalone docs about the changed behavior;
 - `agent-docs/` records: `try-n-fail`, `todos`, `synced-comments`, and their `index.md`;
 - skill and agent definitions the project owns;
 - comments and docstrings in the files the selected commits touched.
 
 Never edit these; report a problem found in them instead:
-- the managed block, and files listed in `.harness/manifest.json`. These come from the harness, so carry the change upstream instead.
+- the managed block (the import line) and `.harness/instructions/harness-block.md`, and files listed in `.harness/manifest.json`. These come from the harness, so carry the change upstream instead.
 - generated files. Edit their source and regenerate them as the project's `AGENTS.md` describes.
 
 Leave these out entirely: do not search, read, edit, or report on them, and do not add them to `agent-docs/sync-state.json`. They are workflow state and run or session records, not rules:

@@ -83,7 +83,7 @@ Append rows for new attempts at the same goal; never delete or edit existing row
 
 ## Progress Rule
 
-Directory: `agent-docs/progress/`, holding at most one `<16-char-hex-id>-<kebab-case-name>.md`, the current session's. Every session in which Claude Code changes the project (edits, patches, commits, or other commands that change the working tree or HEAD) writes one and commits it with the work; files changed outside the session's own tool calls, under `.harness/`, or ignored by git do not count. One progress per session: merge into the existing one instead of writing a second. A session edits only its own progress, never another session's.
+Directory: `agent-docs/progress/`, holding at most one `<16-char-hex-id>-<kebab-case-name>.md`, the current session's. Every session in which Claude Code changes the project (edits, patches, commits, or other commands that change the working tree or HEAD) writes one and commits it with the work; files changed outside the session's own tool calls, under `.harness/`, or ignored by git, and changes (including its commit) made by `harness.py update` alone within one Bash call, do not count. One progress per session: merge into the existing one instead of writing a second. A session edits only its own progress, never another session's.
 
 Before opening a PR from a Claude Code session:
 1. Retire the progress to `agent-docs/progress-logs/` with `python3 .harness/bin/progress.py retire`.

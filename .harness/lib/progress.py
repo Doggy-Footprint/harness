@@ -13,6 +13,7 @@ RECORD_SUBSECTIONS = ("Changes", "Commands", "Failed Attempts", "Sources", "User
 CONSTRAINTS = "Constraints"
 USER_REQUESTS = "User Requests"
 FRONTMATTER_FIELDS = ("session", "before", "previous", "branch")
+INSTALLER_RUN_RECORD = ".harness/sessions/installer-run.json"
 PROGRESS_DIR_NAME = "progress"
 PROGRESS_LOGS_DIR_NAME = "progress-logs"
 DEFAULT_HOST_SUFFIXES = (".corp", ".internal", ".local", ".lan", ".intranet")
@@ -698,6 +699,22 @@ def write_state(path: Path, state: dict) -> None:
     temporary = path.with_name(path.name + f".{os.getpid()}.tmp")
     temporary.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     os.replace(temporary, path)
+
+
+def write_installer_run(repo_root: Path, before: str, after: str) -> None:
+    write_state(repo_root / INSTALLER_RUN_RECORD, {"before": before, "after": after})
+
+
+def consume_installer_run(repo_root: Path, before: str, after: str) -> bool:
+    path = repo_root / INSTALLER_RUN_RECORD
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(record, dict) or record.get("before") != before or record.get("after") != after:
+            return False
+        path.unlink()
+    except (OSError, ValueError, TypeError):
+        return False
+    return True
 
 
 # Claude Code delivers a subagent's hand-back through UserPromptSubmit as an ordinary prompt; the hook
