@@ -7,3 +7,8 @@ File: 7c41e9b2d05af386-test-implementer-isolation-violation.md
 Summary: Evaluation pending: whether the 0.31.0 dispatch wording stopped main from telling test-implementer to run tests, measured by 0.32.0 dispatch_run_instruction telemetry against the 0.28.0 pilot (3/3)
 Related Files: harness/skills/workflow-approach/SKILL.md, harness/lib/isolation.py, harness/hooks/telemetry_hook.py, analytics/app.py
 Related Symbols: detect, _dispatch, _harness_hacking, migrate_isolation_telemetry
+---
+File: d706c17a1d003208-speed-up-test-suite.md
+Summary: Full test suite takes 456-637 s for about 1100 tests; measure the slowest modules, then shorten it
+Related Files: tests/test_installer.py, tests/test_progress.py, tests/test_hook_owned_progress.py
+Related Symbols: run_installer
