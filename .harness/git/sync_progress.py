@@ -41,6 +41,15 @@ def main() -> int:
     paths = sorted(PATHS.progress.glob("*.md")) if PATHS.progress.is_dir() else []
     session_id = os.environ.get("CLAUDE_CODE_SESSION_ID")
     if session_id:
+        for path in paths:
+            if path.is_file():
+                claimed = progress.claim_session_file(
+                    REPO_ROOT, path, session_id, progress.repo_relative(PATHS.progress, REPO_ROOT),
+                    progress.repo_relative(PATHS.progress_logs, REPO_ROOT),
+                )
+                if claimed:
+                    subprocess.run(["git", "-C", str(REPO_ROOT), "add", "--", str(path)], check=False)
+    if session_id:
         paths += progress.session_files(PATHS.progress_logs, session_id)
     for path in paths:
         if path.is_file() and sync(path, head):

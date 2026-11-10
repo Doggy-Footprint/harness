@@ -910,6 +910,16 @@ def migrate_lazy_rule_files(target: Path, dry_run: bool) -> list[str]:
         "no data is migrated; AGENTS.md is unchanged",
     ]
 
+def migrate_hook_owned_progress(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "progress hook: a progress written with an unknown session id gets this session's id",
+        "progress hook: the first project change creates the session's progress with [harness-requires] placeholders",
+        "progress entries: `  - files:` alone is enough; an entry is stale only when a listed file changed after the "
+        "commit that recorded it",
+        "pre-commit: a Claude Code commit in a session that changed the project needs its progress staged",
+        "no data is migrated; AGENTS.md is unchanged",
+    ]
+
 
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
@@ -964,6 +974,11 @@ MIGRATIONS = (
         parse_version("0.41.0"),
         "move hook-backed rules into their own instruction files",
         migrate_lazy_rule_files,
+    ),
+    (
+        parse_version("0.42.0"),
+        "let hooks own progress session ids, skeletons, and the commit gate",
+        migrate_hook_owned_progress,
     ),
 )
 
@@ -1038,9 +1053,9 @@ def sha256_of(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def run_git(target: Path, args: list, stdin: str | None = None):
+def run_git(target: Path, args: list, stdin: str | None = None, env: dict | None = None):
     return subprocess.run(
-        ["git", "-C", str(target)] + args, capture_output=True, text=True, input=stdin
+        ["git", "-C", str(target)] + args, capture_output=True, text=True, input=stdin, env=env
     )
 
 
@@ -1774,6 +1789,7 @@ def auto_commit(target: Path, changed: list[str], old_version, report: dict) -> 
             target,
             ["--literal-pathspecs", "commit", "--only", "-m", commit_message(old_version, VERSION)] + pathspec_args,
             stdin=pathspecs,
+            env={**os.environ, "HARNESS_UPDATE_COMMIT": "1"},
         )
     if result.returncode == 0:
         head = run_git(target, ["rev-parse", "HEAD"]).stdout.strip()

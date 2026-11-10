@@ -9,7 +9,7 @@ Before opening a PR from a Claude Code session:
 
 After retiring, the session keeps editing its progress in `progress-logs/`.
 
-Frontmatter: `session` (Claude Code session id), `before` (repo path of the progress moved to logs when this one was created, or `none`), `previous` (repo path of the progress this session continued through `/continue-on`, or `none`), `branch`, and the `commit` stamp. `before` records order only; `previous` records an explicit continuation.
+Frontmatter: `session` (Claude Code session id; the hook fills it, so write `auto` when you do not know it), `before` (repo path of the progress moved to logs when this one was created, or `none`), `previous` (repo path of the progress this session continued through `/continue-on`, or `none`), `branch`, and the `commit` stamp. `before` records order only; `previous` records an explicit continuation.
 
 Required file structure:
 
@@ -17,11 +17,11 @@ Required file structure:
 - `## Next Session` with `### State`, `### Next Step`, `### Constraints`, `### Verify`, `### Dead Ends`, `### Related`
 - `## Record` with `### Changes`, `### Commands`, `### Failed Attempts` (table `| attempt | failure evidence | cause |`, cause marked `verified` or `hypothesis`), `### Sources`, `### User Requests`
 
-Every `## Next Session` bullet outside `### Constraints` is an entry followed by `  - commit: <sha checked against>; files: <comma-separated repo paths or none>`; record each entry's own commit. `### Constraints` bullets quote the user verbatim from `### User Requests` and carry `  - source: <where it was said>`. A subsection with nothing to continue holds `- none: <reason>`; a `none:` bullet is not an entry and carries no `commit:` line. `### Related` lists the exact records a later session needs; never point to records you did not check.
+Every `## Next Session` bullet outside `### Constraints` is an entry followed by `  - files: <comma-separated repo paths or none>`; list the files the entry's claim depends on. An entry is fresh from the commit that recorded it: it is stale only when a listed file (or a file under a listed directory) changed in a later commit, so an entry committed together with its work is fresh. An optional `commit: <sha>; ` before `files:` is accepted but does not decide freshness. `### Constraints` bullets quote the user verbatim from `### User Requests` and carry `  - source: <where it was said>`. A subsection with nothing to continue holds `- none: <reason>`; a `none:` bullet is not an entry and carries no `files:` line. `### Related` lists the exact records a later session needs; never point to records you did not check.
 
 `### User Requests` records, masked, the prompts the user sent in this session; subagent hand-backs that arrive as prompts are left out. Hooks rewrite it when the progress is written and at each commit, which stages it, so never edit it. Pre-commit blocks keys, tokens, emails, IP addresses, and internal hostnames in `progress/` and `progress-logs/`; replace each with `[masked:<category>]`.
 
-To continue earlier work, read only the `## Next Session` of the chosen progress and the pointers under its `### Related` (`/continue-on`); never guess related records. Re-check entries the hooks flag as stale, and ask the user whether a flagged near-duplicate was re-verified or copied.
+To continue earlier work, read only the `## Next Session` of the chosen progress and the pointers under its `### Related` (`/continue-on`); never guess related records. Re-check entries the hooks flag as stale (update the entry text and its `  - files:` line, or move it to `### Dead Ends`), and ask the user whether a flagged near-duplicate was re-verified or copied.
 
 ### Hook Behavior
 
@@ -30,3 +30,6 @@ To continue earlier work, read only the `## Next Session` of the chosen progress
 - Project changes are detected per tool call; a Bash command run in the background is checked only until its tool call returns, so later changes it makes are not seen.
 - `gh pr create` is blocked until the session's progress is retired, committed, and pushed, so a merged PR leaves nothing in `progress/` to move.
 - A retired progress in `progress-logs/` gets the same checks and User Requests sync, and Stop blocks while it is uncommitted or unpushed.
+- The first project change of a session that has no progress creates one from a skeleton: frontmatter, every heading, and `[harness-requires]` placeholders. Replace every `[harness-requires]` outside `### User Requests`; checks and Stop report each remaining one.
+- A progress in `progress/` that is not in HEAD and whose `session:` is empty, `auto`, or not a session of this checkout gets `session: <current session>` when it is written, at Stop, and at commit. A file in HEAD, or one whose `session:` has a state file or an owner in HEAD, is never rewritten.
+- A Claude Code commit in a session that changed the project is blocked until the session's progress is staged and, in `progress-logs/`, passes the format checks; merge, cherry-pick, revert, rebase, and `harness.py update` commits are exempt.

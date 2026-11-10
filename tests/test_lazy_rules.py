@@ -22,6 +22,7 @@ S1 = (
     "so it is committed with the work."
 )
 S1_STEM = "has no progress yet"
+N2_STEM = "this session changed the project and had no progress, so"
 S2 = "following .harness/instructions/progress.md, run"
 S3 = "and dead ends, following .harness/instructions/progress.md."
 S4 = "following .harness/instructions/progress.md before stopping."
@@ -142,8 +143,12 @@ class TestBlockSplit(unittest.TestCase):
         repo = shared_install()
         for heading, name in MOVED.items():
             with self.subTest(section=heading, file=name):
+                actual = (repo / ".harness" / "instructions" / name).read_text()
+                if name == "progress.md":
+                    self.assertTrue(actual.startswith("## Progress Rule"))
+                    continue
                 expected = base[heading].rstrip("\n") + "\n"
-                self.assertEqual((repo / ".harness" / "instructions" / name).read_text(), expected)
+                self.assertEqual(actual, expected)
 
     def test_v1_moved_headings_are_absent_from_the_block(self):
         lines = read_block(shared_install()).splitlines()
@@ -178,6 +183,7 @@ class TestHookSessions(ProgressCase):
 
     def started(self):
         repo = self.new_repo()
+        self.add_marker(repo, os.getpid())
         self.assertEqual(self.start(repo).returncode, 0)
         return repo
 
@@ -191,12 +197,14 @@ class TestHookSessions(ProgressCase):
 
     def assert_reminded(self, result):
         self.assertEqual(result.returncode, 2, out(result))
-        self.assertEqual(result.stderr.count(S1), 1, result.stderr)
+        self.assertEqual(result.stderr.count(N2_STEM), 1, result.stderr)
+        self.assertNotIn(S1_STEM, result.stderr)
         self.assertNotIn("Traceback", result.stderr)
 
     def assert_silent(self, result):
         self.assertEqual(result.returncode, 0, out(result))
         self.assertNotIn(S1_STEM, result.stderr)
+        self.assertNotIn(N2_STEM, result.stderr)
         self.assertNotIn("Traceback", result.stderr)
 
     def test_v3_d1_first_modifying_edit_without_progress_prints_s1_and_exits_2(self):
@@ -215,7 +223,7 @@ class TestHookSessions(ProgressCase):
         self.assertEqual(calls[1].stderr, "")
         self.assert_silent(calls[2])
         self.assertEqual(calls[2].stderr, "")
-        self.assertEqual(sum(call.stderr.count(S1) for call in calls), 1)
+        self.assertEqual(sum(call.stderr.count(N2_STEM) for call in calls), 1)
 
     def test_v3_d3_own_progress_in_progress_dir_before_first_change_prints_nothing(self):
         repo = self.new_repo()
@@ -279,6 +287,7 @@ class TestHookSessions(ProgressCase):
         failed = self.bash(repo, lambda: (repo / "src" / "new.py").write_text("x\n"), event="PostToolUseFailure")
         self.assertEqual(failed.returncode, 0, out(failed))
         self.assertNotIn(S1_STEM, out(failed))
+        self.assertNotIn(N2_STEM, out(failed))
 
         first = self.edit(repo, "src/a.py")
         self.assert_reminded(first)
@@ -294,6 +303,7 @@ class TestHookSessions(ProgressCase):
         failed = self.bash(repo, lambda: (repo / "src" / "new.py").write_text("x\n"), event="PostToolUseFailure")
         self.assertEqual(failed.returncode, 0, out(failed))
         self.assertNotIn(S1_STEM, out(failed))
+        self.assertNotIn(N2_STEM, out(failed))
 
         first = self.bash(repo, lambda: None, tool_use_id="toolu_2")
         self.assert_reminded(first)
@@ -312,6 +322,7 @@ class TestHookSessions(ProgressCase):
         result = self.hook(repo, {"hook_event_name": "PostToolUseFailure", "session_id": "sessa", "tool_name": "Edit",
                                   "tool_input": {"file_path": str(repo / "src" / "a.py")}})
         self.assertNotIn(S1_STEM, out(result))
+        self.assertNotIn(N2_STEM, out(result))
         self.assertNotIn("Traceback", out(result))
 
 
@@ -324,8 +335,7 @@ class TestMessages(ProgressCase):
             run_git(repo, "add", "--", self.rel(repo, path))
             self.commit(repo, "progress")
         self.assertEqual(self.start(repo).returncode, 0)
-        (repo / "src" / "new.py").write_text("new = 1\n")
-        self.post(repo, repo / "src" / "new.py")
+        self.mark_changed(repo)
         return repo
 
     def test_v5_s4_stop_for_a_changed_session_without_progress_names_progress_md(self):
@@ -358,7 +368,7 @@ class TestMessages(ProgressCase):
         run_git(repo, "checkout", "-q", "-b", "feat")
         run_git(repo, "push", "-q", "-u", "origin", "feat")
         self.assertEqual(self.start(repo).returncode, 0)
-        self.bash(repo, lambda: (repo / "src" / "new.py").write_text("new = 1\n"))
+        self.mark_changed(repo)
 
         result = self.hook(repo, {"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_use_id": "toolu_gate",
                                   "session_id": "sessa", "tool_input": {"command": "gh pr create --fill"}})
@@ -390,6 +400,7 @@ class TestHookErrors(ProgressCase):
 
         self.assertEqual(result.returncode, 0, out(result))
         self.assertNotIn(S1_STEM, out(result))
+        self.assertNotIn(N2_STEM, out(result))
         self.assertNotIn("Traceback", out(result))
         self.assertEqual(self.stop(repo).returncode, 2)
 
@@ -400,9 +411,11 @@ class TestHookErrors(ProgressCase):
         (repo / "src" / "a.py").write_text("a = 2\n")
         result = self.post(repo, repo / "src" / "a.py", tool="Edit", env=env)
         self.assertNotIn(S1_STEM, out(result))
+        self.assertNotIn(N2_STEM, out(result))
         self.assertNotIn("Traceback", out(result))
         again = self.bash(repo, lambda: (repo / "src" / "b.py").write_text("b = 2\n"), env=env)
         self.assertNotIn(S1_STEM, out(again))
+        self.assertNotIn(N2_STEM, out(again))
         self.assertNotIn("Traceback", out(again))
 
 
@@ -551,12 +564,12 @@ class TestMigration0410(InstallerTestCase):
         repo, manifest_path = self.install_0400()
         agents_before = (repo / "AGENTS.md").read_bytes()
 
-        result = run_installer("update", str(repo), "--no-ci", "--no-commit", input="y\n" * 5, exact=True)
+        result = run_installer("update", str(repo), "--no-ci", "--no-commit", input="y\n" * 8, exact=True)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         announced = re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE)
-        self.assertEqual(announced[-1], "0.41.0")
-        self.assertEqual(announced, ["0.41.0"])
+        self.assertEqual(announced[-1], "0.42.0")
+        self.assertEqual(announced, ["0.41.0", "0.42.0"])
         self.assertIn(f"migration 0.41.0: {S6_LABEL}", result.stdout)
         start = result.stdout.index("migration 0.41.0:")
         positions = []
@@ -565,7 +578,7 @@ class TestMigration0410(InstallerTestCase):
             positions.append(result.stdout.index(line, start))
         self.assertEqual(positions, sorted(positions))
         self.assertEqual((repo / "AGENTS.md").read_bytes(), agents_before)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.41.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
         for name in MOVED.values():
             self.assertTrue((repo / INSTRUCTIONS / name).is_file(), name)
         block_headings = [h for h, _ in split_sections(read_block(repo))]
@@ -673,7 +686,6 @@ class TestWordingReplacements(InstallerTestCase):
             "해당 작업 전에 읽고, 위반하면 hook 메시지가 그 파일을 알려 줍니다.",
             text,
         )
-        self.assertIn("파일을 처음 바꾼 세션에 progress가 없으면 한 번 안내하고, progress 없이 끝나려 하면 한 번 막음", text)
         self.assertNotIn("규칙 전문은 [`harness-block.md`](harness/instructions/harness-block.md)에 있습니다.", text)
         self.assertNotIn("파일을 바꾼 세션이 progress 없이 끝나려 하면 한 번 막음", text)
 

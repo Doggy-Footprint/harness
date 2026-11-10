@@ -21,6 +21,7 @@ NAME0 = "0000000000000000-zeroth-task.md"
 NAME1 = "1111111111111111-first-task.md"
 NAME2 = "2222222222222222-second-task.md"
 SHA0 = "0" * 40
+N2_STEM = "this session changed the project and had no progress, so"
 RECORD_MARKER = "RECORD-ONLY-MARKER-7431"
 
 
@@ -165,6 +166,11 @@ class ProgressCase(InstallerTestCase):
             env=env if env is not None else self.env(),
         )
 
+    def mark_changed(self, repo, rel="src/new.py", sid="sessa", **kw):
+        """Marks the session as having changed the project through a failed Bash call, which never creates a skeleton."""
+        return self.bash(repo, lambda: (repo / rel).write_text("new = 1\n"), sid=sid,
+                         event="PostToolUseFailure", **kw)
+
     def start(self, repo, sid="sessa", **kw):
         return self.hook(repo, {"hook_event_name": "SessionStart", "session_id": sid, "source": "startup"}, **kw)
 
@@ -261,8 +267,8 @@ class TestRotation(ProgressCase):
 
         result = self.post(repo, path, sid="sessb")
 
-        self.assertEqual(result.returncode, 0, out(result))
-        self.assertEqual(result.stderr, "")
+        self.assertEqual(result.returncode, 2, out(result))
+        self.assertIn("harness: set `session: sessb` in " + self.rel(repo, path) + "; `(empty)` is not a session of this checkout.", result.stderr)
         fields = frontmatter(path)
         self.assertEqual(fields["session"], "sessb")
         self.assertEqual(fields["before"], "none")
@@ -590,10 +596,11 @@ class TestLiveSessionRotationRefusal(ProgressCase):
 
 class TestFreshness(ProgressCase):
 
-    def entry_repo(self, commit, files, text="alpha module wiring"):
-        repo = self.new_repo()
-        path = self.put(repo, NAME1, build(stamp=self.head(repo), next_step=[(text, commit, files)]))
-        return repo, path
+    def record(self, repo, text):
+        path = self.put(repo, NAME1, text)
+        run_git(repo, "add", "--", self.rel(repo, path))
+        self.commit(repo, "record progress")
+        return path
 
     def reports(self, repo, path):
         rel = self.rel(repo, path)
@@ -621,96 +628,90 @@ class TestFreshness(ProgressCase):
     def test_o2_c6_later_commit_touching_listed_file_is_stale_changed(self):
         repo = self.new_repo()
         base = self.head(repo)
+        path = self.record(repo, build(stamp=base, next_step=[("alpha module wiring", base, "src/a.py")]))
         self.touch_commit(repo, "src/a.py")
-        path = self.put(repo, NAME1, build(stamp=self.head(repo), next_step=[("alpha module wiring", base, "src/a.py")]))
         self.assert_stale(repo, path, "changed")
 
     def test_o2_c6_any_listed_path_counts_not_only_the_first(self):
         repo = self.new_repo()
         base = self.head(repo)
+        path = self.record(repo, build(stamp=base, next_step=[("alpha module wiring", base, "src/a.py, src/b.py")]))
         self.touch_commit(repo, "src/b.py")
-        path = self.put(repo, NAME1, build(stamp=self.head(repo), next_step=[("alpha module wiring", base, "src/a.py, src/b.py")]))
         self.assert_stale(repo, path, "changed")
 
     def test_o2_c7_later_commit_touching_other_file_is_fresh(self):
         repo = self.new_repo()
         base = self.head(repo)
+        path = self.record(repo, build(stamp=base, next_step=[("alpha module wiring", base, "src/a.py")]))
         self.touch_commit(repo, "src/b.py")
         self.touch_commit(repo, "src/c.py")
-        path = self.put(repo, NAME1, build(stamp=self.head(repo), next_step=[("alpha module wiring", base, "src/a.py")]))
         self.assert_fresh(repo, path)
 
     def test_o2_c7_path_that_only_shares_a_prefix_is_not_a_listed_file(self):
         repo = self.new_repo()
         base = self.head(repo)
+        path = self.record(repo, build(stamp=base, next_step=[("alpha module wiring", base, "src/a.py")]))
         self.touch_commit(repo, "src/a.pyc")
-        path = self.put(repo, NAME1, build(stamp=self.head(repo), next_step=[("alpha module wiring", base, "src/a.py")]))
         self.assert_fresh(repo, path)
 
     def test_o2_c7_later_commit_touching_only_the_progress_file_is_fresh(self):
         repo = self.new_repo()
         base = self.head(repo)
-        path = self.put(repo, NAME1, build(stamp=base, next_step=[("alpha module wiring", base, "src/a.py")]))
-        run_git(repo, "add", "--", self.rel(repo, path))
-        self.commit(repo, "commit the progress")
+        path = self.record(repo, build(stamp=base, next_step=[("alpha module wiring", base, "src/a.py")]))
         self.assert_fresh(repo, path)
 
-    def test_o2_boundary_entry_commit_is_the_commit_that_touched_the_file(self):
-        repo = self.new_repo()
-        touched = self.touch_commit(repo, "src/a.py")
-        path = self.put(repo, NAME1, build(stamp=touched, next_step=[("alpha module wiring", touched, "src/a.py")]))
-        self.assert_fresh(repo, path)
-
-    def test_o2_short_sha_of_seven_characters_resolves(self):
+    def test_o2_boundary_change_in_the_recording_commit_is_fresh_and_one_commit_later_is_stale(self):
         repo = self.new_repo()
         base = self.head(repo)
-        short = base[:7]
-        path = self.put(repo, NAME1, build(stamp=base, next_step=[("alpha module wiring", short, "src/a.py")]))
+        path = self.put(repo, NAME1, build(stamp=base, next_step=[("alpha module wiring", base, "src/a.py")]))
+        (repo / "src" / "a.py").write_text("a = 2\n")
+        run_git(repo, "add", "-A")
+        self.commit(repo, "work and progress together")
         self.assert_fresh(repo, path)
         self.touch_commit(repo, "src/a.py")
         self.assert_stale(repo, path, "changed")
 
-    def test_o2_c8_unresolved_sha_is_stale(self):
-        for sha in ("deadbeef" * 5, "deadbee"):
-            with self.subTest(sha=sha):
-                repo, path = self.entry_repo(sha, "src/a.py")
-                self.assert_stale(repo, path, "unresolved")
-
-    def test_o2_c8_non_ancestor_commit_is_stale(self):
-        repo = self.new_repo()
-        main = self.branch(repo)
-        run_git(repo, "checkout", "-q", "-b", "side")
-        side = self.touch_commit(repo, "src/side.py")
-        run_git(repo, "checkout", "-q", main)
-        path = self.put(repo, NAME1, build(stamp=self.head(repo), next_step=[("alpha module wiring", side, "src/a.py")]))
-        self.assert_stale(repo, path, "not ancestor")
-
-    def test_o2_files_none_skips_the_changed_check_only(self):
+    def test_o2_short_sha_of_seven_characters_resolves(self):
         repo = self.new_repo()
         base = self.head(repo)
-        self.touch_commit(repo, "src/a.py")
-        path = self.put(repo, NAME1, build(stamp=self.head(repo), next_step=[("alpha module wiring", base, "none")]))
+        path = self.record(repo, build(stamp=base, next_step=[("alpha module wiring", base[:7], "src/a.py")]))
         self.assert_fresh(repo, path)
-        path.write_text(build(stamp=self.head(repo), next_step=[("alpha module wiring", "deadbeef" * 5, "none")]))
-        self.assert_stale(repo, path, "unresolved")
+        self.touch_commit(repo, "src/a.py")
+        self.assert_stale(repo, path, "changed")
 
-    def test_o2_files_none_with_non_ancestor_commit_is_stale(self):
+    def test_o2_unresolved_explicit_sha_does_not_decide_freshness(self):
+        for sha in ("deadbeef" * 5, "deadbee"):
+            with self.subTest(sha=sha):
+                repo = self.new_repo()
+                path = self.record(repo, build(stamp=self.head(repo), next_step=[("alpha module wiring", sha, "src/a.py")]))
+                self.assert_fresh(repo, path)
+
+    def test_o2_non_ancestor_explicit_commit_does_not_decide_freshness(self):
         repo = self.new_repo()
         main = self.branch(repo)
         run_git(repo, "checkout", "-q", "-b", "side")
         side = self.touch_commit(repo, "src/side.py")
         run_git(repo, "checkout", "-q", main)
-        path = self.put(repo, NAME1, build(stamp=self.head(repo), next_step=[("alpha module wiring", side, "none")]))
-        self.assert_stale(repo, path, "not ancestor")
+        path = self.record(repo, build(stamp=self.head(repo), next_step=[("alpha module wiring", side, "src/a.py")]))
+        self.assert_fresh(repo, path)
+        self.touch_commit(repo, "src/a.py")
+        self.assert_stale(repo, path, "changed")
+
+    def test_o2_files_none_skips_the_changed_check(self):
+        repo = self.new_repo()
+        base = self.head(repo)
+        path = self.record(repo, build(stamp=base, next_step=[("alpha module wiring", base, "none")]))
+        self.touch_commit(repo, "src/a.py")
+        self.assert_fresh(repo, path)
 
     def test_o2_each_entry_gets_its_own_label(self):
         repo = self.new_repo()
         base = self.head(repo)
-        self.touch_commit(repo, "src/a.py")
-        path = self.put(repo, NAME1, build(
-            stamp=self.head(repo),
+        path = self.record(repo, build(
+            stamp=base,
             state=[("beta untouched file", base, "src/b.py")],
             next_step=[("alpha touched file", base, "src/a.py")]))
+        self.touch_commit(repo, "src/a.py")
         shown = self.show(repo, self.rel(repo, path))
         self.assertRegex(shown.stdout, r"\bfresh\b")
         self.assertIn("stale: changed", shown.stdout)
@@ -722,8 +723,9 @@ class TestFreshness(ProgressCase):
         path = self.put(repo, NAME1, build(stamp=base, next_step=[("alpha module wiring", base, "src/a.py")]))
         quiet = self.post(repo, path)
         self.assertEqual((quiet.returncode, quiet.stderr, quiet.stdout), (0, "", ""))
+        run_git(repo, "add", "--", self.rel(repo, path))
+        self.commit(repo, "record progress")
         self.touch_commit(repo, "src/a.py")
-        path.write_text(build(stamp=self.head(repo), next_step=[("alpha module wiring", base, "src/a.py")]))
         loud = self.post(repo, path)
         self.assertEqual(loud.returncode, 2, out(loud))
         self.assertIn("stale", loud.stderr)
@@ -757,13 +759,15 @@ class TestSimilarity(ProgressCase):
     def pair_repo(self, old_text, new_text, old_commit="first", new_commit="second", link="before",
                   extra_old=(), old_section="state", new_section="next_step"):
         repo = self.new_repo()
-        first = self.head(repo)
-        second = self.commit(repo, "second commit")
-        commits = {"first": first, "second": second}
-        old_entries = list(extra_old) + [(old_text, commits[old_commit], "none")]
-        old = self.put(repo, NAME1, build(session="sessb", stamp=second, **{old_section: old_entries}), directory="progress-logs")
+        old = self.put(repo, NAME1, build(session="sessb", **{old_section: list(extra_old) + [(old_text, "a" * 40, "none")]}),
+                       directory="progress-logs")
         links = {"before": {"before": self.rel(repo, old)}, "previous": {"previous": self.rel(repo, old)}, "none": {}}[link]
-        new = self.put(repo, NAME2, build(session="sessa", stamp=second, **{new_section: [(new_text, commits[new_commit], "none")]}, **links))
+        new = self.put(repo, NAME2, build(session="sessa", **{new_section: [(new_text, "a" * 40, "none")]}, **links))
+        for tag in ("first", "second"):
+            for name, path in ((old_commit, old), (new_commit, new)):
+                if name == tag:
+                    run_git(repo, "add", "--", self.rel(repo, path))
+            self.commit(repo, f"{tag} commit")
         return repo, new
 
     def assert_duplicate(self, repo, new, expected):
@@ -825,6 +829,8 @@ class TestSimilarity(ProgressCase):
         second = self.commit(repo, "second commit")
         unrelated = self.put(repo, NAME0, build(session="sessc", stamp=second, state=[("completely different subject matter here", first, "none")]), directory="progress-logs")
         twin = self.put(repo, NAME1, build(session="sessb", stamp=second, state=[(text, first, "none")]), directory="progress-logs")
+        run_git(repo, "add", "--", self.rel(repo, unrelated), self.rel(repo, twin))
+        self.commit(repo, "predecessors")
         for links in ({"before": self.rel(repo, unrelated), "previous": self.rel(repo, twin)},
                       {"before": self.rel(repo, twin), "previous": self.rel(repo, unrelated)}):
             with self.subTest(links=links):
@@ -867,8 +873,7 @@ class TestStopSessionStartPreCompact(ProgressCase):
         result = self.start(repo)
         self.assertEqual(result.returncode, 0, out(result))
         if changed:
-            (repo / "src" / "new.py").write_text("new = 1\n")
-            self.post(repo, repo / "src" / "new.py")
+            self.mark_changed(repo)
         return repo
 
     def test_o4_stop_decision_table(self):
@@ -1132,7 +1137,7 @@ class TestErrors(ProgressCase):
                     self.add_marker(repo, os.getpid())
                     result = self.post(repo, path)
                     self.assertEqual(result.returncode, 2, out(result))
-                self.assertIn("entry without commit metadata: ", out(result))
+                self.assertIn("  - files:", out(result))
                 self.assertIn(text[:50], out(result))
                 self.assertNotIn(text[:75], out(result))
                 self.assertNotIn("Traceback", out(result))
@@ -1343,8 +1348,10 @@ class TestShow(ProgressCase):
     def test_o6_fr13_report_marks_stale_entries(self):
         repo = self.new_repo()
         base = self.head(repo)
+        path = self.put(repo, NAME1, build(session="sessb", stamp=base, next_step=[("alpha item", base, "src/a.py")]))
+        run_git(repo, "add", "--", self.rel(repo, path))
+        self.commit(repo, "record progress")
         self.touch_commit(repo, "src/a.py")
-        self.put(repo, NAME1, build(session="sessb", stamp=self.head(repo), next_step=[("alpha item", base, "src/a.py")]))
         result = self.show(repo, "--session", "sessa")
         self.assertIn("stale: changed", result.stdout)
         self.assertNotIn("## Record", result.stdout)
@@ -1564,8 +1571,10 @@ class TestMessageQuality(ProgressCase):
         def stale():
             repo = self.new_repo()
             base = self.head(repo)
+            path = self.put(repo, NAME1, build(stamp=base, next_step=[("alpha module wiring", base, "src/a.py")]))
+            run_git(repo, "add", "--", self.rel(repo, path))
+            self.commit(repo, "record progress")
             self.touch_commit(repo, "src/a.py")
-            path = self.put(repo, NAME1, build(stamp=self.head(repo), next_step=[("alpha module wiring", base, "src/a.py")]))
             return self.post(repo, path).stderr, [NAME1]
 
         def near_duplicate():
@@ -1574,6 +1583,8 @@ class TestMessageQuality(ProgressCase):
             first = self.head(repo)
             second = self.commit(repo, "second")
             old = self.put(repo, NAME1, build(session="sessb", stamp=second, state=[(text, first, "none")]), directory="progress-logs")
+            run_git(repo, "add", "--", self.rel(repo, old))
+            self.commit(repo, "predecessor")
             new = self.put(repo, NAME2, build(session="sessa", stamp=second, before=self.rel(repo, old), next_step=[(text, second, "none")]))
             return self.post(repo, new).stderr, [NAME2]
 
@@ -1597,8 +1608,7 @@ class TestMessageQuality(ProgressCase):
         def stop_missing_progress():
             repo = self.new_repo()
             self.start(repo)
-            (repo / "src" / "new.py").write_text("x\n")
-            self.post(repo, repo / "src" / "new.py")
+            self.mark_changed(repo)
             return self.stop(repo).stderr, ["agent-docs/progress"]
 
         def stop_empty_next_session():
@@ -2251,6 +2261,10 @@ class TestHookTiming(ProgressCase):
         old = self.put(repo, NAME1, build(session="sessb", stamp=self.head(repo), next_step=old_entries), directory="progress-logs")
         new = self.put(repo, NAME2, build(session="sessa", stamp=self.head(repo), before=self.rel(repo, old), next_step=new_entries))
         self.add_marker(repo, os.getpid())
+        run_git(repo, "add", "--", self.rel(repo, old), self.rel(repo, new))
+        self.commit(repo, "record progress")
+        for i in range(20):
+            self.touch_commit(repo, f"src/f{i}.py")
 
         started = time.perf_counter()
         result = self.post(repo, new)
@@ -2273,6 +2287,7 @@ class TestInstallerRunExemption(ProgressCase):
 
     def session_with_change(self, make_record, record_bytes=None):
         repo = self.new_repo()
+        self.add_marker(repo, os.getpid())
         self.assertEqual(self.start(repo).returncode, 0)
         before = self.fingerprint(repo)
 
@@ -2345,7 +2360,7 @@ class TestInstallerRunExemption(ProgressCase):
         repo, result = self.session_with_change(lambda r, b, a: load_progress().write_installer_run(r, b, "not-the-after"))
 
         self.assertEqual(result.returncode, 2, out(result))
-        self.assertIn("has no progress yet", result.stderr)
+        self.assertIn(N2_STEM, result.stderr)
         self.assertEqual(json.loads(self.record_path(repo).read_text())["after"], "not-the-after")
         self.assertEqual(self.stop(repo).returncode, 2)
 
@@ -2353,7 +2368,7 @@ class TestInstallerRunExemption(ProgressCase):
         repo, result = self.session_with_change(lambda r, b, a: load_progress().write_installer_run(r, "not-the-before", a))
 
         self.assertEqual(result.returncode, 2, out(result))
-        self.assertIn("has no progress yet", result.stderr)
+        self.assertIn(N2_STEM, result.stderr)
         self.assertEqual(json.loads(self.record_path(repo).read_text())["before"], "not-the-before")
         self.assertEqual(self.stop(repo).returncode, 2)
 
@@ -2364,7 +2379,7 @@ class TestInstallerRunExemption(ProgressCase):
                 repo, result = self.session_with_change(None, record_bytes=data)
 
                 self.assertEqual(result.returncode, 2, out(result))
-                self.assertIn("has no progress yet", result.stderr)
+                self.assertIn(N2_STEM, result.stderr)
                 self.assertNotIn("Traceback", result.stderr)
                 self.assertEqual(self.stop(repo).returncode, 2)
 
@@ -2372,7 +2387,7 @@ class TestInstallerRunExemption(ProgressCase):
         repo, result = self.session_with_change(None)
 
         self.assertEqual(result.returncode, 2, out(result))
-        self.assertIn("has no progress yet", result.stderr)
+        self.assertIn(N2_STEM, result.stderr)
         self.assertFalse(self.record_path(repo).exists())
         self.assertEqual(self.stop(repo).returncode, 2)
 
@@ -2388,7 +2403,7 @@ class TestInstallerRunExemption(ProgressCase):
         outcome = {}
 
         def action():
-            outcome["update"] = run_installer("update", str(repo), "--no-ci", input="y\n" * 10, env=self.env(), exact=True)
+            outcome["update"] = run_installer("update", str(repo), "--no-ci", input="y\n" * 13, env=self.env(), exact=True)
 
         result = self.bash(repo, action)
 

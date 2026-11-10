@@ -418,23 +418,51 @@ def on_logs_edit(path: Path, session_id: str | None) -> int:
     return 2
 
 
-def first_change_reminder(session_id: str | None) -> int:
+def claim_session(path: Path, session_id: str) -> str | None:
+    return progress.claim_session_file(REPO_ROOT, path, session_id, rel(PROGRESS_DIR), rel(PATHS.progress_logs))
+
+
+def moved_notice(label: str, moved: Path) -> str:
+    return (
+        f"harness: moved the previous session's progress to {rel(moved)}; {label} now has `before: {rel(moved)}`. "
+        f"Write this session's work in {label}; run `/continue-on` to pick up {rel(moved)}."
+    )
+
+
+def create_skeleton(session_id: str | None) -> int:
     if not session_id or not git_ready():
         return 0
     if not modified_project(session_id) or own_progress(session_id) is not None:
         return 0
-    marker = progress.change_dir(REPO_ROOT, session_id) / "reminded"
+    marker = progress.change_dir(REPO_ROOT, session_id) / "skeleton"
     try:
         with open(marker, "x", encoding="utf-8"):
             pass
+        prompts = progress.state_prompts(session_state(session_id))
+        path = (PROGRESS_DIR / (progress.skeleton_name(prompts[0]["text"] if prompts else None) + ".md")).resolve()
+        label = rel(path)
+        if rotation_refusal(path, session_id, session_id):
+            print(
+                "harness: this session changed the project and has no progress yet. Read "
+                f".harness/instructions/progress.md, then write {rel(PROGRESS_DIR)}/<16-hex-id>-<kebab-name>.md "
+                "so it is committed with the work.",
+                file=sys.stderr,
+            )
+            return 2
+        PROGRESS_DIR.mkdir(parents=True, exist_ok=True)
+        path.write_text(progress.skeleton(session_id, progress.git_branch(REPO_ROOT)), encoding="utf-8")
+        moved = progress.rotate(path, session_id)
+        sync_requests(path, session_id)
     except OSError:
         return 0
-    print(
-        "harness: this session changed the project and has no progress yet. Read "
-        f".harness/instructions/progress.md, then write {rel(PROGRESS_DIR)}/<16-hex-id>-<kebab-name>.md "
-        "so it is committed with the work.",
-        file=sys.stderr,
-    )
+    messages = [
+        f"harness: this session changed the project and had no progress, so {label} was created. Read "
+        f".harness/instructions/progress.md, replace every {progress.PLACEHOLDER} in {label}, and commit it "
+        "with the work."
+    ]
+    if moved is not None:
+        messages.append(moved_notice(label, moved))
+    print("\n".join(messages), file=sys.stderr)
     return 2
 
 
@@ -442,7 +470,7 @@ def on_post_tool_use(payload: dict) -> int:
     record_modification_safely(payload)
     path = target_path(payload)
     if path is None:
-        return first_change_reminder(session_id_of(payload))
+        return create_skeleton(session_id_of(payload))
     label = rel(path)
     if path.parent == PATHS.progress_logs.resolve():
         return on_logs_edit(path, session_id_of(payload))
@@ -464,42 +492,43 @@ def on_post_tool_use(payload: dict) -> int:
             file=sys.stderr,
         )
         return 2
+    notices = []
+    if session_id:
+        notice = claim_session(path, session_id)
+        if notice:
+            notices.append(notice)
+            parsed = progress.parse(path.read_text(encoding="utf-8"))
+
+    def refuse(message: str) -> int:
+        print("\n".join([*notices, message]), file=sys.stderr)
+        return 2
+
     own_session = parsed.frontmatter.get("session") or session_id
     owned_logs = progress.session_files(PATHS.progress_logs, own_session) if own_session else []
     if owned_logs:
-        print(
+        return refuse(
             f"harness: {label} not accepted: session {own_session} already owns {rel(owned_logs[0])}, and a "
             f"session owns one progress. Merge the content of {label} into {rel(owned_logs[0])}, then remove "
-            f"{label}. No file was moved.",
-            file=sys.stderr,
+            f"{label}. No file was moved."
         )
-        return 2
     refusal = rotation_refusal(path, session_id, own_session)
     if refusal:
-        print(refusal, file=sys.stderr)
-        return 2
-    messages = []
+        return refuse(refusal)
+    messages = list(notices)
     try:
         moved = progress.rotate(path, session_id)
     except progress.DestinationExists as error:
-        print(
+        return refuse(
             f"harness: rotation refused for {label}: {rel(error.destination)} already exists. Rename the older "
-            f"progress to a new 16-hex id, then write {label} again.",
-            file=sys.stderr,
+            f"progress to a new 16-hex id, then write {label} again."
         )
-        return 2
     except progress.SameSession as error:
-        print(
+        return refuse(
             f"harness: {label} not accepted: this session already owns {rel(error.existing)}. Merge {label} "
-            f"into {rel(error.existing)}, then remove {label}.",
-            file=sys.stderr,
+            f"into {rel(error.existing)}, then remove {label}."
         )
-        return 2
     if moved is not None:
-        messages.append(
-            f"harness: moved the previous session's progress to {rel(moved)}; {label} now has `before: {rel(moved)}`. "
-            f"Write this session's work in {label}; run `/continue-on` to pick up {rel(moved)}."
-        )
+        messages.append(moved_notice(label, moved))
     if (progress.session_of(path) or own_session) == session_id:
         sync_requests(path, session_id)
     else:
@@ -557,9 +586,22 @@ def on_stop(payload: dict) -> int:
     session_id = session_id_of(payload)
     if not session_id or not git_ready():
         return 0
-    own = own_progress(session_id)
+    claimed = False
+    if PROGRESS_DIR.is_dir():
+        for path in sorted(PROGRESS_DIR.glob("*.md")):
+            notice = claim_session(path, session_id) if path.is_file() else None
+            if notice:
+                claimed = True
+                if payload.get("stop_hook_active") is not True:
+                    print(notice, file=sys.stderr)
     if payload.get("stop_hook_active") is True:
         return 0
+    result = stop_checks(session_id)
+    return 2 if claimed else result
+
+
+def stop_checks(session_id: str) -> int:
+    own = own_progress(session_id)
     if own is None:
         if modified_project(session_id):
             print(
@@ -572,10 +614,17 @@ def on_stop(payload: dict) -> int:
             return 2
         return 0
     parsed = progress.read_progress(own)
+    if parsed is not None and progress.placeholder_lines(parsed):
+        print(
+            f"harness: {rel(own)} still holds {progress.PLACEHOLDER} placeholders. Replace them following "
+            ".harness/instructions/progress.md before stopping.",
+            file=sys.stderr,
+        )
+        return 2
     if parsed is not None and not progress.has_next_session_entries(parsed):
         print(
             f"harness: {rel(own)} has no entries under `## Next Session`. Add entries, each followed by "
-            "`  - commit: <sha>; files: <paths or none>`, or an explicit `- none: <reason>` bullet, "
+            "`  - files: <paths or none>`, or an explicit `- none: <reason>` bullet, "
             "before stopping.",
             file=sys.stderr,
         )

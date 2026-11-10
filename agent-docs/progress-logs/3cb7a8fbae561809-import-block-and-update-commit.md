@@ -3,7 +3,7 @@ session: 26664246-d290-44aa-8b2f-9bef3d42fabf
 before: agent-docs/progress-logs/5c1e9a7d03b84f26-verifier-tests-diff.md
 previous: none
 branch: Doggy-Footprint/utility
-commit: 9f66056340134cba4dc0972319a827a32bd5be30
+commit: e29e2f1f9973fc6d951c313b79d0ae4f9d63c374
 ---
 
 # Import the managed block and auto-commit harness updates (0.40.0)
@@ -11,32 +11,52 @@ commit: 9f66056340134cba4dc0972319a827a32bd5be30
 ## Next Session
 
 ### State
-- 0.41.0 (lazy hook-backed rules) committed on the PR #32 branch: five rule files under `harness/instructions/`, a `## Rule Files` table in the block, rule-file paths in hook and pre-commit messages, a one-time first-change reminder. Not to be merged alone: 6-7 of 25 eval sessions left two progress files for one session after a Stop block (0 of 25 before).
-  - commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f; files: harness/instructions/harness-block.md, harness/instructions/progress.md, harness/hooks/progress_hook.py, harness/git/verify_rules.py, installer/harness.py, harness/VERSION, tests/test_lazy_rules.py
-- Rescored eval (Bash `cat` counted as a read, first-request tokens grouped by tool count): rule files read before the first write in 54-55 of 55 cases; first-request tokens at 25 tools 24,603 before, 22,333 and 22,457 after; 14-16 of 25 sessions per arm copied the outer session UUID from the eval repo path into `session:`.
-  - commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f; files: harness/hooks/progress_hook.py, harness/lib/progress.py
+- PR #32 holds 0.40.0 (import block, update auto-commit), 0.41.0 (hook-backed rules in their own files), and 0.42.0 (hook-owned progress mechanics); 0.42.0 spec archived as complete, dogfood update applied, `doctor .` exit 0.
+  - files: harness/VERSION, agent-docs/spec-logs/fba8551e5565cc4d-hook-owned-progress-mechanics.md, agent-docs/spec-logs/c78afc0d4b2361e5-lazy-hook-backed-rules.md
+- 0.42.0 behavior: the hook claims an unknown/`auto`/empty `session:` in an uncommitted progress, the first project change creates a skeleton with harness-requires placeholders, freshness counts from the commit that recorded an entry (`  - files:` alone), and pre-commit blocks a Claude Code commit without the session's staged progress (`HARNESS_UPDATE_COMMIT=1` exempts `harness.py update`).
+  - files: harness/lib/progress.py, harness/hooks/progress_hook.py, harness/git/sync_progress.py, harness/git/verify_rules.py, harness/instructions/progress.md, installer/harness.py
+- Evaluation of 0.42.0 against 0.41.0 (25 haiku/medium sessions each): Stop-blocked sessions 11 → 0, progress passing and in the work commit 15 → 24, mean turns 24.9 → 17.7, mean input tokens 772K → 470K, first-request tokens unchanged; numbers and procedure in the spec's execution ledger rows 5-6 and Review evidence R1. Evaluation scripts were session-scratchpad only and are gone.
+  - files: agent-docs/spec-logs/fba8551e5565cc4d-hook-owned-progress-mechanics.md
 
 ### Next Step
-- Draft the 0.42.0 workflow spec: hook fills `session:` and the Stop message names the file to fix; freshness anchored to the commit that recorded the entry with `commit:` optional; hook-created progress skeleton replacing the reminder; progress gate at pre-commit. Then 0.43.0: `code_hash` refresh command with hash limited to tagged blocks (data migration), stale-move command, rule text injected at first write with the block list shortened to file + when to read, hook-written minimal progress for record-only sessions. Re-run the eval with a UUID-free repo path, fixed MCP tool set, and `rm`/`mv` allowed.
-  - commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f; files: harness/hooks/progress_hook.py, harness/lib/progress.py, harness/git/sync_progress.py, harness/git/verify_rules.py, harness/instructions/harness-block.md
+- Start the 0.43.0 workflow-approach spec covering the countermeasures the user accepted for this stage: (1) a hook-written minimal progress (User Requests + Changes) for sessions that changed only `agent-docs/` records; (2) `code_hash` limited to the tagged code blocks, with a data migration that recomputes existing tracking files, plus a command that refreshes count and `code_hash`; (3) a command that moves a document to `stale/` with its index entry; (4) rule text injected by hooks at the first write into an `agent-docs/<area>/`, with the block's Rule Files table shortened to file name and when to read it.
+  - files: harness/hooks/progress_hook.py, harness/git/verify_rules.py, harness/instructions/harness-block.md, harness/instructions/synced-comments.md, harness/instructions/index-and-staleness.md, installer/harness.py
+- Also fix in 0.43.0: the synced-comment check counts a progress file that quotes a `synced id: <id>, version: <n>, count: <n>` tag as a code location (seen in T5 sessions of both 0.41.0 and 0.42.0, `declares count 2 but 3 code locations`).
+  - files: harness/git/verify_rules.py
+- Re-evaluate 0.43.0 against 0.42.0 with the procedure in R1 of the 0.42.0 spec (rewrite the scripts; T4 setup must contain the --sort implementation; `rm`/`mv` are denied, so T4 can fail on a refused `mv`).
+  - files: agent-docs/spec-logs/fba8551e5565cc4d-hook-owned-progress-mechanics.md
 
 ### Constraints
 - "대책 전부 수용해도 좋을 것 같네."
   - source: user prompt in session 26664246-d290-44aa-8b2f-9bef3d42fabf
-- "1. 2 권장. 3. 기존 브랜치, 동일 PR에 올리기"
+- "평가 세션은 haiku-medium"
+  - source: user prompt in session 26664246-d290-44aa-8b2f-9bef3d42fabf
+- "주석은 필요한게 아니면 삭제."
+  - source: user prompt in session 26664246-d290-44aa-8b2f-9bef3d42fabf
+- "잘했네. PR하고, 0.43.0은 continue-on에서 이어갈 수 있게 준비해줘"
+  - source: user prompt in session 26664246-d290-44aa-8b2f-9bef3d42fabf
+- "1. (a)" / "2. (a)" / "3. (a)": answers to (1) record-only sessions get a hook-written minimal progress, (2) `code_hash` limited to tagged blocks with a data migration, (3) Rule Files table shortened to file + when to read, with hook-injected rule text
+  - source: user prompt in session 26664246-d290-44aa-8b2f-9bef3d42fabf
+- "spec 회고에 repo / commit hash 정도만"
   - source: user prompt in session 26664246-d290-44aa-8b2f-9bef3d42fabf
 
 ### Verify
-- `/Users/hwansu/tools/harness/.venv/bin/python -m unittest discover -s tests`: 1067 tests, only `test_qr3_scan_leaves_target_tree_unchanged_and_runs_no_project_code` fails (mtime snapshot of `.git`, passes on rerun).
-  - commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f; files: tests/test_lazy_rules.py, tests/test_test_scan.py
+- `/Users/hwansu/tools/harness/.venv/bin/python -m unittest discover -s tests`: 1177 tests OK on the 0.42.0 tree.
+  - files: tests/test_hook_owned_progress.py, tests/test_progress.py, tests/test_installer.py
+- `python3 installer/harness.py doctor .` exits 0.
+  - files: .harness/manifest.json
 
 ### Dead Ends
-- A one-line "what it is" column in the Rule Files table left rule-file reads unchanged (55/55 vs 54/55) and cost about 125 first-request tokens at 25 tools.
-  - commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f; files: harness/instructions/harness-block.md
+- A one-line "what it is" column in the 0.41.0 Rule Files table left rule-file reads unchanged (55/55 vs 54/55, Bash `cat` counted) and cost about 125 first-request tokens at 25 tools.
+  - files: harness/instructions/harness-block.md
 
 ### Related
+- `agent-docs/spec-logs/fba8551e5565cc4d-hook-owned-progress-mechanics.md`
+  - files: agent-docs/spec-logs/fba8551e5565cc4d-hook-owned-progress-mechanics.md
 - `agent-docs/spec-logs/c78afc0d4b2361e5-lazy-hook-backed-rules.md`
-  - commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f; files: agent-docs/spec-logs/c78afc0d4b2361e5-lazy-hook-backed-rules.md
+  - files: agent-docs/spec-logs/c78afc0d4b2361e5-lazy-hook-backed-rules.md
+- `agent-docs/todos/d706c17a1d003208-speed-up-test-suite.md`
+  - files: agent-docs/todos/d706c17a1d003208-speed-up-test-suite.md
 
 ## Record
 
@@ -48,6 +68,8 @@ commit: 9f66056340134cba4dc0972319a827a32bd5be30
 - New tests/test_update_commit.py; version/prompt-count updates in eight other test files.
 
 - 0.41.0: hook-backed rules moved verbatim into `harness/instructions/{progress,index-and-staleness,try-n-fail,todos,synced-comments}.md`; block gains `## Rule Files`; S2-S4 hook messages and pre-commit name the rule file; one-time first-change reminder; migration 0.41.0; new tests/test_lazy_rules.py.
+
+- 0.42.0: session-id claim (PostToolUse, Stop, pre-commit), blame-anchored freshness with optional `commit:`, progress skeleton with harness-requires placeholders, pre-commit progress gate, `HARNESS_UPDATE_COMMIT=1` on update auto-commit, migration 0.42.0; new tests/test_hook_owned_progress.py.
 
 ### Commands
 - `claude -p` in a throwaway repo with the nested import between markers: reply quoted the token from the nested file.
@@ -311,3 +333,67 @@ commit: 9f66056340134cba4dc0972319a827a32bd5be30
 #### 34 — 2026-11-10T12:52:30Z
 
 > todo에 테스트 속도 줄여야 한다고 간단하게 기록해줘
+
+#### 35 — 2026-11-10T12:54:05Z
+
+> <task-notification>
+> <task-id>b7vpdhjjg</task-id>
+> <tool-use-id>toolu_01NPx1qaR1859UN1gtGVnVL9</tool-use-id>
+> <output-file>/private/tmp/claude-501/-Users-hwansu-orca-workspaces-harness-utility/26664246-d290-44aa-8b2f-9bef3d42fabf/tasks/b7vpdhjjg.output</output-file>
+> <status>completed</status>
+> <summary>Background command "Rerun full Test command after correction batch 1" completed (exit code 0)</summary>
+> </task-notification>
+
+#### 36 — 2026-11-10T13:05:38Z
+
+> <task-notification>
+> <task-id>bpea295wy</task-id>
+> <tool-use-id>toolu_01AqvPiB6PZfoSTtWuKr8U5K</tool-use-id>
+> <output-file>/private/tmp/claude-501/-Users-hwansu-orca-workspaces-harness-utility/26664246-d290-44aa-8b2f-9bef3d42fabf/tasks/bpea295wy.output</output-file>
+> <status>completed</status>
+> <summary>Background command "Run 10 hand mutations against new tests" completed (exit code 0)</summary>
+> </task-notification>
+
+#### 37 — 2026-11-10T13:16:24Z
+
+> <task-notification>
+> <task-id>b22ch153h</task-id>
+> <tool-use-id>toolu_01TmzFWc9pFnEYpZ4E35u5CE</tool-use-id>
+> <output-file>/private/tmp/claude-501/-Users-hwansu-orca-workspaces-harness-utility/26664246-d290-44aa-8b2f-9bef3d42fabf/tasks/b22ch153h.output</output-file>
+> <status>completed</status>
+> <summary>Background command "Rerun Test command and the surviving mutation" completed (exit code 0)</summary>
+> </task-notification>
+
+#### 38 — 2026-11-10T13:17:56Z
+
+> <task-notification>
+> <task-id>bwxpvc4o5</task-id>
+> <tool-use-id>toolu_01NYm4MVWNPYEWVVzDY4rAVm</tool-use-id>
+> <output-file>/private/tmp/claude-501/-Users-hwansu-orca-workspaces-harness-utility/26664246-d290-44aa-8b2f-9bef3d42fabf/tasks/bwxpvc4o5.output</output-file>
+> <status>completed</status>
+> <summary>Background command "Smoke-run one eval session with 0.42.0" completed (exit code 0)</summary>
+> </task-notification>
+
+#### 39 — 2026-11-10T13:22:55Z
+
+> <task-notification>
+> <task-id>b8v6gygl0</task-id>
+> <tool-use-id>toolu_01H9xFZ1JTz4akFdQzbK1hoS</tool-use-id>
+> <output-file>/private/tmp/claude-501/-Users-hwansu-orca-workspaces-harness-utility/26664246-d290-44aa-8b2f-9bef3d42fabf/tasks/b8v6gygl0.output</output-file>
+> <status>completed</status>
+> <summary>Background command "Run 50-session before/after evaluation" completed (exit code 0)</summary>
+> </task-notification>
+
+#### 40 — 2026-11-10T13:25:08Z
+
+> <task-notification>
+> <task-id>b93t0nxak</task-id>
+> <tool-use-id>toolu_01NTFFdDnmezEsCZfP16vVJA</tool-use-id>
+> <output-file>/private/tmp/claude-501/-Users-hwansu-orca-workspaces-harness-utility/26664246-d290-44aa-8b2f-9bef3d42fabf/tasks/b93t0nxak.output</output-file>
+> <status>completed</status>
+> <summary>Background command "Rerun T4 with true premise and re-aggregate" completed (exit code 0)</summary>
+> </task-notification>
+
+#### 41 — 2026-11-10T13:33:49Z
+
+> 잘했네. PR하고, 0.43.0은 continue-on에서 이어갈 수 있게 준비해줘
