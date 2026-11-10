@@ -23,8 +23,6 @@ SKILLS = sorted(d.name for d in (REPO_ROOT / "harness" / "skills").iterdir() if 
 
 
 def run_installer(*args, input="", forbid_input=False, env=None, exact=False):
-    # The 0.40.0 and 0.41.0 migrations each add one confirmation prompt; scripted all-"y" answers
-    # get two more "y" so tests written against older prompt counts keep their intent.
     if not exact and args[:1] == ("update",) and input.strip() and all(line == "y" for line in input.splitlines()):
         input += "y\ny\n"
     command = [sys.executable, str(INSTALLER)] + list(args)

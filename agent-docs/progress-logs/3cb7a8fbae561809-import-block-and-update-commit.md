@@ -3,7 +3,7 @@ session: 26664246-d290-44aa-8b2f-9bef3d42fabf
 before: agent-docs/progress-logs/5c1e9a7d03b84f26-verifier-tests-diff.md
 previous: none
 branch: Doggy-Footprint/utility
-commit: 52ab38a8ba8119f2610661eb1afbec64ebf83ed6
+commit: 6e77d1a234f20cc21dd58109bfd4e1d67171f090
 ---
 
 # Import the managed block and auto-commit harness updates (0.40.0)
@@ -287,3 +287,13 @@ commit: 52ab38a8ba8119f2610661eb1afbec64ebf83ed6
 > 2. (a)
 > 3. (a)
 > 회고 확인
+
+#### 32 — 2026-11-10T12:20:32Z
+
+> [fill] -> [harness-requires]
+> 
+> 평가 세션은 haiku-medium
+> 주석은 필요한게 아니면 삭제.
+> 
+> ---
+> 위 내용 적용하여 승인
