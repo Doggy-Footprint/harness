@@ -3,7 +3,7 @@ session: 26664246-d290-44aa-8b2f-9bef3d42fabf
 before: agent-docs/progress-logs/5c1e9a7d03b84f26-verifier-tests-diff.md
 previous: none
 branch: Doggy-Footprint/utility
-commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f
+commit: 52ab38a8ba8119f2610661eb1afbec64ebf83ed6
 ---
 
 # Import the managed block and auto-commit harness updates (0.40.0)
@@ -11,21 +11,17 @@ commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f
 ## Next Session
 
 ### State
-- 0.40.0 committed and pushed as PR #32. Stage B (0.41.0, lazy hook-backed rules) is implemented and verified in the working tree, not committed: five rule files under `harness/instructions/`, a `## Rule Files` table in the block, rule-file paths in hook and pre-commit messages, a one-time first-change reminder.
+- 0.41.0 (lazy hook-backed rules) committed on the PR #32 branch: five rule files under `harness/instructions/`, a `## Rule Files` table in the block, rule-file paths in hook and pre-commit messages, a one-time first-change reminder. Not to be merged alone: 6-7 of 25 eval sessions left two progress files for one session after a Stop block (0 of 25 before).
   - commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f; files: harness/instructions/harness-block.md, harness/instructions/progress.md, harness/hooks/progress_hook.py, harness/git/verify_rules.py, installer/harness.py, harness/VERSION, tests/test_lazy_rules.py
-- Spec `agent-docs/specs/c78afc0d4b2361e5-lazy-hook-backed-rules.md` is active at version 5; both verifier invocations used; retrospective and archive not written yet.
-  - commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f; files: agent-docs/specs/c78afc0d4b2361e5-lazy-hook-backed-rules.md
-- Before/after eval (haiku, effort medium, `claude -p`, 5 tasks x 5 reps on simonw/mcp-explorer 56910d7c6c9f7e143dadd67bf047d7650a79ffdd) ran with scripts kept in the session scratchpad only. An outside-view subagent re-read the transcripts: 14-16 of 25 sessions per after arm copied the outer session UUID from the eval repo path into `session:`; rule files were read through Bash `cat`, which the scorer did not count; first-request token means mix 25-tool and 156-tool runs.
+- Rescored eval (Bash `cat` counted as a read, first-request tokens grouped by tool count): rule files read before the first write in 54-55 of 55 cases; first-request tokens at 25 tools 24,603 before, 22,333 and 22,457 after; 14-16 of 25 sessions per arm copied the outer session UUID from the eval repo path into `session:`.
   - commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f; files: harness/hooks/progress_hook.py, harness/lib/progress.py
 
 ### Next Step
-- User decides: keep or revert the "what it is" column of the Rule Files table; finish 0.41.0 into PR #32; which countermeasures to take (hook fills `session:`, freshness anchored to the recording commit, hook-created progress skeleton, commit-time progress gate, generators for synced/stale fields).
-  - commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f; files: harness/instructions/harness-block.md, harness/hooks/progress_hook.py, harness/lib/progress.py
+- Draft the 0.42.0 workflow spec: hook fills `session:` and the Stop message names the file to fix; freshness anchored to the commit that recorded the entry with `commit:` optional; hook-created progress skeleton replacing the reminder; progress gate at pre-commit. Then 0.43.0: `code_hash` refresh command with hash limited to tagged blocks (data migration), stale-move command, rule text injected at first write with the block list shortened to file + when to read, hook-written minimal progress for record-only sessions. Re-run the eval with a UUID-free repo path, fixed MCP tool set, and `rm`/`mv` allowed.
+  - commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f; files: harness/hooks/progress_hook.py, harness/lib/progress.py, harness/git/sync_progress.py, harness/git/verify_rules.py, harness/instructions/harness-block.md
 
 ### Constraints
-- "1. 권장안 수용 2. 5회 3. spec 회고에 repo / commit hash 정도만"
-  - source: user prompt in session 26664246-d290-44aa-8b2f-9bef3d42fabf
-- "sub agent 하나 호출해서 대책을 좀 찾아보자. 기존 구조를 부서도 좋으니까 상황을 옆에서 본 아이디어를 달라고 해"
+- "대책 전부 수용해도 좋을 것 같네."
   - source: user prompt in session 26664246-d290-44aa-8b2f-9bef3d42fabf
 - "1. 2 권장. 3. 기존 브랜치, 동일 PR에 올리기"
   - source: user prompt in session 26664246-d290-44aa-8b2f-9bef3d42fabf
@@ -35,12 +31,12 @@ commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f
   - commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f; files: tests/test_lazy_rules.py, tests/test_test_scan.py
 
 ### Dead Ends
-- Adding a one-line "what it is" column to the Rule Files table did not raise counted rule-file reads (Read tool only) and cost about 125 first-request tokens at a fixed tool count.
+- A one-line "what it is" column in the Rule Files table left rule-file reads unchanged (55/55 vs 54/55) and cost about 125 first-request tokens at 25 tools.
   - commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f; files: harness/instructions/harness-block.md
 
 ### Related
-- `agent-docs/specs/c78afc0d4b2361e5-lazy-hook-backed-rules.md`
-  - commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f; files: agent-docs/specs/c78afc0d4b2361e5-lazy-hook-backed-rules.md
+- `agent-docs/spec-logs/c78afc0d4b2361e5-lazy-hook-backed-rules.md`
+  - commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f; files: agent-docs/spec-logs/c78afc0d4b2361e5-lazy-hook-backed-rules.md
 
 ## Record
 
@@ -50,6 +46,8 @@ commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f
 - `progress.write_installer_run` / `consume_installer_run`; progress hook skips marking when the record matches the call's before/after fingerprints.
 - 0.40.0 migration announcement; Progress Rule clause; README and rearrange-docs wording; AGENTS.md project definition says `update . --no-commit`.
 - New tests/test_update_commit.py; version/prompt-count updates in eight other test files.
+
+- 0.41.0: hook-backed rules moved verbatim into `harness/instructions/{progress,index-and-staleness,try-n-fail,todos,synced-comments}.md`; block gains `## Rule Files`; S2-S4 hook messages and pre-commit name the rule file; one-time first-change reminder; migration 0.41.0; new tests/test_lazy_rules.py.
 
 ### Commands
 - `claude -p` in a throwaway repo with the nested import between markers: reply quoted the token from the nested file.
@@ -278,3 +276,14 @@ commit: b8961357fcc4c3bf97aa3a8ad22544d1c6e8463f
 #### 29 — 2026-11-10T11:39:02Z
 
 > sub agent 하나 호출해서 대책을 좀 찾아보자. 기존 구조를 부서도 좋으니까 상황을 옆에서 본 아이디어를 달라고 해
+
+#### 30 — 2026-11-10T11:58:45Z
+
+> 대책 전부 수용해도 좋을 것 같네.
+
+#### 31 — 2026-11-10T12:11:27Z
+
+> 1. (a)
+> 2. (a)
+> 3. (a)
+> 회고 확인

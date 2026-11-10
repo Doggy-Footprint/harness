@@ -36,7 +36,7 @@ python3 installer/harness.py doctor <target>
 | `AGENTS.md`, `CLAUDE.md` | 프로젝트 정의와 관리형 문서 규칙 (`CLAUDE.md`는 `@AGENTS.md` 참조) |
 | `.agents/skills/`, `.claude/skills/` | `workflow-approach`, `requirement-oracle`, `architecture-options`, `harness-import`, `test-audit`, `rearrange-docs`, `continue-on` |
 | `.claude/agents/` | `implementer`, `test-implementer`, `test-verifier`, `mutant-triager`, `code-explorer` |
-| `.claude/settings.json` | 세션·서브에이전트·도구 훅. `gh pr create`/`gh pr edit` 뒤에는 PR 설명을 5분 standup 소개 기준으로 쓰라고 상기시킴. 사용자 프롬프트를 마스킹해 progress에 기록하고, 파일을 바꾼 세션이 progress 없이 끝나려 하면 한 번 막음 |
+| `.claude/settings.json` | 세션·서브에이전트·도구 훅. `gh pr create`/`gh pr edit` 뒤에는 PR 설명을 5분 standup 소개 기준으로 쓰라고 상기시킴. 사용자 프롬프트를 마스킹해 progress에 기록하고, 파일을 처음 바꾼 세션에 progress가 없으면 한 번 안내하고, progress 없이 끝나려 하면 한 번 막음 |
 | `.harness/git/` | 커밋 전 문서 규칙 검사(progress의 마스킹되지 않은 키·이메일·IP·내부 호스트명 차단 포함), 커밋 메시지의 `Request:`·`Intent:` 줄 경고, merge로 들어온 progress를 `progress-logs/`로 이동 |
 | `agent-docs/` | try-n-fail 기록, 세션 progress, todo, spec, 실행 기록 |
 | `.github/workflows/harness-comment-warning.yml` | 새 주석이 있는 PR은 `comments-approved` 라벨이 있어야 통과 (선택) |
@@ -64,7 +64,7 @@ python3 installer/harness.py doctor <target>
 
 ## 문서 관리
 
-에이전트는 `AGENTS.md`의 관리 블록에 따라 문서를 씁니다. 관리 블록은 규칙 본문이 아니라 `.harness/instructions/harness-block.md`를 가져오는 import 한 줄(`@.harness/instructions/harness-block.md`)이며, 버전이 바뀌어도 `AGENTS.md`는 달라지지 않습니다. 규칙 전문은 [`harness-block.md`](harness/instructions/harness-block.md)에 있습니다.
+에이전트는 `AGENTS.md`의 관리 블록에 따라 문서를 씁니다. 관리 블록은 규칙 본문이 아니라 `.harness/instructions/harness-block.md`를 가져오는 import 한 줄(`@.harness/instructions/harness-block.md`)이며, 버전이 바뀌어도 `AGENTS.md`는 달라지지 않습니다. 항상 읽는 규칙은 [`harness-block.md`](harness/instructions/harness-block.md)에 있습니다. hook이 위반을 잡는 progress, try-n-fail, todo, index/stale, 동기화 주석 규칙은 같은 디렉터리의 별도 파일에 있어 해당 작업 전에 읽고, 위반하면 hook 메시지가 그 파일을 알려 줍니다.
 
 | 문서 | 위치 | 언제 쓰나 |
 | --- | --- | --- |

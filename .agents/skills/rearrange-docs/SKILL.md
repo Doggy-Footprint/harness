@@ -23,7 +23,7 @@ Confirm every hypothesis with the user before the Diagnose step. If the diff con
 # Scope
 
 In scope are documents governed by the harness rules in `AGENTS.md` (standalone docs, inline comments, and docstrings):
-- `AGENTS.md` and `CLAUDE.md`, outside the managed block (`<!-- harness:begin -->` to `<!-- harness:end -->`), which is only an import line; the rules live in `.harness/instructions/harness-block.md`, a manifest file;
+- `AGENTS.md` and `CLAUDE.md`, outside the managed block (`<!-- harness:begin -->` to `<!-- harness:end -->`), which is only an import line; the rules live in `.harness/instructions/` (`harness-block.md` and the rule files it lists), manifest files;
 - README files and other standalone docs about the changed behavior;
 - `agent-docs/` records: `try-n-fail`, `todos`, `synced-comments`, and their `index.md`;
 - skill and agent definitions the project owns;
@@ -75,7 +75,7 @@ Get user confirmation with question cards, one card per file. Put all `dangling`
 - Keep each document's language, voice, and heading structure.
 - Records are history; do not rewrite their past content.
   - Keep try-n-fail Attempts rows and the Failed Attempts rows of todos moved from handoffs.
-  - Move a try-n-fail record whose goal was dropped or achieved, or a completed todo, to `stale/` under the Index & Staleness Management rule.
+  - Move a try-n-fail record whose goal was dropped or achieved, or a completed todo, to `stale/` under the Index & Staleness Management rule in `.harness/instructions/index-and-staleness.md`.
 - Comments follow Comment Enforcement. Edits to synced comments follow the Shared Comment & Docstring Synchronization rules (version, count, `code_hash`, version log).
 - The Record Writing exclusions apply to every rewritten instruction.
 - Before editing a document that has uncommitted changes, save a copy of it for the Verify step.

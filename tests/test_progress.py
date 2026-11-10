@@ -1005,7 +1005,7 @@ class TestStopSessionStartPreCompact(ProgressCase):
         self.bash(repo, lambda: (repo / "src" / "new.py").write_text("x\n"))
         self.bash_event(repo, "PreToolUse", "toolu_pending")
         files = sorted(p.relative_to(repo).as_posix() for p in self.change_dir(repo).iterdir())
-        self.assertEqual(len(files), 2)
+        self.assertEqual(len(files), 3)
         ignored = run_git(repo, "check-ignore", "--", *files).stdout.split()
         self.assertEqual(sorted(ignored), files)
 
@@ -2344,31 +2344,35 @@ class TestInstallerRunExemption(ProgressCase):
     def test_h2_record_with_other_after_marks_session_and_keeps_record(self):
         repo, result = self.session_with_change(lambda r, b, a: load_progress().write_installer_run(r, b, "not-the-after"))
 
-        self.assertEqual(result.returncode, 0, out(result))
+        self.assertEqual(result.returncode, 2, out(result))
+        self.assertIn("has no progress yet", result.stderr)
         self.assertEqual(json.loads(self.record_path(repo).read_text())["after"], "not-the-after")
         self.assertEqual(self.stop(repo).returncode, 2)
 
     def test_h3_record_with_other_before_marks_session_and_keeps_record(self):
         repo, result = self.session_with_change(lambda r, b, a: load_progress().write_installer_run(r, "not-the-before", a))
 
-        self.assertEqual(result.returncode, 0, out(result))
+        self.assertEqual(result.returncode, 2, out(result))
+        self.assertIn("has no progress yet", result.stderr)
         self.assertEqual(json.loads(self.record_path(repo).read_text())["before"], "not-the-before")
         self.assertEqual(self.stop(repo).returncode, 2)
 
-    def test_h4_malformed_record_marks_session_and_hook_exits_normally(self):
+    def test_h4_malformed_record_marks_session_and_hook_reminds_without_traceback(self):
         for label, data in (("malformed json", b"{not json"), ("missing keys", b'{"before": "x"}'), ("not an object", b"[1]"),
                             ("binary", b"\xff\xfe\x00")):
             with self.subTest(case=label):
                 repo, result = self.session_with_change(None, record_bytes=data)
 
-                self.assertEqual(result.returncode, 0, out(result))
+                self.assertEqual(result.returncode, 2, out(result))
+                self.assertIn("has no progress yet", result.stderr)
                 self.assertNotIn("Traceback", result.stderr)
                 self.assertEqual(self.stop(repo).returncode, 2)
 
-    def test_h5_no_record_keeps_existing_behavior_for_a_changing_bash_call(self):
+    def test_h5_no_record_marks_session_and_reminds_for_a_changing_bash_call(self):
         repo, result = self.session_with_change(None)
 
-        self.assertEqual(result.returncode, 0, out(result))
+        self.assertEqual(result.returncode, 2, out(result))
+        self.assertIn("has no progress yet", result.stderr)
         self.assertFalse(self.record_path(repo).exists())
         self.assertEqual(self.stop(repo).returncode, 2)
 

@@ -74,7 +74,7 @@ Group every finding by feature, each as one of: delete tests, add tests, fix tes
 
 # Todos
 
-Write one `agent-docs/todos/<16-hex-id>-test-audit-<feature>.md` per group, following the Todo Rule in `AGENTS.md`:
+Write one `agent-docs/todos/<16-hex-id>-test-audit-<feature>.md` per group, following `.harness/instructions/todos.md`:
 
 - `## Goal` names the feature and the finding kinds.
 - `## Next Step` is `run workflow-approach for this group`.

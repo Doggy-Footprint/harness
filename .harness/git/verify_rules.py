@@ -277,8 +277,10 @@ def check_synced_comments(errors: list):
             )
 
 
-def check_required_headings(errors: list):
+def check_required_headings(errors: list, only=None):
     for directory, headings in REQUIRED_HEADINGS.items():
+        if only is not None and directory != only:
+            continue
         if not directory.is_dir():
             continue
         for path in sorted(directory.glob("*.md")):
@@ -325,19 +327,40 @@ def check_progress_secrets(errors: list):
                 )
 
 
+RULE_FILE_DIR = ".harness/instructions"
+
+
 def main() -> int:
     errors: list = []
-    check_index_and_staleness(errors)
-    check_synced_comments(errors)
-    check_required_headings(errors)
-    check_progress(errors)
-    check_progress_secrets(errors)
+    violated: set = set()
+
+    def run(rule_file: str, check, *args):
+        before = len(errors)
+        check(errors, *args)
+        if len(errors) > before:
+            violated.add(rule_file)
+
+    run("index-and-staleness.md", check_index_and_staleness)
+    run("synced-comments.md", check_synced_comments)
+    run("try-n-fail.md", check_required_headings, PATHS.try_n_fail)
+    run("todos.md", check_required_headings, PATHS.todos)
+    run("progress.md", check_progress)
+    run("progress.md", check_progress_secrets)
 
     if errors:
+        order = [
+            "index-and-staleness.md",
+            "synced-comments.md",
+            "try-n-fail.md",
+            "todos.md",
+            "progress.md",
+        ]
+        rule_files = ", ".join(f"{RULE_FILE_DIR}/{name}" for name in order if name in violated)
         print("harness rule violations found:\n", file=sys.stderr)
         for e in errors:
             print(f"  - {e}", file=sys.stderr)
-        print(f"\n{len(errors)} violation(s). Commit blocked.", file=sys.stderr)
+        print(f"\nRule files: {rule_files}", file=sys.stderr)
+        print(f"{len(errors)} violation(s). Commit blocked.", file=sys.stderr)
         return 1
 
     return 0

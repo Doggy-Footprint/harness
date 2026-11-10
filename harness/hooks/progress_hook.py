@@ -308,8 +308,8 @@ def gate_block(session_id: str, command: str) -> str | None:
         if modified_project(session_id):
             return (
                 f"{prefix} session {session_id} changed the project but has no progress in {progress_rel}/ or "
-                f"{logs_rel}/. Write {progress_rel}/<16-hex-id>-<kebab-name>.md following the Progress Rule in "
-                f"AGENTS.md, run `{retire}`, commit, push, then run `gh pr create` again. {own_call}"
+                f"{logs_rel}/. Write {progress_rel}/<16-hex-id>-<kebab-name>.md following "
+                f".harness/instructions/progress.md, run `{retire}`, commit, push, then run `gh pr create` again. {own_call}"
             )
     committed = progress.git_tree_session_files(REPO_ROOT, "HEAD", progress_rel, session_id)
     if committed:
@@ -418,11 +418,31 @@ def on_logs_edit(path: Path, session_id: str | None) -> int:
     return 2
 
 
+def first_change_reminder(session_id: str | None) -> int:
+    if not session_id or not git_ready():
+        return 0
+    if not modified_project(session_id) or own_progress(session_id) is not None:
+        return 0
+    marker = progress.change_dir(REPO_ROOT, session_id) / "reminded"
+    try:
+        with open(marker, "x", encoding="utf-8"):
+            pass
+    except OSError:
+        return 0
+    print(
+        "harness: this session changed the project and has no progress yet. Read "
+        f".harness/instructions/progress.md, then write {rel(PROGRESS_DIR)}/<16-hex-id>-<kebab-name>.md "
+        "so it is committed with the work.",
+        file=sys.stderr,
+    )
+    return 2
+
+
 def on_post_tool_use(payload: dict) -> int:
     record_modification_safely(payload)
     path = target_path(payload)
     if path is None:
-        return 0
+        return first_change_reminder(session_id_of(payload))
     label = rel(path)
     if path.parent == PATHS.progress_logs.resolve():
         return on_logs_edit(path, session_id_of(payload))
@@ -505,7 +525,7 @@ def on_pre_compact(payload: dict) -> int:
         return 0
     print(
         f"harness: before compaction, update {target} with the current state, next step, user constraints, "
-        "and dead ends, following the Progress Rule in AGENTS.md."
+        "and dead ends, following .harness/instructions/progress.md."
     )
     return 0
 
@@ -545,7 +565,7 @@ def on_stop(payload: dict) -> int:
             print(
                 "harness: this session changed the project through tool calls, but no file in "
                 f"{rel(PROGRESS_DIR)}/ has `session: {session_id}`. Write "
-                f"{rel(PROGRESS_DIR)}/<16-hex-id>-<kebab-name>.md following the Progress Rule in AGENTS.md "
+                f"{rel(PROGRESS_DIR)}/<16-hex-id>-<kebab-name>.md following .harness/instructions/progress.md "
                 "before stopping.",
                 file=sys.stderr,
             )

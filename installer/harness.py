@@ -571,8 +571,8 @@ Written by `harness.py update` (migration 0.29.0); no code or record was changed
 ## Next Step
 1. Read each record and check its claims against the current code.
 2. Per record, propose one of these to the user, with the reason: convert the rejected alternatives or failed approaches a later task could try again into try-n-fail attempts (cause `user rejected: <reason>` or `verified`/`hypothesis`) with a Revisit Condition; otherwise recommend deleting it. A decision the code already shows needs no record.
-3. Write and delete only what the user confirms, following the Try-n-Fail Rule in `AGENTS.md`. When no record is left, recommend deleting `agent-docs/adr/` and `agent-docs/rejections/` with their `index.md`, `stale.md`, and `stale/`. The harness does not manage these directories after this step; whatever the user keeps stays as it is.
-4. Mark this handoff stale under the Index & Staleness Management rule.
+3. Write and delete only what the user confirms, following the Try-n-Fail Rule in `.harness/instructions/try-n-fail.md`. When no record is left, recommend deleting `agent-docs/adr/` and `agent-docs/rejections/` with their `index.md`, `stale.md`, and `stale/`. The harness does not manage these directories after this step; whatever the user keeps stays as it is.
+4. Mark this handoff stale under the Index & Staleness Management rule in `.harness/instructions/index-and-staleness.md`.
 
 ## Open Questions
 - Which records the user wants converted or deleted, and whether to delete the emptied directories.
@@ -900,6 +900,16 @@ def migrate_import_block_and_update_commit(target: Path, dry_run: bool) -> list[
         "no data is migrated; the regular update step rewrites the managed block",
     ]
 
+def migrate_lazy_rule_files(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "the Progress, Try-n-Fail, Todo, Index & Staleness, and Synced Comment rules move from "
+        ".harness/instructions/harness-block.md to their own files in .harness/instructions/",
+        "the managed block lists each rule file and when to read it; hook and pre-commit messages name the file "
+        "of a violated rule",
+        "a session's first project change without a progress prints a one-time reminder to write one",
+        "no data is migrated; AGENTS.md is unchanged",
+    ]
+
 
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
@@ -949,6 +959,11 @@ MIGRATIONS = (
         parse_version("0.40.0"),
         "import the managed block; auto-commit updates; exempt update changes from progress",
         migrate_import_block_and_update_commit,
+    ),
+    (
+        parse_version("0.41.0"),
+        "move hook-backed rules into their own instruction files",
+        migrate_lazy_rule_files,
     ),
 )
 
@@ -1399,10 +1414,13 @@ def archive_agents_md(target: Path, content: str, dry_run: bool) -> Path:
 
 
 def install_or_merge_agents_md(target: Path, dry_run: bool, report: dict, fresh_install: bool = False):
-    block_body = (SOURCE_HARNESS / "instructions" / "harness-block.md").read_text(encoding="utf-8")
     wrapped = MANAGED_BLOCK
     path = target / "AGENTS.md"
-    block_headings = {m.group(1).strip().lower() for m in HEADING_RE.finditer(block_body)}
+    block_headings = {
+        m.group(1).strip().lower()
+        for instruction in sorted((SOURCE_HARNESS / "instructions").glob("*.md"))
+        for m in HEADING_RE.finditer(instruction.read_text(encoding="utf-8"))
+    }
 
     if not path.exists():
         content = "# Project Definition\n\n[#TODO][3-5 lines of description of the project]\n\n" + wrapped
