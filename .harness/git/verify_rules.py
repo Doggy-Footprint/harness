@@ -15,6 +15,7 @@ Covers only rules that can be verified without judgement calls:
 Exit code is non-zero if any rule is violated.
 """
 import hashlib
+import os
 import re
 import subprocess
 import sys
@@ -277,8 +278,10 @@ def check_synced_comments(errors: list):
             )
 
 
-def check_required_headings(errors: list):
+def check_required_headings(errors: list, only=None):
     for directory, headings in REQUIRED_HEADINGS.items():
+        if only is not None and directory != only:
+            continue
         if not directory.is_dir():
             continue
         for path in sorted(directory.glob("*.md")):
@@ -325,19 +328,86 @@ def check_progress_secrets(errors: list):
                 )
 
 
+RULE_FILE_DIR = ".harness/instructions"
+IN_PROGRESS_GIT_STATES = ("MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "rebase-merge", "rebase-apply")
+
+
+def git_dir() -> Path | None:
+    result = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "rev-parse", "--git-dir"], capture_output=True, text=True
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        return None
+    return (REPO_ROOT / result.stdout.strip()).resolve()
+
+
+def check_session_progress(errors: list):
+    session_id = os.environ.get("CLAUDE_CODE_SESSION_ID", "")
+    if not session_id or os.environ.get("HARNESS_UPDATE_COMMIT") == "1":
+        return
+    if not (progress.change_dir(REPO_ROOT, session_id) / "modified").is_file():
+        return
+    try:
+        directory = git_dir()
+    except OSError:
+        return
+    if directory is None or any((directory / name).exists() for name in IN_PROGRESS_GIT_STATES):
+        return
+    owned = []
+    for folder in (PATHS.progress, PATHS.progress_logs):
+        owned.extend(progress.session_files(folder, session_id))
+    progress_rel, logs_rel = rel(PATHS.progress), rel(PATHS.progress_logs)
+    if not owned:
+        errors.append(
+            f"session {session_id} changed the project but no progress in {progress_rel}/ or {logs_rel}/ has "
+            f"`session: {session_id}`; write one and stage it with this commit"
+        )
+        return
+    for path in owned:
+        label = rel(path)
+        staged = subprocess.run(["git", "-C", str(REPO_ROOT), "rev-parse", "--verify", "--quiet", f":{label}"],
+                                capture_output=True, text=True)
+        worktree = progress.git_file_hash(REPO_ROOT, label)
+        if staged.returncode != 0 or staged.stdout.strip() != worktree:
+            errors.append(f"{label}: progress of session {session_id} is not staged with this commit; run `git add {label}`")
+        if path.parent == PATHS.progress_logs:
+            parsed = progress.parse(path.read_text(encoding="utf-8", errors="replace"))
+            for line, message in progress.format_findings(parsed):
+                errors.append(f"{label}:{line}: {message}")
+
+
 def main() -> int:
     errors: list = []
-    check_index_and_staleness(errors)
-    check_synced_comments(errors)
-    check_required_headings(errors)
-    check_progress(errors)
-    check_progress_secrets(errors)
+    violated: set = set()
+
+    def run(rule_file: str, check, *args):
+        before = len(errors)
+        check(errors, *args)
+        if len(errors) > before:
+            violated.add(rule_file)
+
+    run("index-and-staleness.md", check_index_and_staleness)
+    run("synced-comments.md", check_synced_comments)
+    run("try-n-fail.md", check_required_headings, PATHS.try_n_fail)
+    run("todos.md", check_required_headings, PATHS.todos)
+    run("progress.md", check_progress)
+    run("progress.md", check_progress_secrets)
+    run("progress.md", check_session_progress)
 
     if errors:
+        order = [
+            "index-and-staleness.md",
+            "synced-comments.md",
+            "try-n-fail.md",
+            "todos.md",
+            "progress.md",
+        ]
+        rule_files = ", ".join(f"{RULE_FILE_DIR}/{name}" for name in order if name in violated)
         print("harness rule violations found:\n", file=sys.stderr)
         for e in errors:
             print(f"  - {e}", file=sys.stderr)
-        print(f"\n{len(errors)} violation(s). Commit blocked.", file=sys.stderr)
+        print(f"\nRule files: {rule_files}", file=sys.stderr)
+        print(f"{len(errors)} violation(s). Commit blocked.", file=sys.stderr)
         return 1
 
     return 0

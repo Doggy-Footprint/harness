@@ -28,97 +28,17 @@ Every record under `agent-docs/` excludes:
 
 A hook writes `commit: <HEAD at last write>` into the frontmatter of every Markdown document under `agent-docs/` except `index.md` and `stale.md`. Do not edit it by hand. Before relying on a record, compare its `commit` with HEAD and re-check claims about code changed since then.
 
-## Index & Staleness Management
-1. Every agent-managed directory (e.g., `agent-docs/try-n-fail`, `agent-docs/todos`) must contain `index.md`, `stale.md`, and a `stale/` directory. `agent-docs/specs/` and `agent-docs/spec-logs/` are workflow state and run records, and `agent-docs/progress/` and `agent-docs/progress-logs/` are session records, so they are exempt. `agent-docs/adr/` and `agent-docs/rejections/` from harness versions before 0.29.0, and `agent-docs/handoff/` from versions before 0.33.0, are no longer managed or checked.
-2. File Naming: `<16-char-hex-id>-<kebab-case-name>.md` (e.g., `3f8a9c12b0e45d67-auth-flow.md`).
-3. `index.md` Format: entries separated by `---`:
-   ````
-   File: <file-name>
-   Summary: <one-line summary>
-   Related Files: <comma-separated repo paths>
-   Related Symbols: <comma-separated function/class/module names>
-   ````
-4. When marking a document stale, remove its entry from `index.md`, append that index block verbatim to `stale.md`, and move the document to `stale/`.
+## Rule Files
 
-## Shared Comment & Docstring Synchronization Rules
+These rules live in separate files under `.harness/instructions/`. Read the file before the work it covers; hook and pre-commit messages name the file of a rule they find violated.
 
-Apply when an identical comment or docstring must be maintained across multiple locations:
-
-1. Synced ID: a random 48-bit hex ID (12 hex characters, e.g., a1b2c3d4e5f6).
-2. Tracking file: `agent-docs/synced-comments/<synced_id>.md`. `code_hash` hashes the participating files' contents with comments stripped, concatenated in alphanumeric filename order:
-   ````
-   ---
-   version: 1
-   count: <number of associated code locations>
-   code_hash: <hash of participating files' non-comment content>
-   ---
-
-   # Content
-   <Write the shared comment or docstring here>
-
-   # Version Log
-   ## v1 Log
-   - Initial creation.
-   ````
-3. Code tag: every associated code location includes `synced id: <synced_id>, version: <n>, count: <n>`.
-4. Update: when the shared text is edited, or a code change alters the recomputed `code_hash`, increment the version in the frontmatter and every code tag, recompute `code_hash`, and add a `# Version Log` entry.
-5. Removal: when removing the shared content entirely,
-   - remove it from every referenced code location;
-   - increment the version, record the removal reason in the version log, and add `obsolete: true` to the frontmatter.
-
-## Try-n-Fail Rule
-
-Directory: `agent-docs/try-n-fail/`.
-
-Records approaches a later task could plausibly try again: an attempt whose failure took real work to discover (an implementation, a run, or an investigation, not a reading of the code), or a concrete proposal the user rejected. Candidates come from a progress's `### Failed Attempts`, a spec's execution ledger, or a rejection in conversation. Show the draft to the user and write only after confirmation.
-
-Required file structure:
-
-- `#` Title
-- `## Goal` (what the attempts tried to achieve)
-- `## Attempts` (table `| attempt | failure evidence | cause |`; cause marked `verified`, `hypothesis`, or `user rejected: <reason>`)
-- `## Revisit Condition` (the observable change that would make another attempt worthwhile)
-
-Append rows for new attempts at the same goal; never delete or edit existing rows. When the goal is dropped or an attempt later succeeds, mark the record stale.
-
-## Progress Rule
-
-Directory: `agent-docs/progress/`, holding at most one `<16-char-hex-id>-<kebab-case-name>.md`, the current session's. Every session in which Claude Code changes the project (edits, patches, commits, or other commands that change the working tree or HEAD) writes one and commits it with the work; files changed outside the session's own tool calls, under `.harness/`, or ignored by git do not count. One progress per session: merge into the existing one instead of writing a second. A session edits only its own progress, never another session's.
-
-Before opening a PR from a Claude Code session:
-1. Retire the progress to `agent-docs/progress-logs/` with `python3 .harness/bin/progress.py retire`.
-2. Commit and push it.
-3. Run `gh pr create` in its own Bash call.
-
-After retiring, the session keeps editing its progress in `progress-logs/`.
-
-Frontmatter: `session` (Claude Code session id), `before` (repo path of the progress moved to logs when this one was created, or `none`), `previous` (repo path of the progress this session continued through `/continue-on`, or `none`), `branch`, and the `commit` stamp. `before` records order only; `previous` records an explicit continuation.
-
-Required file structure:
-
-- `#` Title
-- `## Next Session` with `### State`, `### Next Step`, `### Constraints`, `### Verify`, `### Dead Ends`, `### Related`
-- `## Record` with `### Changes`, `### Commands`, `### Failed Attempts` (table `| attempt | failure evidence | cause |`, cause marked `verified` or `hypothesis`), `### Sources`, `### User Requests`
-
-Every `## Next Session` bullet outside `### Constraints` is an entry followed by `  - commit: <sha checked against>; files: <comma-separated repo paths or none>`; record each entry's own commit. `### Constraints` bullets quote the user verbatim from `### User Requests` and carry `  - source: <where it was said>`. A subsection with nothing to continue holds `- none: <reason>`; a `none:` bullet is not an entry and carries no `commit:` line. `### Related` lists the exact records a later session needs; never point to records you did not check.
-
-`### User Requests` records, masked, the prompts the user sent in this session; subagent hand-backs that arrive as prompts are left out. Hooks rewrite it when the progress is written and at each commit, which stages it, so never edit it. Pre-commit blocks keys, tokens, emails, IP addresses, and internal hostnames in `progress/` and `progress-logs/`; replace each with `[masked:<category>]`.
-
-To continue earlier work, read only the `## Next Session` of the chosen progress and the pointers under its `### Related` (`/continue-on`); never guess related records. Re-check entries the hooks flag as stale, and ask the user whether a flagged near-duplicate was re-verified or copied.
-
-### Hook Behavior
-
-- When a new session writes its progress, the previous one moves to `agent-docs/progress-logs/` under the same name; a merge moves progress files it adds there too.
-- A progress whose session may still be running in another process is not moved, and the new progress is refused; run parallel sessions in separate git worktrees.
-- Project changes are detected per tool call; a Bash command run in the background is checked only until its tool call returns, so later changes it makes are not seen.
-- `gh pr create` is blocked until the session's progress is retired, committed, and pushed, so a merged PR leaves nothing in `progress/` to move.
-- A retired progress in `progress-logs/` gets the same checks and User Requests sync, and Stop blocks while it is uncommitted or unpushed.
-
-## Todo Rule
-
-Directory: `agent-docs/todos/`.
-
-Work items not tied to a session. Required: `#` Title and `## Next Step`. Recommended: `## Goal` and `## Related`. Further sections are allowed. Handoff records from before harness 0.33.0 may live here unchanged. When the item is done or dropped, mark it stale.
+| file | what it is | read before |
+| --- | --- | --- |
+| `progress.md` | the per-session record in `agent-docs/progress/`: frontmatter, required sections, retiring before a PR | committing in a session that changed the project, writing in `agent-docs/progress/` or `agent-docs/progress-logs/`, continuing earlier work, or opening a PR |
+| `index-and-staleness.md` | file naming, `index.md` entries, and moving a document to `stale/` | adding, renaming, or marking stale a document in an agent-managed directory under `agent-docs/`, or editing its `index.md` or `stale.md` |
+| `try-n-fail.md` | the record of a failed attempt or rejected proposal and its required sections | writing or proposing a record in `agent-docs/try-n-fail/` |
+| `todos.md` | the record of a work item not tied to a session and its required sections | writing a record in `agent-docs/todos/` |
+| `synced-comments.md` | the tracking file and code tags for a comment kept identical in several places | keeping one comment or docstring identical in several places, or editing code tagged `synced id:` |
 
 # Task Guide
 

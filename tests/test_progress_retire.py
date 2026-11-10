@@ -44,7 +44,7 @@ class RetireCase(ProgressCase):
             self.git(repo, "push", "-q", "-u", "origin", branch)
         self.assertEqual(self.start(repo).returncode, 0)
         if changed:
-            self.bash(repo, lambda: (repo / "src" / "new.py").write_text("new = 1\n"))
+            self.bash(repo, lambda: (repo / "src" / "new.py").write_text("new = 1\n"), event="PostToolUseFailure")
         return repo
 
     def progress_text(self, repo, sid=SESSION, stamp=None, user_requests="", **kw):
@@ -573,7 +573,8 @@ class TestLogsFileHooks(RetireCase):
         result = self.post(repo, path)
 
         self.assertEqual(result.returncode, 2, out(result))
-        self.assertIn("entry without commit metadata: ", out(result))
+        self.assertIn("  - files:", out(result))
+        self.assertIn("x" * 50, out(result))
         self.assertNotIn("Traceback", result.stderr)
 
     def test_l4_new_progress_file_while_own_logs_file_exists_is_refused_without_rotation(self):
@@ -782,7 +783,7 @@ class TestMergeScenarios(RetireCase):
         self.git(repo, "checkout", "-q", "-b", "feat")
         self.git(repo, "push", "-q", "-u", "origin", "feat")
         self.assertEqual(self.start(repo).returncode, 0)
-        self.bash(repo, lambda: (repo / "src" / "new.py").write_text("new = 1\n"))
+        self.bash(repo, lambda: (repo / "src" / "new.py").write_text("new = 1\n"), event="PostToolUseFailure")
 
         self.assert_blocked(self.gate(repo), SESSION)
         self.write_progress(repo, post=True)
@@ -851,7 +852,7 @@ class TestMergeScenarios(RetireCase):
 
 class TestVersionAndMigration(RetireCase):
     def test_u1_version_file_reads_current_version(self):
-        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.39.0")
+        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.42.0")
 
     def test_u2_update_from_0_35_0_announces_the_0_36_0_migration(self):
         repo = self.install()
@@ -860,17 +861,17 @@ class TestVersionAndMigration(RetireCase):
         manifest["version"] = "0.35.0"
         manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
 
-        result = run_installer("update", str(repo), input="y\n" * 6)
+        result = run_installer("update", str(repo), input="y\n" * 9)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.36.0", "0.37.0", "0.38.0", "0.39.0"])
+        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"])
         match = re.search(r"migration 0\.36\.0:(.*?)Apply migration", result.stdout, re.DOTALL)
         self.assertIsNotNone(match, result.stdout)
         text = match.group(1).lower()
         self.assertIn("gh pr create", text)
         self.assertIn("retire", text)
         self.assertIn("progress-logs", text)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.39.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
 
 
 class TestConfiguredDocsRoot(RetireCase):

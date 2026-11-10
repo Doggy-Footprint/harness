@@ -92,7 +92,7 @@ def cmd_show(args) -> int:
         output.extend(body)
         output.append("")
         output.append("Freshness report:")
-        for entry, status in progress.entry_report(parsed, REPO_ROOT):
+        for entry, status in progress.entry_report(parsed, REPO_ROOT, path):
             output.append(f"- {status} — {entry.section or '-'}: {entry.text[:60]}")
         if not progress.has_next_session_entries(parsed):
             output.append(
