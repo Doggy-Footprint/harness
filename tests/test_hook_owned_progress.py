@@ -1,24 +1,3 @@
-"""Evidence for hook-owned progress mechanics (0.42.0).
-
-Claim decision table (rules R1-R13). A progress file whose `session:` value V differs from the
-current session S is rewritten to S exactly when the path has no blob in HEAD and V is empty,
-`auto`, or unknown (no state file, no HEAD-owned progress). Points: PostToolUse after a write,
-Stop, and the pre-commit sync.
-  R1  PostToolUse, not in HEAD, V unknown            -> claimed, notice
-  R2  PostToolUse, not in HEAD, V auto               -> claimed, notice
-  R3  PostToolUse, not in HEAD, V empty              -> claimed, notice shows (empty)
-  R4  PostToolUse, not in HEAD, V has a state file   -> bytes unchanged
-  R5  PostToolUse, not in HEAD, V owns a HEAD file   -> bytes unchanged
-  R6  PostToolUse, in HEAD, V unknown                -> bytes unchanged
-  R7  PostToolUse, in HEAD, V auto                   -> bytes unchanged
-  R8  PostToolUse, not in HEAD, V equals S           -> bytes unchanged, no notice
-  R9  Stop, not in HEAD, V unknown                   -> claimed, notice, no write-a-progress block
-  R10 Stop, V has a state file                       -> bytes unchanged
-  R11 Stop, in HEAD, V unknown                       -> bytes unchanged
-  R12 pre-commit, not in HEAD, V unknown/auto/empty  -> claimed and staged
-  R13 pre-commit, V known or in HEAD                 -> bytes unchanged
-"""
-
 import json
 import os
 import re
