@@ -7,7 +7,7 @@ argument-hint: "[progress-logs path]"
 
 # Steps
 
-1. Run `python3 .harness/bin/progress.py show $ARGUMENTS`. Without an argument it picks the progress of the previous session; an `agent-docs/progress-logs/` path skips intervening sessions. On exit 1, report its message to the user and stop.
+1. Run `python3 .harness/bin/progress.py show $ARGUMENTS`. Without an argument it picks the progress of the previous session, skipping a record-only progress in favor of the progress its `before` names; when `agent-docs/progress/` yields none, it picks the newest committed progress in `agent-docs/progress-logs/` that this session does not own and that is not record-only. That pick may be a merged branch's progress rather than the previous session's, so ask the user to confirm it in step 5. An `agent-docs/progress-logs/` path skips intervening sessions. On exit 1, report its message to the user and stop.
 2. Read only the printed output: the target path, frontmatter, `## Next Session`, and the freshness report. Do not open the target file itself; it holds `## Record`, which is not for continuation.
 3. Read the pointers listed under `### Related`, and nothing else. For a pointer that does not exist or lies inside a `stale/` directory, report it to the user without searching for a replacement.
 4. Summarize for the user, in plain words: State, Next Step, Constraints (quoted as written), and every entry the freshness report flags as `stale` or `near-duplicate`, with its reason (stale means a file listed in the entry changed after the commit that recorded it). Stale entries are observations to re-check, not facts.

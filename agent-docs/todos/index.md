@@ -12,8 +12,3 @@ File: d706c17a1d003208-speed-up-test-suite.md
 Summary: Full test suite takes 456-637 s for about 1100 tests; measure the slowest modules, then shorten it
 Related Files: tests/test_installer.py, tests/test_progress.py, tests/test_hook_owned_progress.py
 Related Symbols: run_installer
----
-File: 76ec93b79f7319f3-continue-on-retired-progress.md
-Summary: /continue-on without an argument fails when the previous session retired its progress to progress-logs before a PR
-Related Files: harness/bin/progress.py, harness/skills/continue-on/SKILL.md
-Related Symbols: resolve_target, cmd_show

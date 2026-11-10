@@ -8,4 +8,4 @@
    Related Files: <comma-separated repo paths>
    Related Symbols: <comma-separated function/class/module names>
    ````
-4. When marking a document stale, remove its entry from `index.md`, append that index block verbatim to `stale.md`, and move the document to `stale/`.
+4. Mark a document stale with `python3 .harness/bin/records.py stale <path>`: it removes the document's entry from `index.md`, appends that index block verbatim to `stale.md`, and moves the document to `stale/`. It refuses, changing nothing, when the path is not a managed document, its entry is missing or listed twice, or the destination exists.

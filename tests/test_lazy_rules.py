@@ -38,15 +38,15 @@ S6_PLAN = [
 
 S7 = """## Rule Files
 
-These rules live in separate files under `.harness/instructions/`. Read the file before the work it covers; hook and pre-commit messages name the file of a rule they find violated.
+These rules live in separate files under `.harness/instructions/`. A hook adds a rule's text to the session at its first Write or Edit in the rule's directory; read the file yourself before other work it covers. Hook and pre-commit messages name the file of a rule they find violated.
 
-| file | what it is | read before |
-| --- | --- | --- |
-| `progress.md` | the per-session record in `agent-docs/progress/`: frontmatter, required sections, retiring before a PR | committing in a session that changed the project, writing in `agent-docs/progress/` or `agent-docs/progress-logs/`, continuing earlier work, or opening a PR |
-| `index-and-staleness.md` | file naming, `index.md` entries, and moving a document to `stale/` | adding, renaming, or marking stale a document in an agent-managed directory under `agent-docs/`, or editing its `index.md` or `stale.md` |
-| `try-n-fail.md` | the record of a failed attempt or rejected proposal and its required sections | writing or proposing a record in `agent-docs/try-n-fail/` |
-| `todos.md` | the record of a work item not tied to a session and its required sections | writing a record in `agent-docs/todos/` |
-| `synced-comments.md` | the tracking file and code tags for a comment kept identical in several places | keeping one comment or docstring identical in several places, or editing code tagged `synced id:` |
+| file | read before |
+| --- | --- |
+| `progress.md` | committing in a session that changed the project, continuing earlier work, or opening a PR |
+| `index-and-staleness.md` | adding, renaming, or marking stale a record in `agent-docs/` |
+| `try-n-fail.md` | proposing a try-n-fail record |
+| `todos.md` | writing a todo |
+| `synced-comments.md` | keeping one comment identical in several places, or editing code tagged `synced id:` |
 """
 
 KEPT_HEADINGS = [
@@ -138,17 +138,12 @@ class TestBlockSplit(unittest.TestCase):
         self.assertEqual(headings.index("## Rule Files"), headings.index("## Commit Stamp") + 1)
         self.assertEqual(headings.index("# Task Guide"), headings.index("## Rule Files") + 1)
 
-    def test_v1_moved_sections_equal_their_files_per_base_text(self):
-        base = base_sections()
+    def test_v1_moved_sections_keep_their_base_heading_as_the_first_line_of_their_files(self):
         repo = shared_install()
         for heading, name in MOVED.items():
             with self.subTest(section=heading, file=name):
                 actual = (repo / ".harness" / "instructions" / name).read_text()
-                if name == "progress.md":
-                    self.assertTrue(actual.startswith("## Progress Rule"))
-                    continue
-                expected = base[heading].rstrip("\n") + "\n"
-                self.assertEqual(actual, expected)
+                self.assertEqual(actual.split("\n", 1)[0], heading)
 
     def test_v1_moved_headings_are_absent_from_the_block(self):
         lines = read_block(shared_install()).splitlines()
@@ -568,8 +563,8 @@ class TestMigration0410(InstallerTestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         announced = re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE)
-        self.assertEqual(announced[-1], "0.42.0")
-        self.assertEqual(announced, ["0.41.0", "0.42.0"])
+        self.assertEqual(announced[-1], "0.43.0")
+        self.assertEqual(announced, ["0.41.0", "0.42.0", "0.43.0"])
         self.assertIn(f"migration 0.41.0: {S6_LABEL}", result.stdout)
         start = result.stdout.index("migration 0.41.0:")
         positions = []
@@ -578,7 +573,7 @@ class TestMigration0410(InstallerTestCase):
             positions.append(result.stdout.index(line, start))
         self.assertEqual(positions, sorted(positions))
         self.assertEqual((repo / "AGENTS.md").read_bytes(), agents_before)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
         for name in MOVED.values():
             self.assertTrue((repo / INSTRUCTIONS / name).is_file(), name)
         block_headings = [h for h, _ in split_sections(read_block(repo))]

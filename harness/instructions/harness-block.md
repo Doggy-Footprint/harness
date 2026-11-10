@@ -30,15 +30,15 @@ A hook writes `commit: <HEAD at last write>` into the frontmatter of every Markd
 
 ## Rule Files
 
-These rules live in separate files under `.harness/instructions/`. Read the file before the work it covers; hook and pre-commit messages name the file of a rule they find violated.
+These rules live in separate files under `.harness/instructions/`. A hook adds a rule's text to the session at its first Write or Edit in the rule's directory; read the file yourself before other work it covers. Hook and pre-commit messages name the file of a rule they find violated.
 
-| file | what it is | read before |
-| --- | --- | --- |
-| `progress.md` | the per-session record in `agent-docs/progress/`: frontmatter, required sections, retiring before a PR | committing in a session that changed the project, writing in `agent-docs/progress/` or `agent-docs/progress-logs/`, continuing earlier work, or opening a PR |
-| `index-and-staleness.md` | file naming, `index.md` entries, and moving a document to `stale/` | adding, renaming, or marking stale a document in an agent-managed directory under `agent-docs/`, or editing its `index.md` or `stale.md` |
-| `try-n-fail.md` | the record of a failed attempt or rejected proposal and its required sections | writing or proposing a record in `agent-docs/try-n-fail/` |
-| `todos.md` | the record of a work item not tied to a session and its required sections | writing a record in `agent-docs/todos/` |
-| `synced-comments.md` | the tracking file and code tags for a comment kept identical in several places | keeping one comment or docstring identical in several places, or editing code tagged `synced id:` |
+| file | read before |
+| --- | --- |
+| `progress.md` | committing in a session that changed the project, continuing earlier work, or opening a PR |
+| `index-and-staleness.md` | adding, renaming, or marking stale a record in `agent-docs/` |
+| `try-n-fail.md` | proposing a try-n-fail record |
+| `todos.md` | writing a todo |
+| `synced-comments.md` | keeping one comment identical in several places, or editing code tagged `synced id:` |
 
 # Task Guide
 

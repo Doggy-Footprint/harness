@@ -20,6 +20,7 @@ import verification_tools  # noqa: E402
 SOURCE_HARNESS = Path(__file__).resolve().parents[1] / "harness"
 sys.path.insert(0, str(SOURCE_HARNESS / "lib"))
 import progress  # noqa: E402
+import synced  # noqa: E402
 VERSION = (SOURCE_HARNESS / "VERSION").read_text(encoding="utf-8").strip()
 TARGETS_FILE = Path(
     os.environ.get("HARNESS_TARGETS_FILE") or Path(__file__).resolve().parents[1] / ".harness-targets.json"
@@ -921,6 +922,73 @@ def migrate_hook_owned_progress(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def _target_docs_settings(target: Path) -> tuple[Path, set[str]]:
+    docs_root = "agent-docs"
+    exclude_dirs = {".git", "node_modules", ".harness"}
+    config_path = target / TARGET_CONFIG
+    if config_path.is_file():
+        try:
+            override = json.loads(config_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            override = {}
+        if isinstance(override, dict):
+            if isinstance(override.get("docs_root"), str):
+                docs_root = override["docs_root"]
+            if isinstance(override.get("exclude_dirs"), list):
+                exclude_dirs = {item for item in override["exclude_dirs"] if isinstance(item, str)}
+    return target / docs_root, exclude_dirs
+
+
+def migrate_synced_blocks(target: Path, dry_run: bool) -> list[str]:
+    planned = [
+        "progress hook: a session that changed only agent-docs records gets a record-only progress kept by the hook",
+        "synced comments: code_hash covers only the lines between a tag and its `synced end: <id>` line; "
+        "python3 .harness/bin/records.py synced-refresh <id> updates count, code_hash, version, and tags",
+        "python3 .harness/bin/records.py stale <path> marks a record stale",
+        "the first Write or Edit in an agent-docs rule directory adds that rule's text to the session",
+        "data: code_hash is recomputed for synced ids that already have end markers; AGENTS.md is unchanged",
+    ]
+    if dry_run:
+        return planned
+    docs_root, exclude_dirs = _target_docs_settings(target)
+    tracking_dir = docs_root / "synced-comments"
+    if not tracking_dir.is_dir():
+        return planned
+    try:
+        tracked = synced.tracked_files(target)
+    except (subprocess.CalledProcessError, OSError):
+        return planned
+    blocks, errors = synced.scan(target, tracked, docs_root, exclude_dirs)
+    broken = {error.sid for error in errors}
+    for sid in sorted(blocks):
+        tracking = tracking_dir / f"{sid}.md"
+        if not tracking.is_file():
+            continue
+        text = tracking.read_text(encoding="utf-8", errors="replace")
+        frontmatter = synced.parse_tracking_frontmatter(text)
+        if frontmatter is None or not all(key in frontmatter for key in ("version", "count", "code_hash")):
+            continue
+        if frontmatter.get("obsolete", "false").lower() == "true":
+            continue
+        if sid in broken:
+            paths = ", ".join(sorted({block.path for block in blocks[sid]}))
+            print(
+                f"synced id {sid}: add `synced end: {sid}` after each tagged block in {paths}, "
+                f"then run python3 .harness/bin/records.py synced-refresh {sid}"
+            )
+            continue
+        code_hash = synced.block_hash(blocks[sid])
+        updated = re.sub(
+            r"(?m)\A(---[ \t]*\n(?:(?!---[ \t]*$).*\n)*?)code_hash:[^\n]*",
+            lambda match: f"{match.group(1)}code_hash: {code_hash}",
+            text,
+            count=1,
+        )
+        if updated != text:
+            tracking.write_text(updated, encoding="utf-8")
+    return planned
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -979,6 +1047,11 @@ MIGRATIONS = (
         parse_version("0.42.0"),
         "let hooks own progress session ids, skeletons, and the commit gate",
         migrate_hook_owned_progress,
+    ),
+    (
+        parse_version("0.43.0"),
+        "keep record-only progress in the hook; hash synced blocks between tag and end marker; add records.py and rule injection",
+        migrate_synced_blocks,
     ),
 )
 

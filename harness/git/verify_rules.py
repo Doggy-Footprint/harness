@@ -7,14 +7,13 @@ Covers only rules that can be verified without judgement calls:
     and structure), scoped to docs_root
   - Shared Comment & Docstring Synchronization (synced id / version / count
     consistency between code and <docs_root>/synced-comments/<id>.md, plus
-    checking the tracking file's code_hash against participating files'
-    non-comment content), scanned over `git ls-files` only
+    checking the tracking file's code_hash against the lines between each tag and
+    its `synced end:` line), scanned over `git ls-files` only
   - Required headings for try-n-fail/ and todos/ managed files
   - Progress records: format of progress/ and unmasked secrets in progress-logs/ too
 
 Exit code is non-zero if any rule is violated.
 """
-import hashlib
 import os
 import re
 import subprocess
@@ -24,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 import config  # noqa: E402
 import progress  # noqa: E402
+import synced  # noqa: E402
 
 PATHS = config.load_paths()
 REPO_ROOT = config.REPO_ROOT
@@ -33,17 +33,7 @@ HEX16 = r"[0-9a-f]{16}"
 KEBAB = r"[a-z0-9]+(?:-[a-z0-9]+)*"
 MANAGED_FILENAME_RE = re.compile(rf"^{HEX16}-{KEBAB}\.md$")
 
-SYNCED_ID_RE = r"[0-9a-f]{12}"
-SYNCED_TAG_RE = re.compile(
-    rf"synced id:\s*({SYNCED_ID_RE})\s*,\s*version:\s*(\d+)\s*,\s*count:\s*(\d+)"
-)
 INDEX_ENTRY_FIELDS = ["File", "Summary", "Related Files", "Related Symbols"]
-
-TEXT_FILE_EXTS = {
-    ".py", ".js", ".jsx", ".ts", ".tsx", ".go", ".rs", ".java", ".kt",
-    ".c", ".h", ".cpp", ".hpp", ".cc", ".rb", ".php", ".swift", ".md",
-    ".sh", ".yaml", ".yml", ".json", ".toml",
-}
 
 REQUIRED_HEADINGS = {
     PATHS.try_n_fail: [
@@ -142,81 +132,19 @@ def check_index_and_staleness(errors: list):
             errors.append(f"{rel(index_md)}: lists {name!r} but no such file exists")
 
 
-# Line-comment markers by extension, used to strip comments before hashing
-# a file's content (Shared Comment & Docstring Synchronization rule 2:
-# code_hash fingerprints the non-comment code). Extensions without a known
-# marker are hashed as-is.
-HASH_COMMENT_EXTS = {".py", ".sh", ".yaml", ".yml", ".toml", ".rb"}
-SLASH_COMMENT_EXTS = {
-    ".js", ".jsx", ".ts", ".tsx", ".go", ".rs", ".java", ".kt",
-    ".c", ".h", ".cpp", ".hpp", ".cc", ".swift",
-}
-HASH_AND_SLASH_COMMENT_EXTS = {".php"}
-
-
-def strip_comments(path: Path, text: str) -> str:
-    if path.suffix in HASH_COMMENT_EXTS:
-        markers = ("#",)
-    elif path.suffix in SLASH_COMMENT_EXTS:
-        markers = ("//",)
-    elif path.suffix in HASH_AND_SLASH_COMMENT_EXTS:
-        markers = ("#", "//")
-    else:
-        return text
-    return "\n".join(
-        line for line in text.splitlines() if not line.strip().startswith(markers)
-    )
-
-
-def compute_code_hash(paths: list) -> str:
-    ordered = sorted(paths, key=lambda p: p.name)
-    combined = "".join(
-        strip_comments(p, p.read_text(encoding="utf-8", errors="replace"))
-        for p in ordered
-    )
-    return hashlib.sha256(combined.encode("utf-8")).hexdigest()[:12]
-
-
-def parse_synced_frontmatter(text: str):
-    m = re.match(r"^---\s*\n(.*?)\n---\s*\n", text, re.DOTALL)
-    if not m:
-        return None
-    fm = {}
-    for line in m.group(1).splitlines():
-        kv = re.match(r"^(\w+):\s*(.*)$", line.strip())
-        if kv:
-            fm[kv.group(1)] = kv.group(2).strip()
-    return fm
-
-
 def check_synced_comments(errors: list):
-    occurrences = {}  # id -> list[(file, version, count)]
     try:
-        tracked = git_tracked_files()
+        tracked = synced.tracked_files(REPO_ROOT)
     except (subprocess.CalledProcessError, FileNotFoundError):
         tracked = []
 
-    synced_dir_rel = None
-    try:
-        synced_dir_rel = rel(PATHS.synced_comments)
-    except ValueError:
-        pass
-
-    for path in tracked:
-        if path.suffix not in TEXT_FILE_EXTS:
-            continue
-        if any(part in EXCLUDE_DIRS for part in path.relative_to(REPO_ROOT).parts):
-            continue
-        if synced_dir_rel and rel(path).startswith(synced_dir_rel + "/"):
-            continue
-        try:
-            text = path.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            continue
-        for m in SYNCED_TAG_RE.finditer(text):
-            sid, version, count = m.group(1), int(m.group(2)), int(m.group(3))
-            occurrences.setdefault(sid, []).append((rel(path), version, count))
-
+    block_map, structural = synced.scan(REPO_ROOT, tracked, PATHS.docs_root, EXCLUDE_DIRS)
+    errors.extend(structural)
+    broken = {error.sid for error in structural}
+    occurrences = {
+        sid: [(block.path, block.version, block.count) for block in blocks]
+        for sid, blocks in block_map.items()
+    }
     synced_dir = PATHS.synced_comments
 
     for sid, locs in occurrences.items():
@@ -228,7 +156,7 @@ def check_synced_comments(errors: list):
             )
             continue
 
-        fm = parse_synced_frontmatter(
+        fm = synced.parse_tracking_frontmatter(
             tracking_file.read_text(encoding="utf-8", errors="replace")
         )
         if fm is None or "version" not in fm or "count" not in fm or "code_hash" not in fm:
@@ -247,15 +175,14 @@ def check_synced_comments(errors: list):
                 f"synced id {sid}: marked obsolete in {rel(tracking_file)} "
                 f"but still referenced in {[l[0] for l in locs]}"
             )
-        elif not is_obsolete:
-            participant_paths = [REPO_ROOT / file_name for file_name, _, _ in locs]
-            expected_hash = compute_code_hash(participant_paths)
+        elif not is_obsolete and sid not in broken:
+            expected_hash = synced.block_hash(block_map[sid])
             if expected_hash != fm["code_hash"]:
                 errors.append(
-                    f"synced id {sid}: underlying (non-comment) code in "
-                    f"{[l[0] for l in locs]} no longer matches code_hash "
+                    f"synced id {sid}: code between the tag and `synced end: {sid}` in "
+                    f"{sorted({l[0] for l in locs})} no longer matches code_hash "
                     f"{fm['code_hash']} in {rel(tracking_file)} (recomputed "
-                    f"{expected_hash}); bump the version and update code_hash"
+                    f"{expected_hash}); run python3 .harness/bin/records.py synced-refresh {sid}"
                 )
 
         actual_count = len(locs)
@@ -370,8 +297,13 @@ def check_session_progress(errors: list):
         worktree = progress.git_file_hash(REPO_ROOT, label)
         if staged.returncode != 0 or staged.stdout.strip() != worktree:
             errors.append(f"{label}: progress of session {session_id} is not staged with this commit; run `git add {label}`")
+        parsed = progress.parse(path.read_text(encoding="utf-8", errors="replace"))
+        if progress.is_record_only(parsed) and progress.code_marker(REPO_ROOT, session_id).exists():
+            errors.append(
+                f"{label}:1: record-only progress in a session that changed code; run any Edit to let the hook "
+                "upgrade it, or write the full structure"
+            )
         if path.parent == PATHS.progress_logs:
-            parsed = progress.parse(path.read_text(encoding="utf-8", errors="replace"))
             for line, message in progress.format_findings(parsed):
                 errors.append(f"{label}:{line}: {message}")
 

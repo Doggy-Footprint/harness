@@ -36,8 +36,9 @@ python3 installer/harness.py doctor <target>
 | `AGENTS.md`, `CLAUDE.md` | 프로젝트 정의와 관리형 문서 규칙 (`CLAUDE.md`는 `@AGENTS.md` 참조) |
 | `.agents/skills/`, `.claude/skills/` | `workflow-approach`, `requirement-oracle`, `architecture-options`, `harness-import`, `test-audit`, `rearrange-docs`, `continue-on` |
 | `.claude/agents/` | `implementer`, `test-implementer`, `test-verifier`, `mutant-triager`, `code-explorer` |
-| `.claude/settings.json` | 세션·서브에이전트·도구 훅. `gh pr create`/`gh pr edit` 뒤에는 PR 설명을 5분 standup 소개 기준으로 쓰라고 상기시킴. 사용자 프롬프트를 마스킹해 progress에 기록하고, 파일을 처음 바꾼 세션에 progress가 없으면 `[harness-requires]` 자리표시자가 든 뼈대를 한 번 만들고(다른 세션이 실행 중이라 이동이 거부되면 안내만 하고), 알 수 없는 `session:` 값은 현재 세션 id로 채우고, progress 없이 끝나려 하면 한 번 막음 |
-| `.harness/git/` | 커밋 전 문서 규칙 검사(Claude Code 세션이 프로젝트를 바꿨다면 그 세션의 progress가 이 커밋에 스테이징되어 있어야 함, progress의 마스킹되지 않은 키·이메일·IP·내부 호스트명 차단 포함), 커밋 메시지의 `Request:`·`Intent:` 줄 경고, merge로 들어온 progress를 `progress-logs/`로 이동 |
+| `.claude/settings.json` | 세션·서브에이전트·도구 훅. `gh pr create`/`gh pr edit` 뒤에는 PR 설명을 5분 standup 소개 기준으로 쓰라고 상기시킴. 사용자 프롬프트를 마스킹해 progress에 기록하고, 파일을 처음 바꾼 세션에 progress가 없으면 `[harness-requires]` 자리표시자가 든 뼈대를 한 번 만들고(바꾼 파일이 모두 `agent-docs/`의 기록뿐이면 hook이 `### Changes`와 `### User Requests`를 관리하는 `kind: record-only` progress를 만들고, 이후 코드를 바꾸면 전체 progress로 바꾸고)(다른 세션이 실행 중이라 이동이 거부되면 안내만 하고), 알 수 없는 `session:` 값은 현재 세션 id로 채우고, progress 없이 끝나려 하면 한 번 막음. `agent-docs/`의 규칙 디렉터리에 세션 처음으로 Write/Edit/MultiEdit 하면 그 규칙 파일 본문을 컨텍스트로 추가함 |
+| `.harness/bin/records.py` | `stale <path>`는 기록을 `stale/`로 옮기고 index 항목을 `stale.md`로 옮김, `synced-refresh <id>`는 동기화 주석의 count·code_hash·version·태그를 갱신 |
+| `.harness/git/` | 커밋 전 문서 규칙 검사(동기화 주석은 태그와 `synced end: <id>` 줄 사이의 코드만 `code_hash`로 검사하며 `agent-docs/` 안의 태그는 세지 않음, Claude Code 세션이 프로젝트를 바꿨다면 그 세션의 progress가 이 커밋에 스테이징되어 있어야 함, progress의 마스킹되지 않은 키·이메일·IP·내부 호스트명 차단 포함), 커밋 메시지의 `Request:`·`Intent:` 줄 경고, merge로 들어온 progress를 `progress-logs/`로 이동 |
 | `agent-docs/` | try-n-fail 기록, 세션 progress, todo, spec, 실행 기록 |
 | `.github/workflows/harness-comment-warning.yml` | 새 주석이 있는 PR은 `comments-approved` 라벨이 있어야 통과 (선택) |
 
@@ -72,7 +73,7 @@ python3 installer/harness.py doctor <target>
 | try-n-fail | `agent-docs/try-n-fail/` | 실패를 알아내는 데 실제 구현·실행·조사가 든 시도, 또는 사용자가 거절한 구체적 제안을 다음 작업이 반복할 수 있을 때. 초안 확인 후 작성 |
 | progress | `agent-docs/progress/` | 파일을 바꾼 세션마다 하나. 다음 세션용 `## Next Session`(항목마다 `  - files:` 줄. 항목을 기록한 commit 이후 나열한 파일이 바뀌면 stale)과 기록용 `## Record`. 새 세션의 progress가 생기면 이전 것은 `agent-docs/progress-logs/`로 이동 |
 | todo | `agent-docs/todos/` | 세션에 묶이지 않은 작업 항목. `#` 제목과 `## Next Step` 필수. 0.33.0 이전 handoff 기록은 갱신 때 동의하면 여기로 이동 |
-| 동기화 주석 | `agent-docs/synced-comments/` | 같은 주석을 여러 곳에 유지할 때. 코드에 `synced id`와 버전을 태그 |
+| 동기화 주석 | `agent-docs/synced-comments/` | 같은 주석을 여러 곳에 유지할 때. 코드에 `synced id`와 버전을 태그하고 블록 끝에 `synced end: <id>`를 둠 |
 
 - 관리 디렉터리마다 `index.md`, `stale.md`, `stale/`을 두고, 파일명은 `<16자리 hex id>-<kebab-case>.md`입니다. 낡은 문서는 지우지 않고 `stale/`로 옮깁니다.
 - 커밋 전 Git hook이 파일명, index/stale 구조, 동기화 주석 메타데이터, 필수 제목을 검사합니다.

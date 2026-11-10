@@ -111,3 +111,8 @@ File: 5c55593c9e5cfe8a-progress-and-continue-on.md
 Summary: Draft spec for session progress records, progress-logs rotation, and the user-invoked continue-on skill awaits user review; includes the cross-session research evidence behind the design
 Related Files: agent-docs/specs/388ea2d9a2de1f5f-progress-and-continue-on.md, harness/instructions/harness-block.md, harness/skills/workflow-approach/SKILL.md, harness/hooks/hooks.spec.json, installer/harness.py
 Related Symbols: REQUIRED_HEADINGS, cmd_validate, doc_commit.stamped
+---
+File: 76ec93b79f7319f3-continue-on-retired-progress.md
+Summary: /continue-on without an argument fails when the previous session retired its progress to progress-logs before a PR
+Related Files: harness/bin/progress.py, harness/skills/continue-on/SKILL.md
+Related Symbols: resolve_target, cmd_show

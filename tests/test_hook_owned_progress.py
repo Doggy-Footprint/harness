@@ -1451,8 +1451,8 @@ class TestTextScan(unittest.TestCase):
         self.assertIn(PLACEHOLDER, text)
         self.assertNotIn("한 번 안내", text)
 
-    def test_version_is_0_42_0(self):
-        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.42.0")
+    def test_version_is_0_43_0(self):
+        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.43.0")
 
 
 class TestUpdateFrom0410(unittest.TestCase):
@@ -1491,7 +1491,7 @@ class TestUpdateFrom0410(unittest.TestCase):
         result = run_installer("update", str(repo), "--no-ci", "--no-commit", input="y\n" * 20, exact=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         announced = re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE)
-        self.assertEqual(announced, ["0.42.0"], result.stdout)
+        self.assertEqual(announced, ["0.42.0", "0.43.0"], result.stdout)
         start = result.stdout.index("migration 0.42.0:")
         positions = []
         for line in S9:
@@ -1499,7 +1499,7 @@ class TestUpdateFrom0410(unittest.TestCase):
             positions.append(result.stdout.index(line, start))
         self.assertEqual(positions, sorted(positions))
         self.assertEqual((repo / "AGENTS.md").read_bytes(), agents)
-        self.assertEqual(json.loads((repo / ".harness" / "manifest.json").read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads((repo / ".harness" / "manifest.json").read_text())["version"], "0.43.0")
         doctor = run_installer("doctor", str(repo))
         self.assertEqual(doctor.returncode, 0, doctor.stdout + doctor.stderr)
 

@@ -35,6 +35,57 @@ def in_progress_dirs(path: Path) -> bool:
     return path.suffix == ".md" and path.parent in (PATHS.progress.resolve(), PATHS.progress_logs.resolve())
 
 
+def is_record_only(path: Path) -> bool:
+    parsed = progress.read_progress(path)
+    return parsed is not None and progress.is_record_only(parsed)
+
+
+def skip_record_only(path: Path) -> Path | None:
+    visited = set()
+    while path is not None and is_record_only(path):
+        if path in visited:
+            return None
+        visited.add(path)
+        parsed = progress.read_progress(path)
+        before = ((parsed.frontmatter if parsed else None) or {}).get("before", "none")
+        path = (REPO_ROOT / before).resolve() if before and before != "none" and (REPO_ROOT / before).is_file() else None
+    return path
+
+
+def committed_logs(session_id: str | None) -> list[Path]:
+    if not PATHS.progress_logs.is_dir():
+        return []
+    result = progress._git(
+        REPO_ROOT,
+        ["-c", "core.quotePath=false", "log", "--no-renames", "--name-only", "--format=%x01%ct", "HEAD", "--",
+         rel(PATHS.progress_logs)],
+    )
+    if result.returncode != 0:
+        return []
+    newest: dict[str, int] = {}
+    for chunk in result.stdout.split("\x01")[1:]:
+        lines = chunk.split("\n")
+        try:
+            stamp = int(lines[0])
+        except ValueError:
+            continue
+        for name in lines[1:]:
+            if name.endswith(".md"):
+                newest[name] = max(newest.get(name, 0), stamp)
+    ordered = sorted(newest, key=lambda name: (-newest[name], name))
+    found = []
+    for name in ordered:
+        path = (REPO_ROOT / name).resolve()
+        if path.parent != PATHS.progress_logs.resolve() or not path.is_file():
+            continue
+        if session_id and progress.session_of(path) == session_id:
+            continue
+        if is_record_only(path):
+            continue
+        found.append(path)
+    return found
+
+
 def resolve_target(argument: str | None, session_id: str | None) -> tuple[Path | None, str | None]:
     if argument:
         path = locate(argument)
@@ -45,16 +96,25 @@ def resolve_target(argument: str | None, session_id: str | None) -> tuple[Path |
             )
         if not path.is_file():
             return None, f"progress not found: {argument}; run show again with an existing file from {rel(PATHS.progress_logs)}/"
+        if is_record_only(path):
+            return None, f"not continuable: {argument} is a record-only progress"
         return path, None
     current = sorted(path for path in PATHS.progress.glob("*.md") if path.is_file()) if PATHS.progress.is_dir() else []
     for path in current:
         if progress.session_of(path) != session_id or not session_id:
-            return path, None
+            chosen = skip_record_only(path.resolve())
+            if chosen is not None:
+                return chosen, None
     for path in current:
         parsed = progress.read_progress(path)
         before = ((parsed.frontmatter if parsed else None) or {}).get("before", "none")
         if before and before != "none" and (REPO_ROOT / before).is_file():
-            return (REPO_ROOT / before).resolve(), None
+            chosen = skip_record_only((REPO_ROOT / before).resolve())
+            if chosen is not None:
+                return chosen, None
+    logs = committed_logs(session_id)
+    if logs:
+        return logs[0], None
     return None, (
         f"no progress to continue: {rel(PATHS.progress)}/ holds no progress from another session and this "
         f"session's progress has no `before`; run show again with an {rel(PATHS.progress_logs)}/ path to continue an older one"
