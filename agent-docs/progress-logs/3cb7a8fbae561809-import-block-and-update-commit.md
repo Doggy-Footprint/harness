@@ -3,7 +3,7 @@ session: 26664246-d290-44aa-8b2f-9bef3d42fabf
 before: agent-docs/progress-logs/5c1e9a7d03b84f26-verifier-tests-diff.md
 previous: none
 branch: Doggy-Footprint/utility
-commit: d3179c2be79de08029d6eedf13d9da0e3092ebfa
+commit: 90e600a509820e88c59062e60f6c019cf7069c14
 ---
 
 # Import the managed block and auto-commit harness updates (0.40.0)
@@ -405,3 +405,15 @@ commit: d3179c2be79de08029d6eedf13d9da0e3092ebfa
 #### 43 — 2026-11-10T13:42:54Z
 
 > 그리고 꼭 필요한 주석 빼고 다 지워줘
+
+#### 44 — 2026-11-10T14:07:10Z
+
+> 평가 세션 기록은 지워
+
+#### 45 — 2026-11-10T14:09:50Z
+
+> 이거 progress 어딨냐
+
+#### 46 — 2026-11-10T14:10:59Z
+
+> todo 에 continue-on에 progress-logs로 옮겨진 경우를 처리해야 한다고 적어놔줘. 지금 고칠 필요 없고 todo만 적어
