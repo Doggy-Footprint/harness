@@ -167,7 +167,6 @@ class ProgressCase(InstallerTestCase):
         )
 
     def mark_changed(self, repo, rel="src/new.py", sid="sessa", **kw):
-        """Marks the session as having changed the project through a failed Bash call, which never creates a skeleton."""
         return self.bash(repo, lambda: (repo / rel).write_text("new = 1\n"), sid=sid,
                          event="PostToolUseFailure", **kw)
 
