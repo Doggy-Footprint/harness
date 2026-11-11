@@ -241,7 +241,7 @@ class TestMigration0290(DocRecordsTestCase):
         self.assertIn("keep agent-docs/adr/ untouched", result.stdout)
         self.assertNotIn("agent-docs/rejections/", result.stdout)
         self.assertEqual(record.read_text(), "# X\n")
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
         block = (repo / ".harness" / "instructions" / "harness-block.md").read_text()
         self.assertNotIn("## Try-n-Fail Rule", block)
         self.assertIn("## Try-n-Fail Rule", (repo / ".harness" / "instructions" / "try-n-fail.md").read_text())
@@ -270,7 +270,7 @@ class TestMigration0290(DocRecordsTestCase):
         self.assertIn("record(s) to try-n-fail", dry.stdout)
         self.assertEqual(self.handoffs(repo), [])
 
-        result = run_installer("update", str(repo), "--no-ci", input="y\n" * 18 + "n\n")
+        result = run_installer("update", str(repo), "--no-ci", input="y\n" * 19 + "n\n")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         [handoff] = self.handoffs(repo)
         text = handoff.read_text()
@@ -282,7 +282,7 @@ class TestMigration0290(DocRecordsTestCase):
         self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
 
         self.set_version(repo, "0.28.0")
-        again = run_installer("update", str(repo), "--no-ci", input="y\n" * 18 + "n\n")
+        again = run_installer("update", str(repo), "--no-ci", input="y\n" * 19 + "n\n")
         self.assertEqual(again.returncode, 0, again.stdout + again.stderr)
         self.assertEqual(len(self.handoffs(repo)), 1)
 

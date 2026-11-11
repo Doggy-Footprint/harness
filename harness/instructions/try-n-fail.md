@@ -11,4 +11,4 @@ Required file structure:
 - `## Attempts` (table `| attempt | failure evidence | cause |`; cause marked `verified`, `hypothesis`, or `user rejected: <reason>`)
 - `## Revisit Condition` (the observable change that would make another attempt worthwhile)
 
-Append rows for new attempts at the same goal; never delete or edit existing rows. When the goal is dropped or an attempt later succeeds, mark the record stale.
+Append rows for new attempts at the same goal; never delete or edit existing rows. When the goal is dropped or an attempt later succeeds, mark the record stale with `python3 .harness/bin/records.py stale <path>`.

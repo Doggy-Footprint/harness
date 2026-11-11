@@ -25,6 +25,11 @@ def sync(path: Path, head: str) -> bool:
     state = progress.load_state(progress.state_path(REPO_ROOT, session_id))
     prompts = progress.state_prompts(state) if state is not None else None
     text = progress.sync_user_requests(original, prompts)
+    if progress.is_record_only(progress.parse(text)):
+        docs = progress.repo_relative(PATHS.docs_root, REPO_ROOT)
+        text = progress.sync_changes(
+            text, progress.record_paths(progress.read_changed_paths(REPO_ROOT, session_id), docs)
+        )
     if text == original:
         return False
     if head:

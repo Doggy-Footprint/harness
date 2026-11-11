@@ -23,6 +23,9 @@ SIMILARITY_MIN_LENGTH = 20
 GIT_TIMEOUT = 10
 UNCOMMITTED = "0" * 40
 PLACEHOLDER = "[harness-requires]"
+RECORD_ONLY = "record-only"
+SNAPSHOT_VERSION = 2
+EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 
 _FENCE_LINE_RE = re.compile(r"^\s*(`{3,}|~{3,})")
 _HEADING_RE = re.compile(r"^(#{1,6})[ \t]+(.*?)[ \t]*#*[ \t]*$")
@@ -228,7 +231,31 @@ def _excerpt(text: str) -> str:
     return text[:60]
 
 
+def is_record_only(parsed: Progress) -> bool:
+    return bool(parsed.frontmatter) and parsed.frontmatter.get("kind") == RECORD_ONLY
+
+
+def _record_only_findings(progress: Progress) -> list[tuple[int, str]]:
+    findings = []
+    if progress.title() is None:
+        findings.append((1, "missing `# <title>` heading; add it"))
+    record = progress.section_range(RECORD)
+    if record is None:
+        findings.append((1, f"missing `## {RECORD}` section; add it with its `###` subsections"))
+        return findings
+    changes = progress.section_range("Changes", level=3, within=record)
+    if changes is None:
+        findings.append((record[0] + 1, f"missing `### Changes` under `## {RECORD}`; add it"))
+    elif not any(_BULLET_RE.match(progress.lines[index].rstrip("\r")) for index in range(changes[0] + 1, changes[1])):
+        findings.append((changes[0] + 1, "`### Changes` has no bullet; list each changed record path as `- <path>`"))
+    if progress.section_range(USER_REQUESTS, level=3, within=record) is None:
+        findings.append((record[0] + 1, f"missing `### {USER_REQUESTS}` under `## {RECORD}`; add it"))
+    return findings
+
+
 def format_findings(progress: Progress) -> list[tuple[int, str]]:
+    if is_record_only(progress):
+        return _record_only_findings(progress)
     findings = []
     if progress.title() is None:
         findings.append((1, "missing `# <title>` heading; add it"))
@@ -383,13 +410,20 @@ def git_branch(repo_root: Path) -> str:
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
-def git_worktree_fingerprint(repo_root: Path, excluded_prefix: str) -> str:
+def _porcelain_paths(line: str) -> tuple[str, str | None]:
+    names = line[3:].split(" -> ", 1)
+    return names[-1].strip().strip('"'), (names[0].strip().strip('"') if len(names) == 2 else None)
+
+
+def git_worktree_snapshot(repo_root: Path, excluded_prefix: str) -> dict:
     result = _git(repo_root, ["-c", "core.quotePath=false", "status", "--porcelain", "--untracked-files=all"])
     if result.returncode != 0:
         raise GitUnavailable(result.stderr.strip() or "git status failed")
-    digest = hashlib.sha256(git_head(repo_root).encode("utf-8"))
+    head = git_head(repo_root)
+    digest = hashlib.sha256(head.encode("utf-8"))
+    entries = []
     for line in sorted(result.stdout.splitlines()):
-        path = line[3:].split(" -> ", 1)[-1].strip().strip('"')
+        path = _porcelain_paths(line)[0]
         if path.startswith(excluded_prefix):
             continue
         try:
@@ -398,7 +432,49 @@ def git_worktree_fingerprint(repo_root: Path, excluded_prefix: str) -> str:
         except OSError:
             signature = "-"
         digest.update(f"\0{line}\0{signature}".encode("utf-8"))
-    return digest.hexdigest()
+        entries.append([line, signature])
+    return {"v": SNAPSHOT_VERSION, "head": head, "fingerprint": digest.hexdigest(), "entries": entries}
+
+
+def git_worktree_fingerprint(repo_root: Path, excluded_prefix: str) -> str:
+    return git_worktree_snapshot(repo_root, excluded_prefix)["fingerprint"]
+
+
+def load_snapshot(text: str) -> dict | None:
+    try:
+        value = json.loads(text)
+    except ValueError:
+        return None
+    if (
+        isinstance(value, dict) and value.get("v") == SNAPSHOT_VERSION and isinstance(value.get("head"), str)
+        and isinstance(value.get("fingerprint"), str) and isinstance(value.get("entries"), list)
+    ):
+        return value
+    return None
+
+
+def snapshot_changed_paths(repo_root: Path, before: dict, after: dict, excluded_prefix: str) -> list[str] | None:
+    def index(snapshot: dict) -> dict[str, tuple]:
+        return {_porcelain_paths(line)[0]: (line, signature) for line, signature in snapshot["entries"]}
+
+    old, new = index(before), index(after)
+    changed = {path for path in old.keys() | new.keys() if old.get(path) != new.get(path)}
+    for table in (old, new):
+        for path in list(changed):
+            if path in table:
+                origin = _porcelain_paths(table[path][0])[1]
+                if origin and not origin.startswith(excluded_prefix):
+                    changed.add(origin)
+    if before["head"] != after["head"]:
+        result = _git(
+            repo_root,
+            ["-c", "core.quotePath=false", "diff", "--name-only", "--no-renames",
+             before["head"] or EMPTY_TREE, after["head"] or EMPTY_TREE],
+        )
+        if result.returncode != 0:
+            return None
+        changed.update(name for name in result.stdout.splitlines() if name and not name.startswith(excluded_prefix))
+    return sorted(changed)
 
 
 def git_resolve(repo_root: Path, ref: str) -> str | None:
@@ -739,6 +815,12 @@ def check_findings(path: Path, repo_root: Path, label: str) -> list[str]:
             if key not in parsed.frontmatter:
                 findings.append(f"{label}:1: frontmatter is missing `{key}:`; add it (`none` when it does not apply)")
     findings.extend(f"{label}:{line}: {message}" for line, message in format_findings(parsed))
+    owner = (parsed.frontmatter or {}).get("session")
+    if is_record_only(parsed) and owner and code_marker(repo_root, owner).exists():
+        findings.append(
+            f"{label}:1: record-only progress in a session that changed code; run any Edit to let the hook "
+            "upgrade it, or write the full structure"
+        )
     entry_list = entries(parsed)
     statuses = freshness(entry_list, repo_root, path)
     for entry, status in zip(entry_list, statuses):
@@ -868,6 +950,116 @@ def skeleton_name(first_prompt: str | None) -> str:
 
 def change_dir(repo_root: Path, session_id: str) -> Path:
     return repo_root / ".harness" / "sessions" / f"progress-{safe_session_id(session_id)}.d"
+
+
+def changed_paths_file(repo_root: Path, session_id: str) -> Path:
+    return change_dir(repo_root, session_id) / "changed-paths"
+
+
+def code_marker(repo_root: Path, session_id: str) -> Path:
+    return change_dir(repo_root, session_id) / "code"
+
+
+def read_changed_paths(repo_root: Path, session_id: str) -> list[str]:
+    try:
+        text = changed_paths_file(repo_root, session_id).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+    return sorted({line for line in text.splitlines() if line})
+
+
+def add_changed_paths(repo_root: Path, session_id: str, paths: list[str]) -> None:
+    if not paths:
+        return
+    merged = sorted(set(read_changed_paths(repo_root, session_id)) | set(paths))
+    target = changed_paths_file(repo_root, session_id)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_name(target.name + f".{os.getpid()}.tmp")
+    temporary.write_text("\n".join(merged) + "\n", encoding="utf-8")
+    os.replace(temporary, target)
+
+
+def classify_path(path: str, docs_root: str) -> str:
+    docs = docs_root.strip("/")
+    parts = path.split("/")
+    docs_parts = docs.split("/") if docs and docs != "." else []
+    if not docs_parts or parts[:len(docs_parts)] != docs_parts or len(parts) <= len(docs_parts):
+        return "code"
+    inner = parts[len(docs_parts):]
+    if inner[0] in (PROGRESS_DIR_NAME, PROGRESS_LOGS_DIR_NAME) and len(inner) > 1:
+        return "progress"
+    return "record"
+
+
+def record_paths(paths: list[str], docs_root: str) -> list[str]:
+    return sorted(path for path in paths if classify_path(path, docs_root) == "record")
+
+
+RECORD_ONLY_TEMPLATE = """---
+session: {session}
+kind: record-only
+before: none
+previous: none
+branch: {branch}
+---
+
+# Record-only session
+
+## Record
+
+### Changes
+{changes}
+
+### User Requests
+"""
+
+
+def record_only_text(session_id: str, branch: str, changes: list[str]) -> str:
+    bullets = "\n".join(f"- {path}" for path in changes)
+    return RECORD_ONLY_TEMPLATE.format(session=session_id, branch=branch, changes=bullets)
+
+
+def sync_changes(text: str, changes: list[str]) -> str:
+    parsed = parse(text)
+    if not is_record_only(parsed) or not changes:
+        return text
+    record = parsed.section_range(RECORD)
+    section = parsed.section_range("Changes", level=3, within=record) if record else None
+    if section is None:
+        return text
+    lines = parsed.lines
+    bullets = [f"- {path}" for path in sorted(set(changes))]
+    return "\n".join(lines[:section[0] + 1] + bullets + [""] + lines[section[1]:])
+
+
+def _next_session_block() -> list[str]:
+    lines = SKELETON_TEMPLATE.split("\n")
+    start = lines.index("## Next Session")
+    end = lines.index("## Record")
+    return lines[start:end]
+
+
+def upgrade_record_only(text: str) -> str:
+    parsed = parse(text)
+    if not is_record_only(parsed):
+        return text
+    record = parsed.section_range(RECORD)
+    section = parsed.section_range("Changes", level=3, within=record) if record else None
+    if record is None or section is None:
+        return text
+    lines = list(parsed.lines)
+    bullets = [line for line in lines[section[0] + 1:section[1]] if line.strip()]
+    skeleton_lines = SKELETON_TEMPLATE.split("\n")
+    commands = skeleton_lines.index("### Commands")
+    requests = skeleton_lines.index("### User Requests")
+    rebuilt = (
+        lines[:section[0] + 1] + bullets + [f"- {PLACEHOLDER}", ""] + skeleton_lines[commands:requests] + lines[section[1]:]
+    )
+    rebuilt[record[0]:record[0]] = _next_session_block()
+    body_start = parse_frontmatter(text)[2]
+    return "\n".join(
+        line for index, line in enumerate(rebuilt) if not (index < body_start and line.startswith("kind:"))
+    )
 
 
 def load_state(path: Path) -> dict | None:

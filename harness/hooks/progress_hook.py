@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """PostToolUse feedback and Stop blocks exit 2 with the message on stderr;
-UserPromptSubmit and PreCompact notices go to stdout with exit 0.
+UserPromptSubmit and PreCompact notices, and the PreToolUse rule text for Write, Edit, and MultiEdit,
+go to stdout with exit 0.
 """
 import datetime
 import json
@@ -18,10 +19,16 @@ import session_lock  # noqa: E402
 
 REPO_ROOT = config.REPO_ROOT
 PATHS = config.load_paths()
+CLASSIFICATION_FAILED = False
 PROGRESS_DIR = PATHS.progress
+PROGRESS_NAME = PATHS.progress.name
+PROGRESS_LOGS_NAME = PATHS.progress_logs.name
 CHECK_COMMAND = "python3 .harness/bin/progress.py check"
 EDIT_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 HEAD_FLAG_RE = re.compile(r"(?<![\w-])(?:--head(?:=|\s+)|-H\s*)([^\s;&|)]+)")
+RULE_TOOLS = {"Write", "Edit", "MultiEdit"}
+RULE_DIR = ".harness/instructions"
+INDEX_RULE = "index-and-staleness.md"
 PR_OWN_CALL = "Run `gh pr create` in its own Bash call, not chained after other commands."
 
 
@@ -69,6 +76,10 @@ def modified_project(session_id: str | None) -> bool:
     return bool(session_id) and (progress.change_dir(REPO_ROOT, session_id) / "modified").is_file()
 
 
+def docs_rel() -> str:
+    return rel(PATHS.docs_root)
+
+
 def mark_modified(session_id: str) -> None:
     directory = progress.change_dir(REPO_ROOT, session_id)
     directory.mkdir(parents=True, exist_ok=True)
@@ -79,8 +90,8 @@ def snapshot_path(session_id: str, tool_use_id: str) -> Path:
     return progress.change_dir(REPO_ROOT, session_id) / f"snap-{progress.safe_session_id(tool_use_id)}"
 
 
-def fingerprint() -> str:
-    return progress.git_worktree_fingerprint(REPO_ROOT, ".harness/")
+def take_snapshot() -> dict:
+    return progress.git_worktree_snapshot(REPO_ROOT, ".harness/")
 
 
 def edited_path(payload: dict) -> Path | None:
@@ -94,6 +105,21 @@ def edited_path(payload: dict) -> Path | None:
     return path.resolve()
 
 
+def note_paths(session_id: str, paths: list[str] | None) -> None:
+    global CLASSIFICATION_FAILED
+    directory = progress.change_dir(REPO_ROOT, session_id)
+    docs = docs_rel()
+    is_code = paths is None or any(progress.classify_path(path, docs) == "code" for path in paths)
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        if is_code:
+            progress.code_marker(REPO_ROOT, session_id).touch()
+        if paths:
+            progress.add_changed_paths(REPO_ROOT, session_id, paths)
+    except OSError:
+        CLASSIFICATION_FAILED = True
+
+
 def record_modification(payload: dict) -> None:
     session_id = session_id_of(payload)
     if not session_id:
@@ -105,18 +131,29 @@ def record_modification(payload: dict) -> None:
             return
         snapshot = snapshot_path(session_id, tool_use_id)
         try:
-            before = snapshot.read_text(encoding="utf-8")
+            before_text = snapshot.read_text(encoding="utf-8")
         except FileNotFoundError:
             return
         snapshot.unlink(missing_ok=True)
-        current = fingerprint()
-        if current != before:
+        before = progress.load_snapshot(before_text)
+        after = take_snapshot()
+        if after["fingerprint"] == (before["fingerprint"] if before else before_text):
+            return
+        try:
+            if progress.consume_installer_run(
+                REPO_ROOT, before["fingerprint"] if before else before_text, after["fingerprint"]
+            ):
+                return
+        except Exception:
+            pass
+        mark_modified(session_id)
+        paths = None
+        if before is not None:
             try:
-                if progress.consume_installer_run(REPO_ROOT, before, current):
-                    return
-            except Exception:
-                pass
-            mark_modified(session_id)
+                paths = progress.snapshot_changed_paths(REPO_ROOT, before, after, ".harness/")
+            except progress.GitUnavailable:
+                paths = None
+        note_paths(session_id, paths)
         return
     if tool not in EDIT_TOOLS:
         return
@@ -124,9 +161,11 @@ def record_modification(payload: dict) -> None:
     root = REPO_ROOT.resolve()
     if path is None or not path.is_relative_to(root) or path.is_relative_to(root / ".harness"):
         return
-    if progress.git_is_ignored(root, path.relative_to(root).as_posix()):
+    relative = path.relative_to(root).as_posix()
+    if progress.git_is_ignored(root, relative):
         return
     mark_modified(session_id)
+    note_paths(session_id, [relative])
 
 
 def write_progress(path: Path, text: str, original: str) -> None:
@@ -340,9 +379,70 @@ def gate_block(session_id: str, command: str) -> str | None:
     return None
 
 
+def rule_files_for(path: Path) -> tuple[str, list[str]] | None:
+    docs = PATHS.docs_root.resolve()
+    if not path.is_relative_to(docs):
+        return None
+    parts = path.relative_to(docs).parts
+    if len(parts) < 2:
+        return None
+    name = parts[0]
+    directory = docs / name
+    if name in (PROGRESS_NAME, PROGRESS_LOGS_NAME):
+        files = ["progress.md"]
+    elif name == PATHS.try_n_fail.name:
+        files = ["try-n-fail.md", INDEX_RULE]
+    elif name == PATHS.todos.name:
+        files = ["todos.md", INDEX_RULE]
+    elif name == PATHS.synced_comments.name:
+        files = ["synced-comments.md"]
+    elif name in (PATHS.specs.name, PATHS.spec_logs.name) or not (directory / "index.md").is_file():
+        return None
+    else:
+        files = [INDEX_RULE]
+    return rel(directory), files
+
+
+def rule_injection(payload: dict) -> None:
+    session_id = session_id_of(payload)
+    path = edited_path(payload)
+    if not session_id or path is None or not git_ready():
+        return
+    mapped = rule_files_for(path)
+    if mapped is None:
+        return
+    directory, files = mapped
+    marker_dir = progress.change_dir(REPO_ROOT, session_id)
+    sections = []
+    for name in files:
+        marker = marker_dir / f"rule-{Path(name).stem}"
+        if marker.exists():
+            continue
+        try:
+            content = (REPO_ROOT / RULE_DIR / name).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        try:
+            marker_dir.mkdir(parents=True, exist_ok=True)
+            marker.touch()
+        except OSError:
+            pass
+        sections.append(f"harness: rule text of {RULE_DIR}/{name} for writing in {directory}/:\n\n{content}")
+    if sections:
+        print(json.dumps({
+            "hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": "\n\n".join(sections)}
+        }))
+
+
 def on_pre_tool_use(payload: dict) -> int:
     session_id = session_id_of(payload)
     tool_use_id = payload.get("tool_use_id")
+    if payload.get("tool_name") in RULE_TOOLS:
+        try:
+            rule_injection(payload)
+        except Exception:
+            pass
+        return 0
     command = hook_shared.shell_command(payload.get("tool_input"))
     if payload.get("tool_name") == "Bash" and session_id and hook_shared.PR_CREATE_RE.search(command):
         try:
@@ -355,11 +455,11 @@ def on_pre_tool_use(payload: dict) -> int:
     if payload.get("tool_name") != "Bash" or not session_id or not isinstance(tool_use_id, str) or not tool_use_id:
         return 0
     try:
-        before = fingerprint()
+        before = take_snapshot()
         snapshot = snapshot_path(session_id, tool_use_id)
         snapshot.parent.mkdir(parents=True, exist_ok=True)
         temporary = snapshot.with_name(snapshot.name + f".{os.getpid()}.tmp")
-        temporary.write_text(before, encoding="utf-8")
+        temporary.write_text(json.dumps(before), encoding="utf-8")
         os.replace(temporary, snapshot)
     except (OSError, progress.GitUnavailable):
         pass
@@ -389,6 +489,10 @@ def on_post_tool_use_failure(payload: dict) -> int:
     return 0
 
 
+def session_code_changed(session_id: str | None) -> bool:
+    return bool(session_id) and progress.code_marker(REPO_ROOT, session_id).exists()
+
+
 def finding_lines(path: Path, label: str) -> list[str]:
     try:
         findings = progress.check_findings(path, REPO_ROOT, label)
@@ -411,6 +515,7 @@ def on_logs_edit(path: Path, session_id: str | None) -> int:
         )
         return 2
     sync_requests(path, session_id)
+    maintain_own_progress(path, session_id)
     messages = finding_lines(path, label)
     if not messages:
         return 0
@@ -429,15 +534,22 @@ def moved_notice(label: str, moved: Path) -> str:
     )
 
 
+def record_only_changes(session_id: str) -> list[str]:
+    if session_code_changed(session_id):
+        return []
+    return progress.record_paths(progress.read_changed_paths(REPO_ROOT, session_id), docs_rel())
+
+
 def create_skeleton(session_id: str | None) -> int:
     if not session_id or not git_ready():
         return 0
-    if not modified_project(session_id) or own_progress(session_id) is not None:
+    if not modified_project(session_id) or own_progress(session_id) is not None or CLASSIFICATION_FAILED:
         return 0
     marker = progress.change_dir(REPO_ROOT, session_id) / "skeleton"
     try:
         with open(marker, "x", encoding="utf-8"):
             pass
+        changes = record_only_changes(session_id)
         prompts = progress.state_prompts(session_state(session_id))
         path = (PROGRESS_DIR / (progress.skeleton_name(prompts[0]["text"] if prompts else None) + ".md")).resolve()
         label = rel(path)
@@ -450,18 +562,73 @@ def create_skeleton(session_id: str | None) -> int:
             )
             return 2
         PROGRESS_DIR.mkdir(parents=True, exist_ok=True)
-        path.write_text(progress.skeleton(session_id, progress.git_branch(REPO_ROOT)), encoding="utf-8")
+        branch = progress.git_branch(REPO_ROOT)
+        path.write_text(
+            progress.record_only_text(session_id, branch, changes) if changes else progress.skeleton(session_id, branch),
+            encoding="utf-8",
+        )
         moved = progress.rotate(path, session_id)
         sync_requests(path, session_id)
     except OSError:
         return 0
-    messages = [
-        f"harness: this session changed the project and had no progress, so {label} was created. Read "
-        f".harness/instructions/progress.md, replace every {progress.PLACEHOLDER} in {label}, and commit it "
-        "with the work."
-    ]
+    if changes:
+        messages = [
+            f"harness: this session changed only records, so {label} was created as a record-only progress; "
+            "the hook keeps its ### Changes and ### User Requests. Commit it with the work."
+        ]
+    else:
+        messages = [
+            f"harness: this session changed the project and had no progress, so {label} was created. Read "
+            f".harness/instructions/progress.md, replace every {progress.PLACEHOLDER} in {label}, and commit it "
+            "with the work."
+        ]
     if moved is not None:
         messages.append(moved_notice(label, moved))
+    print("\n".join(messages), file=sys.stderr)
+    return 2
+
+
+def maintain_own_progress(path: Path, session_id: str) -> str | None:
+    try:
+        original = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    parsed = progress.parse(original)
+    if not progress.is_record_only(parsed):
+        return None
+    try:
+        if session_code_changed(session_id) and path.parent.resolve() == PROGRESS_DIR.resolve():
+            upgraded = progress.upgrade_record_only(original)
+            if upgraded == original:
+                return None
+            write_progress(path, upgraded, original)
+            label = rel(path)
+            return (
+                f"harness: this session changed code, so {label} was turned into a full progress. Read "
+                f".harness/instructions/progress.md, replace every {progress.PLACEHOLDER} in {label}, and commit it "
+                "with the work."
+            )
+        changes = progress.record_paths(progress.read_changed_paths(REPO_ROOT, session_id), docs_rel())
+        write_progress(path, progress.sync_changes(original, changes), original)
+    except OSError:
+        return None
+    return None
+
+
+def own_progress_follow_up(session_id: str | None) -> int:
+    own = own_progress(session_id)
+    if own is None:
+        return create_skeleton(session_id)
+    if not session_id or not git_ready() or not modified_project(session_id):
+        return 0
+    notice = maintain_own_progress(own, session_id)
+    if notice:
+        print(notice, file=sys.stderr)
+        return 2
+    parsed = progress.read_progress(own)
+    messages = finding_lines(own, rel(own)) if parsed is not None and progress.is_record_only(parsed) else []
+    if not messages:
+        return 0
     print("\n".join(messages), file=sys.stderr)
     return 2
 
@@ -470,7 +637,7 @@ def on_post_tool_use(payload: dict) -> int:
     record_modification_safely(payload)
     path = target_path(payload)
     if path is None:
-        return create_skeleton(session_id_of(payload))
+        return own_progress_follow_up(session_id_of(payload))
     label = rel(path)
     if path.parent == PATHS.progress_logs.resolve():
         return on_logs_edit(path, session_id_of(payload))
@@ -531,6 +698,9 @@ def on_post_tool_use(payload: dict) -> int:
         messages.append(moved_notice(label, moved))
     if (progress.session_of(path) or own_session) == session_id:
         sync_requests(path, session_id)
+        notice = maintain_own_progress(path, session_id) if session_id else None
+        if notice:
+            messages.append(notice)
     else:
         current = path.read_text(encoding="utf-8")
         write_progress(path, current, current)
@@ -621,7 +791,8 @@ def stop_checks(session_id: str) -> int:
             file=sys.stderr,
         )
         return 2
-    if parsed is not None and not progress.has_next_session_entries(parsed):
+    record_only = parsed is not None and progress.is_record_only(parsed) and not session_code_changed(session_id)
+    if parsed is not None and not record_only and not progress.has_next_session_entries(parsed):
         print(
             f"harness: {rel(own)} has no entries under `## Next Session`. Add entries, each followed by "
             "`  - files: <paths or none>`, or an explicit `- none: <reason>` bullet, "

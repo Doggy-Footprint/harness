@@ -1009,7 +1009,7 @@ class TestStopSessionStartPreCompact(ProgressCase):
         self.bash(repo, lambda: (repo / "src" / "new.py").write_text("x\n"))
         self.bash_event(repo, "PreToolUse", "toolu_pending")
         files = sorted(p.relative_to(repo).as_posix() for p in self.change_dir(repo).iterdir())
-        self.assertEqual(len(files), 3)
+        self.assertEqual(len(files), 5)
         ignored = run_git(repo, "check-ignore", "--", *files).stdout.split()
         self.assertEqual(sorted(ignored), files)
 

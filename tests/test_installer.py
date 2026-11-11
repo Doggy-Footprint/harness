@@ -24,7 +24,7 @@ SKILLS = sorted(d.name for d in (REPO_ROOT / "harness" / "skills").iterdir() if 
 
 def run_installer(*args, input="", forbid_input=False, env=None, exact=False):
     if not exact and args[:1] == ("update",) and input.strip() and all(line == "y" for line in input.splitlines()):
-        input += "y\ny\ny\n"
+        input += "y\n" * 6
     command = [sys.executable, str(INSTALLER)] + list(args)
     if forbid_input:
         script = (
@@ -293,26 +293,27 @@ class TestNormal(InstallerTestCase):
         pretool = settings["hooks"]["PreToolUse"]
         unrelated = [g for g in pretool if g.get("matcher") == "Write"]
         self.assertEqual(len(unrelated), 1)
-        harness_bash = [
-            g for g in pretool
-            if g.get("matcher") == "Bash"
-            and any("/.harness/" in h["command"] for h in g["hooks"])
-        ]
-        self.assertEqual(len(harness_bash), 2)
+        self.assert_harness_pretool_groups(pretool)
 
         result = run_installer("update", str(repo))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
         settings = json.loads((repo / ".claude" / "settings.json").read_text())
         pretool = settings["hooks"]["PreToolUse"]
-        harness_bash = [
-            g for g in pretool
-            if g.get("matcher") == "Bash"
-            and any("/.harness/" in h["command"] for h in g["hooks"])
-        ]
-        self.assertEqual(len(harness_bash), 2)
+        self.assert_harness_pretool_groups(pretool)
         unrelated = [g for g in pretool if g.get("matcher") == "Write"]
         self.assertEqual(len(unrelated), 1)
+
+    def assert_harness_pretool_groups(self, pretool):
+        for script in ("spec_gate.py", "progress_hook.py"):
+            with self.subTest(script=script):
+                groups = [g for g in pretool if any(script in h["command"] and "/.harness/" in h["command"] for h in g["hooks"])]
+                self.assertEqual(len(groups), 1)
+                if script == "progress_hook.py":
+                    for tool in ("Bash", "Write", "Edit", "MultiEdit"):
+                        self.assertIsNotNone(re.fullmatch(groups[0]["matcher"], tool), tool)
+                else:
+                    self.assertEqual(groups[0]["matcher"], "Bash")
 
     def test_f_reinstall_idempotent_after_commit(self):
         repo = self.install()
@@ -528,12 +529,12 @@ class TestNormal(InstallerTestCase):
         result = run_installer("update", str(repo), input="y\ny\n" * 14)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"])
+        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"])
         self.assertIn(
             "expand test-audit scanner rules to more languages, flags, and runners",
             result.stdout,
         )
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
 
     def test_vo9_migration_0210_step_lines_state_replacement_and_no_project_changes(self):
         repo = self.install()
@@ -562,9 +563,9 @@ class TestNormal(InstallerTestCase):
         self.assertIn("no existing project files change", joined)
 
     def test_vo9_version_file_and_install_manifest_are_current(self):
-        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.42.0")
+        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.43.0")
         repo = self.install()
-        self.assertEqual(json.loads((repo / ".harness" / "manifest.json").read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads((repo / ".harness" / "manifest.json").read_text())["version"], "0.43.0")
 
     def test_vo5_s1_s2_update_from_0342_lists_0343_migration_last_and_sets_manifest(self):
         repo = self.install()
@@ -577,9 +578,9 @@ class TestNormal(InstallerTestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         announced = re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE)
-        self.assertEqual(announced, ["0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"], result.stdout)
-        self.assertEqual(announced[-1], "0.42.0")
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(announced, ["0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"], result.stdout)
+        self.assertEqual(announced[-1], "0.43.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
 
     def test_vo5_s4_0343_migration_text_mentions_session_id_and_still_running(self):
         repo = self.install()
@@ -598,7 +599,7 @@ class TestNormal(InstallerTestCase):
         self.assertIn("still running", text)
 
     def test_vo5_s3_version_file_reads_0343(self):
-        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.42.0")
+        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.43.0")
 
     LANGUAGE_SECTIONS = ["## Scanner coverage", "## Quality checks", "## False positives", "## Run and coverage"]
 
@@ -638,13 +639,13 @@ class TestNormal(InstallerTestCase):
         result = run_installer("update", str(repo), input="y\ny\n" * 13)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"])
+        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"])
         self.assertIn("split test-audit language guidance into per-language files", result.stdout)
         self.assertEqual(
             sorted(p.stem for p in (repo / ".agents" / "skills" / "test-audit" / "languages").glob("*.md")),
             sorted(self.scanner_languages()),
         )
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
 
     def test_vo9_update_from_0170_provides_test_audit_skill_and_scanner(self):
         repo = self.install()
@@ -660,7 +661,7 @@ class TestNormal(InstallerTestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("migration 0.18.0:", result.stdout)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
         self.assert_test_audit_installed(repo)
 
     def test_install_provides_user_only_rearrange_docs_skill(self):
@@ -678,8 +679,8 @@ class TestNormal(InstallerTestCase):
         result = run_installer("update", str(repo), input="y\ny\ny\n" * 19)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"])
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"])
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
         self.assert_user_only_skill_installed(repo, "rearrange-docs")
 
     def test_update_from_0360_leaves_records_out_of_rearrange_docs(self):
@@ -692,9 +693,9 @@ class TestNormal(InstallerTestCase):
         result = run_installer("update", str(repo), input="y\ny\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"])
+        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"])
         self.assertIn("progress-logs/", result.stdout.split("migration 0.37.0:", 1)[1])
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
         skill = (repo / ".agents" / "skills" / "rearrange-docs" / "SKILL.md").read_text()
         excluded = skill.split("Leave these out entirely", 1)[1].split("Read `AGENTS.md`", 1)[0]
         for path in ("agent-docs/specs/", "agent-docs/spec-logs/", "agent-docs/progress/", "agent-docs/progress-logs/", "stale/"):
@@ -710,8 +711,8 @@ class TestNormal(InstallerTestCase):
         result = run_installer("update", str(repo), input="y\ny\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"])
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"])
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
         rule = (repo / ".harness" / "instructions" / "progress.md").read_text().split("## Progress Rule", 1)[1]
         self.assertIn("`none:` bullet", rule)
         self.assertIn("`  - files:`", rule)
@@ -729,8 +730,8 @@ class TestNormal(InstallerTestCase):
         result = run_installer("update", str(repo), input="y\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.39.0", "0.40.0", "0.41.0", "0.42.0"])
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"])
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
         verifier = (repo / ".claude" / "agents" / "test-verifier.md").read_text()
         self.assertIn("the path of the Tests diff file", verifier)
         self.assertIn("never Implementation, an Implementation diff, or an injected mutation", verifier)
@@ -750,8 +751,8 @@ class TestNormal(InstallerTestCase):
         result = run_installer("update", str(repo), input="y\ny\n" * 15)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"])
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"])
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
         self.assertIn("Never decide unspecified task details silently.", (repo / ".harness" / "instructions" / "harness-block.md").read_text())
         skill = (repo / ".agents" / "skills" / "workflow-approach" / "SKILL.md").read_text()
         self.assertIn("# Brief\n", skill)
@@ -1135,7 +1136,7 @@ class TestBoundary(InstallerTestCase):
             docs_root / "spec-logs" / "stale.md",
         ):
             self.assertFalse(path.exists(), path)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
         verify = self.run_verify_rules(repo)
         self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
 
@@ -1178,7 +1179,7 @@ class TestBoundary(InstallerTestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("migration 0.13.0:", result.stdout)
         self.assertIn("migration 0.14.0:", result.stdout)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
 
     def test_c13_installed_skill_chains_workflow_start_marker_after_spec_lifecycle_start(self):
         repo = self.install()
@@ -1724,7 +1725,7 @@ class TestEdge(InstallerTestCase):
             for match in [re.search(r"\b0\.\d+\.\d+\b", line)]
             if match
         ]
-        self.assertEqual(announcement_versions, ["0.3.0", "0.4.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.10.0", "0.11.0", "0.12.0", "0.13.0", "0.14.0", "0.15.0", "0.15.1", "0.16.0", "0.16.1", "0.16.2", "0.17.0", "0.18.0", "0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"], output)
+        self.assertEqual(announcement_versions, ["0.3.0", "0.4.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.10.0", "0.11.0", "0.12.0", "0.13.0", "0.14.0", "0.15.0", "0.15.1", "0.16.0", "0.16.1", "0.16.2", "0.17.0", "0.18.0", "0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"], output)
         self.assertFalse(source.exists())
         self.assertEqual((docs / "stale" / source.name).read_text(), "# Stale\n")
         self.assertNotIn(index_block, (docs / "index.md").read_text())
@@ -1970,8 +1971,8 @@ class TestGitignoreGuard(InstallerTestCase):
         self.assertIn("ignored harness paths: .gitignore exceptions require consent (dry-run)", result.stdout)
         self.assertNotIn("execution requires consent to update .gitignore", result.stdout)
         announced = re.findall(r"^migration (0\.\d+\.\d+):", result.stdout, re.MULTILINE)
-        self.assertEqual(announced, ["0.14.0", "0.15.0", "0.15.1", "0.16.0", "0.16.1", "0.16.2", "0.17.0", "0.18.0", "0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"])
-        self.assertEqual(result.stdout.count("- confirmation required (dry-run: not requested)"), 35)
+        self.assertEqual(announced, ["0.14.0", "0.15.0", "0.15.1", "0.16.0", "0.16.1", "0.16.2", "0.17.0", "0.18.0", "0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"])
+        self.assertEqual(result.stdout.count("- confirmation required (dry-run: not requested)"), 36)
         write = result.stdout.split("== write ==\n", 1)[1].split("\n== ", 1)[0]
         self.assertIn("- .harness/VERSION", write.splitlines())
         self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.13.0")
@@ -2074,8 +2075,8 @@ class TestGitignoreGuard(InstallerTestCase):
 
         result = run_installer("update", str(repo), input="y\ny\n" * 23)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
-        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.42.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
+        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.43.0")
 
     def make_check_repo(self, rules):
         repo = self.make_repo()
@@ -2304,7 +2305,7 @@ class TestGitignoreConsent(InstallerTestCase):
         self.assertEqual(result.stdout.count(self.QUESTION), 1)
         self.assertIn("migration 0.15.0:", result.stdout)
         self.assertIn("migration 0.15.1:", result.stdout)
-        self.assertEqual(json.loads(manifest.read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads(manifest.read_text())["version"], "0.43.0")
         self.assert_narrow_bin_exceptions(repo, b"bin/\n")
 
     def test_vo2_no_and_eof_leave_entire_target_unchanged(self):
@@ -2497,7 +2498,7 @@ class TestGitignoreConsent(InstallerTestCase):
         self.assertIn("migration 0.15.0:", confirmed.stdout)
         self.assertIn("migration 0.15.1:", confirmed.stdout)
         self.assertNotIn("migration 0.14.0:", confirmed.stdout)
-        self.assertEqual(json.loads(manifest.read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads(manifest.read_text())["version"], "0.43.0")
 
     def test_vo7_hundred_paths_scan_each_batch_once(self):
         from unittest import mock
@@ -2703,7 +2704,7 @@ class TestGitignoreConsent(InstallerTestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("migration 0.15.1:", result.stdout)
         self.assertNotIn("migration 0.15.0:", result.stdout)
-        self.assertEqual(json.loads((repo / ".harness" / "manifest.json").read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads((repo / ".harness" / "manifest.json").read_text())["version"], "0.43.0")
 
     def test_r2vo3_update_from_0140_announces_0150_then_0151_with_separate_confirmations(self):
         repo = self.make_repo()
@@ -2721,7 +2722,7 @@ class TestGitignoreConsent(InstallerTestCase):
         self.assertIn("migration 0.15.1:", out)
         self.assertLess(out.index("migration 0.15.0:"), out.index("migration 0.15.1:"))
         self.assertNotIn("migration 0.14.0:", out)
-        self.assertEqual(json.loads((repo / ".harness" / "manifest.json").read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads((repo / ".harness" / "manifest.json").read_text())["version"], "0.43.0")
 
 
 class TestRequirementsMigration(InstallerTestCase):
@@ -2738,9 +2739,9 @@ class TestRequirementsMigration(InstallerTestCase):
         result = run_installer("update", str(repo), input="y\ny\ny\n" * 19)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertFalse((repo / "agent-docs" / "requirements").exists())
-        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.16.2", "0.17.0", "0.18.0", "0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"])
-        self.assertEqual(json.loads((repo / ".harness" / "manifest.json").read_text())["version"], "0.42.0")
-        self.assertEqual(re.findall(r"Apply migration (\S+)", result.stdout), ["0.17.0", "0.18.0", "0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"])
+        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.16.2", "0.17.0", "0.18.0", "0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"])
+        self.assertEqual(json.loads((repo / ".harness" / "manifest.json").read_text())["version"], "0.43.0")
+        self.assertEqual(re.findall(r"Apply migration (\S+)", result.stdout), ["0.17.0", "0.18.0", "0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"])
 
     def test_empty_directory_is_removed_and_dry_run_preserves_it(self):
         repo = self.legacy_repo()
@@ -2765,7 +2766,7 @@ class TestRequirementsMigration(InstallerTestCase):
         result = run_installer("update", str(repo), input="y\ny\ny\n" * 19)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertFalse(directory.exists())
-        self.assertEqual(re.findall(r"Apply migration (\S+)", result.stdout), ["0.17.0", "0.18.0", "0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"])
+        self.assertEqual(re.findall(r"Apply migration (\S+)", result.stdout), ["0.17.0", "0.18.0", "0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"])
 
     def test_content_fails_without_changes_and_guides_manual_backup(self):
         for relative in ("index.md", "stale/0123456789abcdef-old.md"):
@@ -2830,8 +2831,8 @@ class TestGpt61SolDefaults(InstallerTestCase):
         self.set_legacy_version(repo)
         result = run_installer("update", str(repo), input="y\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\n")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.16.0", "0.16.1", "0.16.2", "0.17.0", "0.18.0", "0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"])
-        self.assertEqual(json.loads((repo / ".harness" / "manifest.json").read_text())["version"], "0.42.0")
+        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.16.0", "0.16.1", "0.16.2", "0.17.0", "0.18.0", "0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"])
+        self.assertEqual(json.loads((repo / ".harness" / "manifest.json").read_text())["version"], "0.43.0")
 
     def test_v2_declined_legacy_update_announces_migration_and_writes_nothing(self):
         repo = self.install()
@@ -2839,7 +2840,7 @@ class TestGpt61SolDefaults(InstallerTestCase):
         before = self.snapshot(repo)
         result = run_installer("update", str(repo), input="n\n")
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.16.0", "0.16.1", "0.16.2", "0.17.0", "0.18.0", "0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"])
+        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.16.0", "0.16.1", "0.16.2", "0.17.0", "0.18.0", "0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"])
         self.assertEqual(self.snapshot(repo), before)
 
     def test_v2_legacy_dry_run_announces_migration_and_writes_nothing(self):
@@ -2848,7 +2849,7 @@ class TestGpt61SolDefaults(InstallerTestCase):
         before = self.snapshot(repo)
         result = run_installer("update", str(repo), "--dry-run", input="")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.16.0", "0.16.1", "0.16.2", "0.17.0", "0.18.0", "0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"])
+        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.16.0", "0.16.1", "0.16.2", "0.17.0", "0.18.0", "0.19.0", "0.20.0", "0.21.0", "0.22.0", "0.23.0", "0.24.0", "0.25.0", "0.26.0", "0.27.0", "0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"])
         self.assertEqual(self.snapshot(repo), before)
 
     def test_v2_current_version_repeat_is_stable_without_migration(self):
@@ -3098,12 +3099,12 @@ class TestVerificationToolsCli(InstallerTestCase):
         before = self.snapshot(repo)
         dry = run_installer("update", str(repo), "--dry-run")
         self.assertEqual(dry.returncode, 0, dry.stdout + dry.stderr)
-        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", dry.stdout, re.MULTILINE), ["0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"])
+        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", dry.stdout, re.MULTILINE), ["0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"])
         self.assertEqual(before, self.snapshot(repo))
         result = run_installer("update", str(repo), input="y\ny\n" * 8)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0"])
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE), ["0.28.0", "0.29.0", "0.30.0", "0.31.0", "0.32.0", "0.33.0", "0.34.0", "0.34.1", "0.34.2", "0.34.3", "0.34.4", "0.35.0", "0.36.0", "0.37.0", "0.38.0", "0.39.0", "0.40.0", "0.41.0", "0.42.0", "0.43.0"])
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
         after = self.snapshot(repo)
         after.pop(".harness/manifest.json", None)
         before.pop(".harness/manifest.json", None)
@@ -3168,7 +3169,7 @@ class TestHandoffToTodosMigration(InstallerTestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assert_moved(repo, handoff)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
         self.assertIn(self.LIVE, result.stdout)
         verify = self.run_verify_rules(repo)
         self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
@@ -3213,27 +3214,27 @@ class TestHandoffToTodosMigration(InstallerTestCase):
         blobs = [p.read_bytes() for p in (repo / "agent-docs").rglob("*") if p.is_file()]
         self.assertIn(self.LIVE_TEXT.encode(), blobs)
         self.assertIn(self.OLD_TEXT.encode(), blobs)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
 
     def test_o9_c21_answer_no_leaves_handoff_untouched_and_update_succeeds(self):
         repo, handoff, manifest_path = self.repo_with_handoff()
 
-        result = run_installer("update", str(repo), input="y\n" * 14 + "n\n")
+        result = run_installer("update", str(repo), input="y\n" * 15 + "n\n")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assert_handoff_untouched(handoff)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
         self.assertIn("no longer managed", (result.stdout + result.stderr).lower())
         self.assertIn(self.LIVE, result.stdout)
 
     def test_o9_c21_eof_at_prompt_is_treated_as_no(self):
         repo, handoff, manifest_path = self.repo_with_handoff()
 
-        result = run_installer("update", str(repo), input="y\n" * 14, exact=True)
+        result = run_installer("update", str(repo), input="y\n" * 15, exact=True)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assert_handoff_untouched(handoff)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
         self.assertIn("no longer managed", (result.stdout + result.stderr).lower())
         self.assertNotIn("Traceback", result.stderr)
 
@@ -3258,7 +3259,7 @@ class TestHandoffToTodosMigration(InstallerTestCase):
                 for name in ("index.md", "stale.md"):
                     self.assertTrue((repo / "agent-docs" / "todos" / name).is_file(), name)
                 self.assertTrue((repo / "agent-docs" / "todos" / "stale").is_dir())
-                self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.42.0")
+                self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.43.0")
 
     def test_o9_fr19_update_installs_continue_on_and_registers_progress_hooks(self):
         repo = self.install()
@@ -3302,7 +3303,7 @@ class TestHandoffToTodosMigration(InstallerTestCase):
         self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
 
     def test_o9_q6_decline_and_eof_paths_delete_nothing(self):
-        for label, answers in (("no", "y\n" * 14 + "n\n"), ("eof", "y\n" * 14)):
+        for label, answers in (("no", "y\n" * 15 + "n\n"), ("eof", "y\n" * 15)):
             with self.subTest(answer=label):
                 repo, handoff, _ = self.repo_with_handoff()
                 before = {k: v for k, v in self.snapshot(repo).items() if k.startswith("agent-docs/handoff/")}
