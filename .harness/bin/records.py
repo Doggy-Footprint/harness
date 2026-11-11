@@ -6,7 +6,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-# lib/ goes first: bin/ holds a progress.py that would shadow lib/progress.py.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 import config  # noqa: E402
 import synced  # noqa: E402

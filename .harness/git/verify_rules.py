@@ -7,8 +7,7 @@ Covers only rules that can be verified without judgement calls:
     and structure), scoped to docs_root
   - Shared Comment & Docstring Synchronization (synced id / version / count
     consistency between code and <docs_root>/synced-comments/<id>.md, plus
-    checking the tracking file's code_hash against the lines between each tag and
-    its `synced end:` line), scanned over `git ls-files` only
+    code_hash), scanned over `git ls-files` only
   - Required headings for try-n-fail/ and todos/ managed files
   - Progress records: format of progress/ and unmasked secrets in progress-logs/ too
 

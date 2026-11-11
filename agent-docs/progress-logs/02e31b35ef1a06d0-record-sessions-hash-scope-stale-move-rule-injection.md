@@ -3,7 +3,7 @@ session: d109cc7f-e77c-41c7-bb98-7811fd0fb0fa
 before: none
 previous: agent-docs/progress-logs/3cb7a8fbae561809-import-block-and-update-commit.md
 branch: Doggy-Footprint/utility
-commit: 611e1f635fe547798a5a24512249cb2f0743f156
+commit: 17bb3bff61dd8a852954d8aaeebe5267ea995984
 ---
 
 # 0.43.0: record-only progress, synced hash scope, stale move, rule injection
@@ -26,6 +26,8 @@ commit: 611e1f635fe547798a5a24512249cb2f0743f156
 - "(a), 승인" (tags without an end marker after update are violations; brief approved)
   - source: user prompt in this session
 - "승인. PR까지"
+  - source: user prompt in this session
+- "PR 한글로 써줘"
   - source: user prompt in this session
 - "평가 세션은 haiku-medium"
   - source: agent-docs/progress-logs/3cb7a8fbae561809-import-block-and-update-commit.md
@@ -55,6 +57,7 @@ commit: 611e1f635fe547798a5a24512249cb2f0743f156
 - installer/harness.py, harness/VERSION: 0.43.0 migration; dogfood update applied.
 - tests: four new modules, version and migration-count pins moved to 0.43.0.
 - agent-docs/todos: todo 76ec93b79f7319f3 marked stale with `records.py stale`.
+- After PR #33: removed the records.py import-order comment (records.py imports no `progress`) and the code_hash detail in the verify_rules.py docstring; kept the progress_hook.py docstring lines (Claude Code exit-code and stdout contract).
 
 ### Commands
 - `/Users/hwansu/tools/harness/.venv/bin/python -m unittest discover -s tests` (runs 1–5; run 5: 1332 OK)
@@ -176,3 +179,18 @@ commit: 611e1f635fe547798a5a24512249cb2f0743f156
 #### 14 — 2026-11-10T23:40:00Z
 
 > 승인. PR까지
+
+#### 15 — 2026-11-11T01:14:15Z
+
+> PR 한글로 써줘
+
+#### 16 — 2026-11-11T01:16:06Z
+
+> 이 주석들 필요한지 점검해
+> 
+> - `.harness/bin/records.py`: line(s) 9
+> - `.harness/git/verify_rules.py`: line(s) 10, 11
+> - `.harness/hooks/progress_hook.py`: line(s) 3, 4
+> - `harness/bin/records.py`: line(s) 9
+> - `harness/git/verify_rules.py`: line(s) 10, 11
+> - `harness/hooks/progress_hook.py`: line(s) 3, 4
