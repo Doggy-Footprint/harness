@@ -3,7 +3,7 @@ session: b3cff3bb-a2fe-4a38-aebf-534b35d692e2
 before: none
 previous: none
 branch: import-skill
-commit: 095602352f0a4f5c1c352ef8d898e2cc9db612ca
+commit: ebda404f7fe672aa6a68b0431c18fb00f97305ed
 ---
 
 # Import the skill-creator skill from anthropics/skills (0.46.0)
@@ -89,3 +89,11 @@ commit: 095602352f0a4f5c1c352ef8d898e2cc9db612ca
 #### 4 — 2026-11-13T08:01:37Z
 
 > 체크해서 필수가 아닌 주석 (이후 재생성이 쉬운)은 삭제해
+
+#### 5 — 2026-11-13T08:07:49Z
+
+> skill 지시는 원문 그대로지?
+
+#### 6 — 2026-11-13T08:08:09Z
+
+> PR
