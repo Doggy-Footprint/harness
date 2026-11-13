@@ -1014,13 +1014,6 @@ def migrate_drop_skills(target: Path, dry_run: bool) -> list[str]:
     return planned
 
 
-def migrate_skill_creator(target: Path, dry_run: bool) -> list[str]:
-    return [
-        "install the skill-creator skill from anthropics/skills (.agents/skills/skill-creator, .claude/skills/skill-creator); "
-        "no existing files change",
-    ]
-
-
 def migrate_drop_active_marker(target: Path, dry_run: bool) -> list[str]:
     planned = [
         "spec lifecycle: agent-docs/specs/.active is no longer read or written; update deletes a leftover one",
@@ -1111,11 +1104,6 @@ MIGRATIONS = (
         parse_version("0.45.0"),
         "remove the requirement-oracle, architecture-options, harness-import, rearrange-docs, and test-audit skills",
         migrate_drop_skills,
-    ),
-    (
-        parse_version("0.46.0"),
-        "add the skill-creator skill imported from anthropics/skills",
-        migrate_skill_creator,
     ),
 )
 
