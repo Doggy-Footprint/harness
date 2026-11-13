@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Warns when another harness session is already running against this repo.
-Uses os.getppid() as the session key (not payload session_id) since neither
+"""Uses os.getppid() as the session key (not payload session_id) since neither
 Claude nor Codex hook payloads are known to guarantee that field here.
 """
 import json

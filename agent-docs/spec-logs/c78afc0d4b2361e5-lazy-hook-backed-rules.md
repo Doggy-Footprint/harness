@@ -229,4 +229,3 @@ Execution ledger (append attempts; preserve failed approaches):
 | observation | evidence | how to re-check |
 | --- | --- | --- |
 | The before/after evaluation targeted simonw/mcp-explorer at commit `56910d7c6c9f7e143dadd67bf047d7650a79ffdd` | evaluation runs in this session | clone the repository and run `git rev-parse HEAD` after checkout |
-| `test_qr3_scan_leaves_target_tree_unchanged_and_runs_no_project_code` fails intermittently on the base commit and passes on rerun | it compares an mtime snapshot of `.git`; the only failure among 1067 tests in test-run-4 | run that test alone three times |

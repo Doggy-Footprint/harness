@@ -1,6 +1,3 @@
-"""Per-session run metrics: counters kept in a state file, emitted as one
-`session_metrics` telemetry event when the session ends or is found orphaned.
-"""
 import contextlib
 import hashlib
 import json

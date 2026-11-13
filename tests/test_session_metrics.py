@@ -177,7 +177,6 @@ def test_o9_bash_arbitrary_strings_never_raise_and_stay_in_allowed_kinds(command
         assert item[0] in ALLOWED_KINDS
 
 
-# ---------------------------------------------------- integration helpers
 class MetricsCase(TelemetryTestCase):
     def setUp(self):
         self.repo, self.td = self.install_with_telemetry_dir()
@@ -590,7 +589,7 @@ class TestO11Packaging(MetricsCase):
         return json.loads((self.repo / ".claude" / "settings.json").read_text())["hooks"]
 
     def test_version_is_0_26_0(self):
-        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.45.0")
+        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.47.0")
 
     def test_installed_post_tool_use_matcher(self):
         groups = [g for g in self.hooks()["PostToolUse"] if "telemetry_hook.py" in self.commands([g])[0]]
@@ -623,7 +622,6 @@ class TestO11Packaging(MetricsCase):
         self.assertTrue(steps, result.stdout)
 
 
-# ------------------------------------------- in-process lifecycle (coverage)
 def _inprocess_events(tmp_path):
     return [json.loads(line) for p in tmp_path.glob("*.jsonl") for line in p.read_text().splitlines() if line.strip()]
 

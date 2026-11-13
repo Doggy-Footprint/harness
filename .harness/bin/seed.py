@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Backs up files before a workflow-approach seed injection and restores them.
-manifest.json is written last, so a backup interrupted before it exists is
+"""manifest.json is written last, so a backup interrupted before it exists is
 detected as partial and never restored from.
 """
 import hashlib

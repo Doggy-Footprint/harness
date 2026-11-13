@@ -13,9 +13,9 @@ A spec is the approved, versioned source of truth for one workflow run. The main
 2. Archived path: `agent-docs/spec-logs/<same-file-name>`.
 3. `specs/` and `spec-logs/` are excluded from Index & Staleness Management. An archived spec changes only by appending a `# Retrospective` entry.
 4. Frontmatter fields are `version`, `run_id`, `status`, `base_commit`, and `max_verifier_invocations`. Status is `draft`, `active`, `complete`, `limit`, or `aborted`. Specs from before harness 0.33.0 may keep a `handoff` field; leave it.
-5. Amendment increments `version` and adds a Version Log entry, prefixed `[intent-mismatch]` when an intent mismatch found after approval forced it. When it changes a brief item (understanding, an answer, a listed default, or the plain-words quality list), re-brief before continuing: show current → proposed, why it must change, and its impact. Log contract-only changes such as a technique, coverage-item naming, or an obligation split without interrupting the user.
-6. Before drafting, run the understanding round. Before dispatch, present the brief and obtain approval; approval covers every listed default the user did not veto. Pause on unanswered Ask items.
-7. Main chooses a default only by listing it in a brief. Prefer general good practice unless the user or project states otherwise, and preserve safety, security, compatibility, data, and existing observable behavior in that order. Record each choice, its evidence and uncertainty in `# Assumptions and Defaults`, with approval as `brief v<n> — approved`, `vetoed → <answer>`, or `user answer`. Optional quality characteristics may be excluded with a recorded reason.
+5. Amendment increments `version` and adds a Version Log entry, prefixed `[intent-mismatch]` when an intent mismatch found after approval forced it. When it changes a brief item (understanding, an assumption or fact the user confirmed, a user decision, a listed default, or the plain-words quality list), re-brief before continuing: show current → proposed, why it must change, and its impact. Log contract-only changes such as a technique, coverage-item naming, or an obligation split without interrupting the user.
+6. Before drafting, run the understanding round, then the decision round when a decision is the user's. Before dispatch, present the approval brief and obtain approval; approval covers every listed default the user did not veto. Pause on unanswered fact questions, user decisions, and conflicts.
+7. Main chooses a default only by listing it in a brief, and never for a *Your decision* item or for an unknown behind a significant decision. Prefer general good practice unless the user or project states otherwise, and preserve safety, security, compatibility, data, and existing observable behavior in that order. Record each choice, its evidence and uncertainty in `# Assumptions and Defaults`, with approval as `brief v<n> — approved`, `vetoed → <answer>`, `user answer`, `user decision (main: <own option>)`, or `fact <file name>`. Optional quality characteristics may be excluded with a recorded reason.
 
 ## Required format
 
@@ -80,7 +80,7 @@ Mutation tool: <tool and command, sample cap and seed, survival threshold (defau
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 
 # Assumptions and Defaults
-| id | decision | evidence and uncertainty | brief v<n> — approved / vetoed → <answer> / user answer |
+| id | decision | evidence and uncertainty | brief v<n> — approved / vetoed → <answer> / user answer / user decision (main: <own option>) / fact <file name> |
 | --- | --- | --- | --- |
 
 # Traceability
@@ -118,20 +118,76 @@ Every intent, requirement, Case, quality requirement, obligation, and assumption
 
 # Brief
 
-The brief is how the user approves intent; the spec is the contract for subagents. Briefs exist only in chat: never write them into the spec or any other file, so later sessions read decisions, not briefs.
+The brief is how the user approves intent and makes the engineering decisions that are theirs; the spec is the contract for subagents. Briefs exist only in chat: never write them into the spec or any other file, so later sessions read decisions, not briefs.
 
 Write for a developer with 4 years of experience, explain anything beyond that, and link the spec path and version for deeper review.
 
-**Understanding round.** Before drafting, state "Here's what I understood": what the project is, where this task fits, what success looks like, and what this task will NOT do. Build it from every available source (project definition, README, docs, code, history, prior specs, the conversation), not from any single required file. Include blocking Ask items. Draft only after the user confirms or corrects it.
+## Decision sweep
 
-**Approval brief.** Classify every decision the spec depends on:
-- *Ask*: not easy to fix later, or contradicts what the user or project stated. Not easy to fix later means persisted data, schemas or formats; interfaces others depend on (CLI flags, API fields, file formats); external side effects (sending, deleting, publishing); security boundaries; and money.
-- *Decided for you*: one line each with the choice, why, and how to change it later. Thresholds, coverage targets, test techniques, and each dispatched role's model normally belong here.
-- *New concept*: a decision that depends on knowledge the user may lack. First ask whether the user already knows the concept; ask fresh every run. Then give one sentence on what it is, why it matters here, a concrete consequence of each option, and the choice, treated as Ask or Decided by the rules above.
+Run the sweep before each round. It sorts decisions by what would settle them. The user holds facts the repository does not (load, environment, plans), and a decision made without them is a guess presented as a default.
 
-Ask at most 3 items per round, ranked by cost to reverse times the chance the user disagrees. Overflow becomes Decided unless it is not easy to fix later; such overflow waits for the next round.
+**Context pass.** Before listing decisions, go through the dimensions once for the task as a whole: `load` (volume, peak, growth), `data` (size, shape, sensitivity), `concurrency` (parallel callers, processes, instances), `environment` (where and how it runs or is deployed, and who or what starts it), `consumers` (who calls or reads this and what they already depend on), `roadmap` (planned work this must not block), `failure` (what a failure costs and what loss is tolerable), `cost` (money, quota, latency budget). For each, note what a citation says about it for this task, or that it is unknown. Judge each dimension by everything the change sets off, not only by the code it edits: follow the records it creates or changes to the events they emit, the jobs those queue, the metered calls those jobs make, and the people or automations that react, until the chain ends or reaches something the repository cannot show (a configured automation, a plan's quota). New data reaching old machinery is where `consumers` and `cost` are most often decided. The chain also ends at an addition that existing callers never see unless they opt in (a new filter option, an optional field, an extra enum value nobody else matches on): it sets off nothing for them, so it raises no question about them. For an unknown dimension, picture the task at both ends of it (ten items or ten million; a laptop or a memory-limited container; a person at a terminal or a scheduled pipeline; one caller or a second one already planned) and add every decision that comes out differently at the two ends. Decisions nobody lists hide in the dimensions nobody looked at.
+
+**Per decision.** For every decision the spec depends on, including those the context pass added:
+
+1. Write the decision as a question, your leading option, one alternative a reasonable engineer could pick, and the **reversal condition**: the state of the world in which the alternative wins.
+2. Place the reversal condition in the dimension it belongs to.
+3. Settle the reversal condition with a citation: a repository `path:line`, a project fact found by search (see Project facts), or a statement by the user. A condition you cannot cite is unknown. Do not settle it from what is typical for such projects.
+4. Classify:
+   - No reasonable alternative, an existing project convention, or no observable difference between the options → *Decided for you*.
+   - Settled by a citation → *Decided for you*, with the citation.
+   - Unknown, and a fact would settle it → *Fact question* when the decision is significant, a stated assumption otherwise.
+   - No fact would settle it, because the options trade one quality for another → *Your decision* when it is significant, *Decided for you* otherwise.
+
+A decision is **significant** when at least one holds:
+- *hard to reverse*: persisted data, schemas or formats; interfaces others depend on (CLI flags, API fields, file formats); external side effects (sending, deleting, publishing); security boundaries; money;
+- *load-bearing*: other code or later decisions build on it, such as a data model, module boundary, state ownership, concurrency or consistency model, new dependency, or failure policy;
+- *different outcomes*: the options differ in what users see, operating cost, behavior at the expected load, or how it fails;
+- *answerable for*: the user would have to explain the choice in a design review or after an incident.
+
+Example, for the task "add CSV export of orders":
+- "Run the export inside the request or as a background job?" Leading: inside the request. Alternative: background job. Reversal condition: an export can outlast the request timeout (`data`). The repository gives the timeout (`server/config.ts:12`, 30 s) but not how many orders one customer has, so the condition is unknown, and the choice is load-bearing → *Fact question*: "How many orders does the largest customer export at once? Up to tens of thousands it runs inside the request; beyond that it needs a background job and a way to deliver the file."
+- "Which CSV library?" The project already uses one (`package.json:18`) → *Decided for you*, cited.
+- "Timestamps in UTC or in the customer's time zone?" No fact settles it, users see the difference, and files already parsed by customers are hard to change → *Your decision*.
+
+## Rounds
+
+**1. Understanding round.** Before drafting, state "Here's what I understood": what the project is, where this task fits, what success looks like, and what this task will NOT do. Build it from every available source (project definition, README, docs, code, history, prior specs, the conversation), not from any single required file. An exclusion is a decision too: one that drops a safeguard or cannot be added back later ("no archive before deletion", "existing rows are not migrated") goes through the sweep like any other decision instead of being listed under what the task will not do. Then list:
+- *Assumptions about the world*: each unknown behind a decision that is not significant, and each project fact you rely on with its date. Write each as one sentence that is true or false whatever gets built ("assumed: one process, no concurrent writers"). The user corrects a wrong assumption faster than the decisions built on it. A sentence about what the software will do ("unsupported files are skipped") is a decision, not an assumption: state the fact it rests on instead ("assumed: a person watches the run and can retry a file"), and keep the decision for the approval brief. The same holds for an existing safeguard applied to new input ("the current filters also apply to the imported data"): it decides that the safeguard is enough, so state or ask what the new input contains instead. A decision confirmed under the name of an assumption is approved without being seen as one.
+- *Fact questions*: each unknown behind a significant decision. Ask for the fact, not for the decision: name the fact, the decision it settles, and where each answer leads. Add no guess of the answer, because a guess anchors the reply. Do not move such an unknown to the assumptions to save a question: an assumption the user skims past decides a significant choice without them. There is no cap, since a fact costs the user a few words; ask nothing the repository answers.
+- *Not asked*: a single line, not a list, naming each dimension on which you ask nothing and assume nothing, with a few words of why the design is the same wherever the project stands on it ("Not asked: cost (no paid service or quota), concurrency (read-only lookup)"). That the repository is silent is not such a reason; silence is what makes a dimension unknown, and `roadmap` and `consumers` are rarely written down anywhere. Nor is it a reason that the code you edit does not change for that dimension: the reason must also hold for what the change sets off (see Context pass). The user knows where the line is wrong, and it is the only place a dimension you misjudged becomes visible.
+- One invitation, with no examples: "If you already see decisions you want to make yourself, list them." Answering is optional. Naming candidates turns the invitation into a hint; the decision round names them after the user has had the chance to see them unaided.
+
+The round holds these parts and nothing else: no decisions, chosen or pending, and no notes on what you searched or found missing.
+
+Continue only after the user confirms or corrects the round. Record each answered fact (see Project facts).
+
+**2. Decision round.** Re-run the sweep with the answers: a fact usually settles the decision it was asked for, which becomes *Decided for you* with the fact cited. Present each remaining *Your decision* as a neutral question, with the significance criteria it meets and the facts it rests on. Give no options, no trade-offs, and no recommendation. The user thinks first without a hint; that is how they keep their engineering judgment and a working model of the project, which reading a finished choice does not give. When the user asks, give the options with a concrete consequence of each, still without a recommendation. A decision the user listed in the understanding round is *Your decision* even if the sweep classified it otherwise. Skip the round when no *Your decision* remains.
+
+More than 3 *Your decision* items means the task is too large to decide well in one sitting: recommend splitting it and propose the cut. Proceed with all of them only when the user declines.
+
+**3. Approval brief.** After drafting the spec, present:
+- *Your decisions*: the user's choice, the option you would have picked, and what differs. When they differ, ask what the user's choice rested on, and record the answer when it is a fact.
+- *Decided for you*: one line each with the choice, its citation or reason, and how to change it later. Thresholds, coverage targets, test techniques, and each dispatched role's model normally belong here.
+- *Conflict*: a choice that contradicts what the user or project stated. Show both sides and ask.
+- *New concept*: a decision that depends on knowledge the user may lack. First ask whether the user already knows the concept; ask fresh every run. Then give one sentence on what it is and why it matters here. For a *Decided for you* item add a concrete consequence of each option and the choice; for a *Your decision* item add neither.
+- When the user answered the invitation: which decisions both lists share, which only the user named, and which only the sweep found.
 
 State quality expectations in plain words for applicable characteristics only (for example "must not crash on a broken log line"); mention a non-applicable one only when that may surprise the user. ISO terms stay in the spec.
+
+## Project facts
+
+A fact the user states about the world outside the repository is recorded so that later runs cite it instead of asking again. Write one fact per file, `agent-docs/facts/<16-hex-id>-<dimension>-<kebab-name>.md`:
+
+```
+dimension: <one token from the sweep list>
+fact: <one sentence with its number, name, or date>
+source: user, <YYYY-MM-DD>
+asked for: <the decision it settled>
+re-check: <how to confirm it still holds>
+```
+
+Find facts by search, never by reading the directory. Grep `agent-docs/facts/` for the dimension token and for the nouns of the reversal condition, in English and in the user's language, and open only the files that match. Unrelated facts in context anchor decisions they have nothing to do with. A fact you rely on appears in the understanding round as an assumption with its date, so the user can correct it; `load` and `roadmap` facts go out of date first.
 
 # Verification model
 
@@ -182,7 +238,7 @@ Emit `start` before the initial dispatch. Emit `implement_test` before the paral
 # Workflow
 
 1. **Recover or ground (main).** Before creating a spec, inspect `specs/`. If an active spec exists, do not start another workflow. Resume it only when the user asks or runs `/continue-on`; otherwise compare `base_commit` to HEAD, summarize progress and drift, and ask the user whether to resume or abort it. To abort, in this order: (1) restore any seed with `python3 .harness/bin/seed.py restore`; (2) get the retrospective entry approved and written in the active spec; (3) run `python3 .harness/bin/spec_lifecycle.py abort --spec PATH`; (4) if it refuses because of other live sessions, ask the user whether any of them runs this workflow, and re-run with `--other-sessions-confirmed` only after the user confirms none does; (5) emit `python3 .harness/bin/workflow_marker.py end --run-id ID --status aborted`. Read deciding code yourself; delegate only location discovery. For pre-0.10 specs, reconcile obligations and audit state with the verification model before dispatch, giving each obligation a technique, coverage items and target. Do not infer prior acceptance from a passing suite. Apply Identity and lifecycle rule 5 to changed verification policy, and preserve invocation counts and history.
-2. **Understand, draft, and approve (main).** Run the understanding round and wait for the user's confirmation or correction. Derive functional requirements and all nine quality applicability decisions. Define measures, thresholds, 29119-4 techniques, coverage items and targets, evidence, and traceability with `max_verifier_invocations: 2`. Present the approval brief and obtain approval, set status `active`, then run and check: `python3 .harness/bin/spec_lifecycle.py start --spec PATH --run-id ID`. Emit telemetry start only after lifecycle start succeeds.
+2. **Understand, draft, and approve (main).** Run the understanding round and wait for the user's confirmation or correction, then the decision round when the sweep leaves a decision to the user. Derive functional requirements and all nine quality applicability decisions. Define measures, thresholds, 29119-4 techniques, coverage items and targets, evidence, and traceability with `max_verifier_invocations: 2`. Present the approval brief and obtain approval, set status `active`, then run and check: `python3 .harness/bin/spec_lifecycle.py start --spec PATH --run-id ID`. Emit telemetry start only after lifecycle start succeeds.
 3. **Implement + test (parallel).** Emit `implement_test`; dispatch both roles on the same spec version without sharing outputs. Instructions are task-specific and complete:
    - implementer: path/version, implementation direction, quality constraints, risks, allowed non-Test checks, and excluded approaches;
    - test-implementer: path/version, conventions, risk model, 29119-4 techniques and coverage items, independent oracle, automated and review evidence, test level, allowed load checks, and excluded approaches. Allowed load checks are only collecting, listing, or type-checking Tests paths; never instruct it to execute tests, the Test command, or Implementation code.

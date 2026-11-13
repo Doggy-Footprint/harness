@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Record workflow-approach telemetry without affecting the workflow."""
 import argparse
 import sys
 from pathlib import Path

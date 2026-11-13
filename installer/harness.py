@@ -1031,6 +1031,16 @@ def migrate_drop_active_marker(target: Path, dry_run: bool) -> list[str]:
     return planned
 
 
+def migrate_brief_fact_questions(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "workflow-approach: the brief asks the user for facts the repository lacks, holds user-owned decisions "
+        "for a decision round without options or recommendation, and caps user decisions at 3 with a split proposal",
+        "workflow-approach: facts the user states are written one per file to agent-docs/facts/ and found by grep; "
+        "the directory is created on the first fact and is exempt from index.md and stale.md",
+        "no existing files change",
+    ]
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -1104,6 +1114,11 @@ MIGRATIONS = (
         parse_version("0.45.0"),
         "remove the requirement-oracle, architecture-options, harness-import, rearrange-docs, and test-audit skills",
         migrate_drop_skills,
+    ),
+    (
+        parse_version("0.47.0"),
+        "brief asks fact questions and holds user decisions without recommendation; record facts in agent-docs/facts/",
+        migrate_brief_fact_questions,
     ),
 )
 

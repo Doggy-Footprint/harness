@@ -37,7 +37,7 @@ def _resolve_image_id(image: str, cache_dir: Path | None) -> str:
     try:
         iid = docker_exec.image_id(image)
     except docker_exec.DockerUnreachable:
-        # Lets a cache hit be served while the daemon is down (QR3).
+        # Lets a cache hit be served while the daemon is down.
         if record is not None and record.is_file():
             known = json.loads(record.read_text()).get(image)
             if known is not None:

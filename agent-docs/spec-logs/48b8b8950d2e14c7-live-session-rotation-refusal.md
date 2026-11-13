@@ -172,4 +172,4 @@ Execution ledger (append attempts; preserve failed approaches):
 ## 2026-11-05
 | observation | evidence | how to re-check |
 | --- | --- | --- |
-| Bumping the harness version breaks hard-coded version strings and migration-prompt `y` counts in five test files besides tests/test_installer.py (test_comment_gate, test_doc_records, test_session_metrics, test_telemetry, test_workflow_markers), and in test_installer inputs built in a variable (O9 q6) that a pattern sweep misses | execution ledger attempt 1 failure list; tests/ changes in commit 6bb07e0 | `grep -rn '"0\.34\.3"' tests/` and `grep -rn 'input=' tests/ \| grep -c y` before a version bump |
+| none | the other observations are reproduced at once by running the test suite or recovered from git history | — |

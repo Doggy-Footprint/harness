@@ -1,4 +1,3 @@
-"""Best-effort workflow event log for workflow-approach hooks."""
 import datetime
 import hashlib
 import json

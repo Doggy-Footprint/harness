@@ -1,8 +1,3 @@
-"""Detection of implementer / test-implementer isolation candidates.
-
-Pure: reads spec files, never writes and never emits telemetry, so a later
-blocking hook can reuse detect() unchanged.
-"""
 import json
 import os
 import re

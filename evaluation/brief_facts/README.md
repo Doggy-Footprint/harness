@@ -6,7 +6,8 @@
 
 - 실행 모델: `claude -p --model <model> [--effort <level>]`(기본 haiku). 읽기 도구(Read, Grep, Glob)만 주고, 스킬 본문과 과제를 실제 `/workflow-approach` 호출과 같은 형식으로 넣습니다. 스킬이 사용자 답을 기다리는 첫 지점의 메시지를 출력으로 받습니다.
 - 평가 모델: sonnet 에이전트가 사례 하나를 맡습니다. 실행 모델이 모르는 제품 맥락(`hidden_context`)을 쥐고, 실행 모델을 스킬 변형마다 여러 번 호출한 뒤 `grader.md`대로 채점합니다. 변형 파일은 읽지 않고 `cfg-k`, `cfg-m` 같은 이름만 봅니다.
-- 대상 저장소: 실행 모델의 학습 시점 뒤에 만들어진 공개 저장소를 커밋으로 고정합니다(사례 파일의 `repo`). 지금은 문서 변환 라이브러리 `firecrawl/anydoc`(사례 `batch-cli`, `cache`, `tsv-control`)와 웹 서비스 `diwenne/openreply`(사례 `log-retention`, `logs-filter-control`)입니다. 복제본에는 harness를 설치하지 않으며, 실행 지시문이 그 상태를 정상으로 알려 줍니다.
+- 대상 저장소: 실행 모델의 학습 시점 뒤에 만들어진 공개 저장소를 커밋으로 고정합니다(사례 파일의 `repo`). 지금은 문서 변환 라이브러리 `firecrawl/anydoc`(사례 `batch-cli`, `cache`, `tsv-control`)와 웹 서비스 `diwenne/openreply`(사례 `log-retention`, `logs-filter-control`), 에이전트형 CRM `trycompai/crm`(사례 `mail-backfill`, `no-email-filter-control`)입니다. 복제본에는 harness를 설치하지 않으며, 실행 지시문이 그 상태를 정상으로 알려 줍니다. `trycompai/crm`은 자체 `CLAUDE.md`(→ `AGENTS.md`)가 있어 실행 모델이 그 규칙(메시지 끝의 Issues 목록 등)도 따릅니다.
+- AA 대조: 같은 스킬 파일을 다른 변형 이름으로 두 번 넣으면, 두 변형의 차이가 실행 모델과 평가 모델의 잡음 크기를 보여 줍니다. 변형 간 차이는 이 잡음보다 클 때만 읽습니다.
 
 ## 사례 파일 (`cases/<id>.json`)
 

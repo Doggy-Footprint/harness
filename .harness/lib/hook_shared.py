@@ -1,6 +1,4 @@
-"""PreToolUse/PostToolUse helpers shared by spec_gate and telemetry_hook.
-
-Test command matching must stay identical between the two hooks: telemetry
+"""Test command matching must stay identical between the two hooks: telemetry
 should recognize exactly the commands the gate blocks on.
 """
 import re
@@ -16,7 +14,6 @@ def normalize(command: str) -> str:
 
 
 def iter_test_commands(specs_dir: Path):
-    """Yield (normalized_command, spec_stem) for every `Test command:` line."""
     if not specs_dir.is_dir():
         return
     for spec in sorted(specs_dir.glob("*.md")):

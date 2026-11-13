@@ -1,18 +1,4 @@
 #!/usr/bin/env python3
-"""Deterministic checks for the mechanical rules in the harness instruction
-block (see harness/instructions/harness-block.md).
-
-Covers only rules that can be verified without judgement calls:
-  - Index & Staleness Management (file naming, index.md/stale.md/stale/ presence
-    and structure), scoped to docs_root
-  - Shared Comment & Docstring Synchronization (synced id / version / count
-    consistency between code and <docs_root>/synced-comments/<id>.md, plus
-    code_hash), scanned over `git ls-files` only
-  - Required headings for try-n-fail/ and todos/ managed files
-  - Progress records: format of progress/ and unmasked secrets in progress-logs/ too
-
-Exit code is non-zero if any rule is violated.
-"""
 import os
 import re
 import subprocess
@@ -47,6 +33,7 @@ REQUIRED_HEADINGS = {
 TITLED_DIRS = {PATHS.todos}
 WORKFLOW_DOC_DIRS = {"specs", "spec-logs"}
 PROGRESS_DOC_DIRS = {"progress", "progress-logs"}
+FACT_DOC_DIRS = {"facts"}
 RETIRED_DOC_DIRS = {"adr", "rejections", "handoff"}
 
 
@@ -62,7 +49,7 @@ def iter_docs_root_files():
             continue
         docs_parts = path.relative_to(PATHS.docs_root).parts
         if "stale" in docs_parts or (
-            docs_parts and docs_parts[0] in WORKFLOW_DOC_DIRS | PROGRESS_DOC_DIRS | RETIRED_DOC_DIRS
+            docs_parts and docs_parts[0] in WORKFLOW_DOC_DIRS | PROGRESS_DOC_DIRS | FACT_DOC_DIRS | RETIRED_DOC_DIRS
         ):
             continue
         if any(part in EXCLUDE_DIRS for part in path.relative_to(REPO_ROOT).parts):

@@ -185,6 +185,4 @@ Execution ledger (append attempts; preserve failed approaches):
 ## 2026-10-25
 | observation | evidence | how to re-check |
 | --- | --- | --- |
-| The Test command depends on `.venv`: system python3 lacks fastapi, pytest, and hypothesis, and `analytics/frontend` needs `npm ci` before vitest runs | `python3 -c "import fastapi"` raised ModuleNotFoundError in this worktree | `.venv/bin/python -m pytest --version`; `ls analytics/frontend/node_modules` |
-| A harness version bump also requires raising the `"y\n" * N` answer counts in installer-driven tests; the two c20 tests in `tests/test_telemetry.py` had spare answers through 0.31.0 but needed +1 at 0.32.0 | after the 0.32.0 bump those tests failed with EOFError; `* 15` passed | `grep -n '"y\\n' tests/test_installer.py tests/test_telemetry.py` |
-| Adding a key to `/api/summary` (top level or `workflow.runs` items) fails `analytics/tests/test_classification_v4.py::test_q1_zero_pre_existing_summary_keys_change_value` until the key is in its `added` set | implementer challenge in this run; v2 Version Log | run that test after adding a key |
+| none | the other observations are reproduced at once by running the test suite or recovered from git history | — |

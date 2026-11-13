@@ -1,7 +1,3 @@
-"""Renders Claude/Codex agent and hook config text from the single-source
-harness/ files. Kept import-only (no side effects) so a later installer can
-call these functions directly.
-"""
 import json
 import re
 

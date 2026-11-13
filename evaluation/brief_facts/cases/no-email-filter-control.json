@@ -1,0 +1,43 @@
+{
+  "id": "no-email-filter-control",
+  "repo": "trycompai/crm@c9473b82e3b4bfd5d0598bbdf7c1f36f3d2d68f0",
+  "task": "연락처 목록에 '이메일 없음' 필터를 추가해줘. 담당자 필터에 '미지정'이 있는 것처럼.",
+  "hidden_context": [
+    "Reps want to find contacts the agent cannot match to mail because they have no address, and add one by hand.",
+    "Nothing else about the product bears on this change."
+  ],
+  "unknowns": [],
+  "repo_answerable": [
+    {
+      "id": "R1",
+      "question": "where list facets are defined, applied and counted",
+      "evidence": "apps/api/src/contacts/contacts.contracts.ts:14-24; apps/api/src/contacts/contacts.service.ts:807-818 (buildWhere) and 838-893 (facetCounts)"
+    },
+    {
+      "id": "R2",
+      "question": "how the 'unassigned' option of the owner filter works",
+      "evidence": "apps/api/src/trpc/list-input.ts:67-82 (FACET_UNASSIGNED sentinel, ownerFilter)"
+    },
+    {
+      "id": "R3",
+      "question": "whether archived contacts are included",
+      "evidence": "apps/api/src/contacts/contacts.service.ts:813 and 843 archivedFilter; docs/api.md:240-244"
+    },
+    {
+      "id": "R4",
+      "question": "whether a contact without an address is stored as null or as an empty string",
+      "evidence": "apps/api/src/crm/values.ts:25-27 normalizeEmail turns a blank into null; apps/api/src/contacts/contacts.service.ts:264 and 476-478"
+    },
+    {
+      "id": "R5",
+      "question": "where the filter menu lives in the UI and which components it must use",
+      "evidence": "apps/app/app/(app)/[slug]/contacts/contacts-table.tsx; AGENTS.md (packages/ui is the single source of UI)"
+    }
+  ],
+  "dont_care": [
+    "names of internal functions or files",
+    "test file naming",
+    "the label text of the new option",
+    "the option's position in the menu"
+  ]
+}

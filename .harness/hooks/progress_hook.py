@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""PostToolUse feedback and Stop blocks exit 2 with the message on stderr;
-UserPromptSubmit and PreCompact notices, and the PreToolUse rule text for Write, Edit, and MultiEdit,
-go to stdout with exit 0.
-"""
 import datetime
 import json
 import os

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PreToolUse isolation / PostToolUse / PostToolUseFailure telemetry. Always
 exits 0 with empty stdout: a non-zero exit or stray output here would block or
-corrupt the calling agent's tool loop (U5).
+corrupt the calling agent's tool loop.
 """
 import json
 import sys
@@ -50,7 +50,6 @@ def parse_spec_version(path: Path):
 
 
 def match_seed(command: str):
-    """Return (action, is_seed_invocation)."""
     tokens = command.split()
     for i, tok in enumerate(tokens):
         if tok == SEED_SCRIPT or tok.endswith("/" + SEED_SCRIPT):

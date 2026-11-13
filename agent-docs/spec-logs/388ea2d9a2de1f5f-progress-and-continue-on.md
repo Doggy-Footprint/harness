@@ -254,8 +254,5 @@ Execution ledger (append attempts; preserve failed approaches):
 ## 2026-10-29
 | observation | evidence | how to re-check |
 | --- | --- | --- |
-| System `python3` lacks pytest and hypothesis; plain `python3 -m unittest discover -s tests` reports import errors for test_session_metrics and test_isolation_telemetry | first Test command run of this spec: `ModuleNotFoundError: No module named 'pytest'` / `'hypothesis'` | `python3 -c "import pytest, hypothesis"` |
 | In Bash, `CLAUDE_CODE_SESSION_ID` equals the transcript file id; `CLAUDE_SESSION_ID` is not set | 2026-10-28: env value `1f08ec89-…` matched `~/.claude/projects/<project>/1f08ec89-….jsonl` | `echo $CLAUDE_CODE_SESSION_ID` and compare with the newest transcript file name |
-| Pre-existing tests hard-code VERSION and per-migration `y` answer counts, so a version bump fails about 16 tests across 5 files | Test command run 1 failure list (ledger attempt 1) | `grep -rn '"0\.33\.0"\|"y\\n' tests/` |
-| This macOS shell has no `timeout`; zsh treats a word starting with `=` as a command lookup (`echo ======` fails) | command output in this session | `which timeout`; `zsh -c 'echo ===='` |
 

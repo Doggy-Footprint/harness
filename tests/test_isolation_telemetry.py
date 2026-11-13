@@ -713,7 +713,7 @@ class TestO7ErrorGuessingAndRandom(HookCase):
         self.assert_silent_success(result)
         result = self.fire(self.ti("Bash", {"command": "go test ./..."}))
         self.assert_silent_success(result)
-        self.read_events(self.telemetry_dir, self.repo)  # every written line must be complete JSON
+        self.read_events(self.telemetry_dir, self.repo)
 
     @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root ignores chmod")
     def test_e4_chmod_zero_spec(self):

@@ -1313,19 +1313,19 @@ class TestMigration044(InstallerTestCase):
         spec_bytes, keep_bytes = spec.read_bytes(), keep.read_bytes()
         result = self.update(repo)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(self.announced(result), ["0.44.0", "0.45.0"], result.stdout)
+        self.assertEqual(self.announced(result), ["0.44.0", "0.45.0", "0.47.0"], result.stdout)
         self.assert_plan(result)
         self.assertFalse(active.exists())
         self.assertEqual(spec.read_bytes(), spec_bytes)
         self.assertEqual(keep.read_bytes(), keep_bytes)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.45.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.47.0")
 
     def test_dry_run_announces_the_migration_and_deletes_nothing(self):
         repo, spec, keep, active, manifest_path = self.prepare()
         before = self.snapshot(repo)
         result = self.update(repo, dry=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(self.announced(result), ["0.44.0", "0.45.0"], result.stdout)
+        self.assertEqual(self.announced(result), ["0.44.0", "0.45.0", "0.47.0"], result.stdout)
         self.assert_plan(result)
         self.assertTrue(active.is_file())
         self.assertEqual(self.snapshot(repo), before)
@@ -1371,10 +1371,10 @@ class TestMigration044(InstallerTestCase):
         spec_bytes = spec.read_bytes()
         result = self.update(repo)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(self.announced(result), ["0.44.0", "0.45.0"], result.stdout)
+        self.assertEqual(self.announced(result), ["0.44.0", "0.45.0", "0.47.0"], result.stdout)
         self.assertFalse(active.exists())
         self.assertEqual(spec.read_bytes(), spec_bytes)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.45.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.47.0")
 
 
 class TestSkillAbortOrder(SpecCase):

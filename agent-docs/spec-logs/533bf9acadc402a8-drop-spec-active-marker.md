@@ -254,7 +254,4 @@ Execution ledger (append attempts; preserve failed approaches):
 ## 2026-11-13
 | observation | evidence | how to re-check |
 | --- | --- | --- |
-| rsync of the working tree while a Claude session runs fails with exit 23 when `.git/index.lock` or a file under `.harness/sessions/` vanishes mid-copy | two hand-mutation copies failed at setup; excluding those two paths made the copies succeed | run `rsync -a` of the repo during an active session |
-| `.active` written by harness 0.43.0 and earlier holds the bare spec file name, not a repo path; fixtures in the repo-path form let a mutation that deletes `.active` naming the moved spec survive | base_commit 7983e9d `cmd_start` writes `path.name + "\n"`; mutation N1 survived until fixtures used the bare name | `git show 7983e9d:harness/bin/spec_lifecycle.py` |
-| adding a migration breaks older-version update tests that feed a fixed number of prompt answers (EOF at `Apply migration`) or count confirmation lines | 6 failures after adding 0.44.0 in test_doc_records and test_installer | `grep -n '"y\\n" \*' tests/*.py` |
-| on this development machine a live process owned by another uid outside the test process's ancestor chain exists, so the PermissionError liveness test ran instead of skipping | `test_permission_error_liveness_counts_as_another_live_session` ran and passed | `ps -axo pid=,uid=` and compare with the ancestor chain |
+| none | the other observations are reproduced at once by running the test suite or recovered from git history | — |

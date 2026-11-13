@@ -8,8 +8,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-# managers are tried in order and the first lockfile present wins;
-# fallback None blocks the language when no lockfile matches.
 LANGUAGES = (
     {
         "language": "python",
