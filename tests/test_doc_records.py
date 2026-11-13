@@ -24,10 +24,7 @@ RETRO_ROW = "## 2026-10-25\n| observation | evidence | how to re-check |\n| --- 
 
 class DocRecordsTestCase(InstallerTestCase):
     def installed(self, *args):
-        repo = self.make_repo()
-        result = run_installer("install", str(repo), "--no-ci", *args)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        return repo, result
+        return self.installed_copy("--no-ci", *args)
 
     def commit_all(self, repo, message="base"):
         run_git(repo, "add", "-A")

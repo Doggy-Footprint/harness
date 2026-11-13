@@ -416,9 +416,7 @@ class TestHookErrors(ProgressCase):
 
 class TestVerifyRulesMessages(InstallerTestCase):
     def installed(self):
-        repo = self.make_repo()
-        result = run_installer("install", str(repo), "--no-ci")
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        repo = self.installed_copy("--no-ci")[0]
         return repo
 
     def verify(self, repo):

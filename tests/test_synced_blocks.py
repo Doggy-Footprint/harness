@@ -98,9 +98,7 @@ class SyncedCase(InstallerTestCase):
     docs = "agent-docs"
 
     def installed(self, docs_root=None):
-        repo = self.make_repo()
-        result = run_installer("install", str(repo), "--no-ci")
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        repo = self.installed_copy("--no-ci")[0]
         if docs_root:
             (repo / ".harness" / "config.json").write_text(json.dumps({"docs_root": docs_root}))
             self.docs = docs_root

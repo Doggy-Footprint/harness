@@ -4,7 +4,7 @@ import stat
 import subprocess
 import sys
 
-from test_installer import InstallerTestCase, run_git, run_installer
+from test_installer import InstallerTestCase, run_git
 
 COMMIT_WARNING = "commit-msg: the message has no"
 PR_REMINDER = "five-minute standup introduction"
@@ -12,9 +12,7 @@ PR_REMINDER = "five-minute standup introduction"
 
 class MessageNudgeTestCase(InstallerTestCase):
     def installed(self):
-        repo = self.make_repo()
-        result = run_installer("install", str(repo), "--no-ci")
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        repo = self.installed_copy("--no-ci")[0]
         return repo
 
     def commit(self, repo, message, *extra):
