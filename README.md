@@ -34,7 +34,7 @@ python3 installer/harness.py doctor <target>
 | --- | --- |
 | `.harness/` | 버전별 payload, 스크립트, 소유 파일의 SHA manifest |
 | `AGENTS.md`, `CLAUDE.md` | 프로젝트 정의와 관리형 문서 규칙 (`CLAUDE.md`는 `@AGENTS.md` 참조) |
-| `.agents/skills/`, `.claude/skills/` | `workflow-approach`, `requirement-oracle`, `architecture-options`, `harness-import`, `test-audit`, `rearrange-docs`, `continue-on` |
+| `.agents/skills/`, `.claude/skills/` | `workflow-approach`, `continue-on` |
 | `.claude/agents/` | `implementer`, `test-implementer`, `test-verifier`, `mutant-triager`, `code-explorer` |
 | `.claude/settings.json` | 세션·서브에이전트·도구 훅. `gh pr create`/`gh pr edit` 뒤에는 PR 설명을 5분 standup 소개 기준으로 쓰라고 상기시킴. 사용자 프롬프트를 마스킹해 progress에 기록하고, 파일을 처음 바꾼 세션에 progress가 없으면 `[harness-requires]` 자리표시자가 든 뼈대를 한 번 만들고(바꾼 파일이 모두 `agent-docs/`의 기록뿐이면 hook이 `### Changes`와 `### User Requests`를 관리하는 `kind: record-only` progress를 만들고, 이후 코드를 바꾸면 전체 progress로 바꾸고)(다른 세션이 실행 중이라 이동이 거부되면 안내만 하고), 알 수 없는 `session:` 값은 현재 세션 id로 채우고, progress 없이 끝나려 하면 한 번 막음. `agent-docs/`의 규칙 디렉터리에 세션 처음으로 Write/Edit/MultiEdit 하면 그 규칙 파일 본문을 컨텍스트로 추가함 |
 | `.harness/bin/records.py` | `stale <path>`는 기록을 `stale/`로 옮기고 index 항목을 `stale.md`로 옮김, `synced-refresh <id>`는 동기화 주석의 count·code_hash·version·태그를 갱신 |
@@ -54,7 +54,7 @@ python3 installer/harness.py doctor <target>
 
 기능·수정 수준의 구현과 디버깅에는 [`workflow-approach`](harness/skills/workflow-approach/SKILL.md)를 씁니다. 단순 문서 수정이나 이름 변경에는 쓰지 않습니다.
 
-1. **Spec**: 메인 에이전트가 이해한 내용을 제시하고, 사용자 확인을 거쳐 `agent-docs/specs/`에 spec을 쓰고 채팅 브리프로 승인받습니다. 미결정 사항은 `requirement-oracle`이 돕습니다.
+1. **Spec**: 메인 에이전트가 이해한 내용을 제시하고, 사용자 확인을 거쳐 `agent-docs/specs/`에 spec을 쓰고 채팅 브리프로 승인받습니다.
    - 브리프는 질문(되돌리기 어려운 결정), 사용자가 거부할 수 있는 기본값, 새 개념 설명으로 나뉘며 파일로 남기지 않습니다.
 2. **구현 + 테스트**: `implementer`와 `test-implementer`가 서로의 결과물을 보지 않고 병렬로 작업합니다.
 3. **검증**: `test-verifier`가 증거를 감사하고, 메인 에이전트가 결함을 주입해 테스트가 잡는지 확인합니다. 검증 호출은 실행당 최대 2회입니다.
@@ -79,7 +79,6 @@ python3 installer/harness.py doctor <target>
 - 커밋 전 Git hook이 파일명, index/stale 구조, 동기화 주석 메타데이터, 필수 제목을 검사합니다.
 - `agent-docs/` 문서(`index.md`, `stale.md` 제외)의 frontmatter `commit`은 hook이 마지막 작성 시점의 HEAD로 채웁니다.
 - 커밋 메시지에는 작업을 요청한 user 요청(`Request:`)과 의도(`Intent:`)를, PR 설명은 프로젝트를 모르는 사람에게 하는 5분 standup 소개 기준으로 씁니다.
-- 규칙이 바뀐 뒤 기존 문서를 현재 규칙에 맞게 다시 쓰려면 `/rearrange-docs`를 실행합니다.
 
 ## 갱신과 점검
 
@@ -98,7 +97,7 @@ python3 installer/harness.py import <target> --json
 | `update --no-commit` | 경고와 커밋 없이 갱신만 합니다. |
 | `update --all` | 지금까지 `install`/`update`한 저장소(`.harness-targets.json`)를 모두 갱신합니다. |
 | `doctor` | manifest SHA, hook 설정, 관리 블록, Git hook 연결을 읽기 전용으로 점검합니다. |
-| `import` | 설치본과 원본의 차이를 보여 줍니다. 반영 여부는 [`harness-import`](harness/skills/harness-import/SKILL.md) 스킬로 검토합니다. |
+| `import` | 설치본과 원본의 차이를 보여 줍니다. |
 
 여러 디렉터리를 주면 하나가 실패해도 나머지를 계속 처리하고, 하나라도 실패하면 종료 코드 1을 반환합니다.
 
