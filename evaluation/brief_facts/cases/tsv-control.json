@@ -1,0 +1,17 @@
+{
+  "id": "tsv-control",
+  "repo": "firecrawl/anydoc@e7178e099b6bf9171e2c52b832cbdb4134b69112",
+  "task": "`.tsv` 파일도 변환되게 해줘. 지금은 확장자를 못 알아봐.",
+  "hidden_context": [
+    "The user's customers upload tab-separated exports from an analytics tool, UTF-8, with a .tsv extension.",
+    "Nothing else about the product bears on this change."
+  ],
+  "unknowns": [],
+  "repo_answerable": [
+    {"id": "R1", "question": "whether tab-delimited content already parses", "evidence": "src/formats/csv.rs sniff_delimiter handles tab"},
+    {"id": "R2", "question": "where extensions map to formats", "evidence": "src/lib.rs Format::from_extension"},
+    {"id": "R3", "question": "whether the Node, Python and wasm bindings need their own change", "evidence": "all three delegate to anydoc::Format::from_extension"},
+    {"id": "R4", "question": "whether tsv should be a new Format variant or an alias", "evidence": "src/lib.rs: extension aliases (xls, docm, ppsx) map onto existing variants"}
+  ],
+  "dont_care": ["names of internal functions or files", "test file naming", "wording of the help text"]
+}

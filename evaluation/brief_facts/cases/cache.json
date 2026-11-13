@@ -1,0 +1,29 @@
+{
+  "id": "cache",
+  "repo": "firecrawl/anydoc@e7178e099b6bf9171e2c52b832cbdb4134b69112",
+  "task": "같은 문서를 반복해서 변환하는 일이 많은데 그때마다 느려. 변환 결과 캐시 넣어줘.",
+  "hidden_context": [
+    "The user calls anydoc from a long-running Node.js API service (the backend of a contract-review product) through toMarkdownBytes.",
+    "The service runs as 6 replicas behind a load balancer, 1 GiB memory each. Redis is already part of the stack.",
+    "Local conversion is not the slow part. The slow documents are scanned PDF contracts that go through ocr: 'hosted': 8 to 20 seconds each, and billed per page.",
+    "About 35% of requests are repeats: the same document requested again by other users of the same tenant within days.",
+    "Document bytes come from object storage and never change after upload; each object already has a content hash.",
+    "The contracts are confidential. Cached output must be isolated per tenant, must be deleted when the tenant deletes the document, and must not sit in plaintext on local disk.",
+    "anydoc is upgraded monthly and its output changes between versions."
+  ],
+  "unknowns": [
+    {"id": "U1", "fact": "which conversions are slow and how slow (the README states a median under 5 ms)", "settles": "what to cache: local conversion versus the hosted OCR round trip"},
+    {"id": "U2", "fact": "how anydoc is run: one-shot CLI, or a long-lived process, and through which binding", "settles": "where a cache can live and in which layer (Rust core, Node, Python)"},
+    {"id": "U3", "fact": "how many processes or instances serve conversions", "settles": "in-process cache versus a shared store"},
+    {"id": "U4", "fact": "how a repeated document is recognized, and whether its content can change", "settles": "cache key and invalidation"},
+    {"id": "U5", "fact": "how sensitive the documents are and whether cached output has isolation or deletion requirements", "settles": "storage medium, tenant isolation, retention"},
+    {"id": "U6", "fact": "the memory or storage budget and typical document size", "settles": "capacity and eviction"}
+  ],
+  "repo_answerable": [
+    {"id": "R1", "question": "whether anydoc already caches anything", "evidence": "no cache in src/, node/, python/"},
+    {"id": "R2", "question": "how fast local conversion is", "evidence": "README.md benchmark: median 4.4 ms"},
+    {"id": "R3", "question": "whether hosted OCR is a network call", "evidence": "node/anydoc.js parseHosted"},
+    {"id": "R4", "question": "whether the core keeps state between conversions", "evidence": "src/lib.rs: pure functions"}
+  ],
+  "dont_care": ["names of internal functions or files", "which hash crate or function", "test file naming"]
+}
