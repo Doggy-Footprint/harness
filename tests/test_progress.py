@@ -111,9 +111,7 @@ def split_requests(text):
 
 class ProgressCase(InstallerTestCase):
     def new_repo(self):
-        repo = self.make_repo()
-        result = run_installer("install", str(repo), "--no-ci")
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        repo = self.installed_copy("--no-ci")[0]
         (repo / "src").mkdir()
         (repo / "src" / "a.py").write_text("a = 1\n")
         (repo / "src" / "b.py").write_text("b = 1\n")

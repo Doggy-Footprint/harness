@@ -53,21 +53,49 @@ def run_git(cwd, *args):
     )
 
 
+_TEMPLATE_DIR = tempfile.TemporaryDirectory()
+_INSTALLED_TEMPLATES = {}
+
+
+def init_repo(repo):
+    run_git(repo, "init", "-q")
+    run_git(repo, "config", "user.email", "test@test.com")
+    run_git(repo, "config", "user.name", "test")
+
+
 class InstallerTestCase(unittest.TestCase):
     def make_repo(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         repo = Path(tmp.name)
-        run_git(repo, "init", "-q")
-        run_git(repo, "config", "user.email", "test@test.com")
-        run_git(repo, "config", "user.name", "test")
+        init_repo(repo)
         return repo
 
-    def install(self):
+    def fresh_install(self):
         repo = self.make_repo()
         result = run_installer("install", str(repo))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return repo
+
+    def install(self):
+        return self.installed_copy()[0]
+
+    def installed_copy(self, *args):
+        key = (args, tuple(sorted(os.environ.items())))
+        if key not in _INSTALLED_TEMPLATES:
+            template = Path(_TEMPLATE_DIR.name) / str(len(_INSTALLED_TEMPLATES))
+            template.mkdir()
+            init_repo(template)
+            env = dict(os.environ, HARNESS_TARGETS_FILE=str(template.with_suffix(".targets.json")))
+            result = run_installer("install", str(template), *args, env=env)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            _INSTALLED_TEMPLATES[key] = (template, result)
+        template, result = _INSTALLED_TEMPLATES[key]
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        repo = Path(tmp.name) / "repo"
+        shutil.copytree(template, repo, symlinks=True)
+        return repo, result
 
     def snapshot(self, repo):
         files = {}
@@ -662,8 +690,8 @@ class TestBoundary(InstallerTestCase):
         targets_file = Path(os.environ["HARNESS_TARGETS_FILE"])
         targets_file.unlink(missing_ok=True)
         self.addCleanup(targets_file.unlink, missing_ok=True)
-        first, second = self.install(), self.install()
-        gone, uninstalled = self.install(), self.install()
+        first, second = self.fresh_install(), self.fresh_install()
+        gone, uninstalled = self.fresh_install(), self.fresh_install()
         recorded = json.loads(targets_file.read_text())
         self.assertEqual(recorded, [str(r.resolve()) for r in (first, second, gone, uninstalled)])
         shutil.rmtree(gone)

@@ -5,7 +5,7 @@ import sys
 import unittest
 from pathlib import Path
 
-from test_installer import InstallerTestCase, run_git, run_installer
+from test_installer import InstallerTestCase, run_git
 from test_synced_blocks import (ID, ID2, STUB_HASH, SyncedCase, block_of, r1, r2, ref_hash, sync_lines_a, sync_lines_b, tag,
                                 end, tracking_text)
 
@@ -184,9 +184,7 @@ class TestSyncedRefresh(SyncedCase):
 
 class StaleCase(InstallerTestCase):
     def stale_repo(self, names=(A, B, C), header=STALE_HEADER, stale_dir=True, directory="agent-docs/notes"):
-        repo = self.make_repo()
-        result = run_installer("install", str(repo), "--no-ci")
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        repo = self.installed_copy("--no-ci")[0]
         folder = repo / directory
         folder.mkdir(parents=True, exist_ok=True)
         for name in names:

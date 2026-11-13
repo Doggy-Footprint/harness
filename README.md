@@ -107,9 +107,10 @@ python3 installer/harness.py import <target> --json
 
 ```bash
 python3 installer/harness.py update . --no-commit
-python3 -m unittest discover -s tests
+python3 tests/run_parallel.py
 ```
 
+- `tests/run_parallel.py`는 테스트를 클래스 단위(최대 8개씩)로 나눠 CPU 코어 수만큼 병렬로 실행합니다. `-j N`으로 동시 실행 수를 정하고, `python3 tests/run_parallel.py test_progress`처럼 모듈을 지정할 수 있습니다. 직렬 실행(`python3 -m unittest discover -s tests`)도 그대로 동작합니다.
 - 버전을 올리면 [`installer/harness.py`](installer/harness.py)에 버전별 migration을 추가합니다.
 - skill, rule, README 문구를 바꿀 때는 `HARNESS_TEXT_TESTS=1 python3 -m unittest discover -s tests`로 실행하세요. 문구 검사는 기본으로 건너뜁니다.
 - 에이전트는 `harness/agents/`, 훅은 `harness/hooks/hooks.spec.json`에서 관리하며 [`installer/generate.py`](installer/generate.py)가 생성합니다.
