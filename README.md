@@ -112,6 +112,7 @@ python3 -m unittest discover -s tests
 ```
 
 - 버전을 올리면 [`installer/harness.py`](installer/harness.py)에 버전별 migration을 추가합니다.
+- skill, rule, README 문구를 바꿀 때는 `HARNESS_TEXT_TESTS=1 python3 -m unittest discover -s tests`로 실행하세요. 문구 검사는 기본으로 건너뜁니다.
 - 에이전트는 `harness/agents/`, 훅은 `harness/hooks/hooks.spec.json`에서 관리하며 [`installer/generate.py`](installer/generate.py)가 생성합니다.
 
 ## 하네스 평가

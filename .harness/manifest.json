@@ -1,8 +1,8 @@
 {
-  "version": "0.43.0",
+  "version": "0.44.0",
   "files": {
     ".harness/config.default.json": "04aab9383dd877c1cea87ab9a9a1682da9f5de5e5d01fc2e9d871d9f2bb710c7",
-    ".harness/VERSION": "45cf252eabfb9874cf77978f8074fddb21798cd05a2ba646116b3999024fd35d",
+    ".harness/VERSION": "2e67466499d10d356b662dee575193faed47851ad2cd230d762d2d5b4231118f",
     ".harness/instructions/index-and-staleness.md": "157f71501f19c6701ffe76f4232237adf708bda1b8377837f745ae11d6a33561",
     ".harness/instructions/progress.md": "ea2d6af3c43b74a0e031bee19f7eb99561ee67b9e6e3bf27a7285716f29d951c",
     ".harness/instructions/try-n-fail.md": "c5ea1c085e6746cf69018d7674705d1a76c73ccc3995f421b718031f5245ae01",
@@ -10,7 +10,7 @@
     ".harness/instructions/harness-block.md": "0055e0c7dc1fc6f9a7d567ca0f306a19d0459e3c27e3d1e929fc2ff4323e032c",
     ".harness/instructions/synced-comments.md": "8c205f5b107c1e25a73ce3691b3e5fcd66cc5300d0c9db887e8dde36b1aa89ca",
     ".harness/bin/workflow_marker.py": "f6413c2d0d2121639d7cd13cd632d8b6578406163d22de6701cddbcdc3232308",
-    ".harness/bin/spec_lifecycle.py": "fcc2ec2c5460c21fe0b19cb1ab24d6cf213f4475116c7ad34a0ab6008e5f8f16",
+    ".harness/bin/spec_lifecycle.py": "f25dec258d2110bedbe8b25f44e151b0395b5f1e671637ac8f257f9b977797f6",
     ".harness/bin/records.py": "54ce926c9b7e8276b60656f3911c555e0d30f2962ebf3771105c0633e965e842",
     ".harness/bin/test_scan.py": "22b95efacd40bb972026e838c3140f6f382020c39ddac493a1ec2b015de19054",
     ".harness/bin/seed.py": "f15b194b90812d09eb778b7e2fff9cf24d68629a7b00ad7d4e359c71ad54b430",
@@ -21,7 +21,7 @@
     ".harness/agents/mutant-triager.md": "dd36ac9857f7970cf73e8e8a327dc85780a90208f6bafc7c0627dec174e8136d",
     ".harness/agents/implementer.md": "839f07bb0144969e5572489a3198fe227b6029b70eb004977d69300e691046a6",
     ".harness/agents/test-verifier.md": "68f8ec9dab17828525268adf007ff7cd2e902064d3a867d8dbb1babeb55267c0",
-    ".harness/hooks/progress_hook.py": "51c39133b67f8050fdf6292085764e4d432f8a7add6374d80fd3b54c784e53ee",
+    ".harness/hooks/progress_hook.py": "03ed79a9f1258ccece86c5cd64c80aa9308191156f78d7ad2c3e2140efdd9887",
     ".harness/hooks/doc_commit.py": "f3027e72682261e97c6cf13f1d2243f5b5eb231b0a4678bf2445933d06f185de",
     ".harness/hooks/spec_gate.py": "81a40d87ca6b97fec0c3fe608291aa85069ee233169c7fff0e24ad8b6d889db7",
     ".harness/hooks/session_lock.py": "858677ada28f00bfb920b26710bc114774b72a3007e45fc80bfc2fd05f4a6564",
@@ -29,6 +29,7 @@
     ".harness/hooks/hooks.spec.json": "1a90b7220f0055081a518b062390b75d67deea2595a9eafb20a4b38178c6f7df",
     ".harness/hooks/pr_message_nudge.py": "d6b27292389f4b808d31afb01e4ae5f39dee026def7653804d97cb13086f67e5",
     ".harness/lib/isolation.py": "d476429373ab6e1e5d1018d2d63739ff100ae4baafe5642fcbfb7215e6736f45",
+    ".harness/lib/spec_state.py": "eee383691a51cf3e4699bd8897bc9694d362bd9aaffd05932f01b8b0d96eeba7",
     ".harness/lib/config.py": "ed93ce7b357e5f5ede43bd68c2b4598151775f21b4ddd98eac88fc5e2c264ef5",
     ".harness/lib/synced.py": "17a469fe87b5359542517e161e2add2b6690175d5bee8b351c5d6927036cf762",
     ".harness/lib/telemetry.py": "b155c249622e95d3d0f1116073e190102191c713c5de083435856101c097c53f",
@@ -47,7 +48,7 @@
     ".harness/skills/continue-on/SKILL.md": "6075286c951c61f7c20018f5b76f4439a6606ad966502ecc04ec82bf7fec279d",
     ".harness/skills/rearrange-docs/SKILL.md": "227edde54de516de33f5898503eaaa2062bef3d4853d9a1009ed736835c11e92",
     ".harness/skills/requirement-oracle/SKILL.md": "a33c88467b40088c0c73b19f9b075e90ee00cee4e76528bad4563dae90025261",
-    ".harness/skills/workflow-approach/SKILL.md": "7cab0cc7b012479542ba639eb5b50cc333e1a54a3d1ce88c48df62a25390c244",
+    ".harness/skills/workflow-approach/SKILL.md": "e3a6c9e8604f3fbadc7a679afe897ff38f72f066ec4283f6f125f1c94c6a6135",
     ".harness/skills/architecture-options/SKILL.md": "823b98a7677813aec396750337c10474bbd445a64d961277a80c8f825dc9f3a9",
     ".harness/skills/test-audit/SKILL.md": "67c595b9e3361bebb486618c1e3c9fc610b84826512e5d6caba490863c80c5a5",
     ".harness/skills/rearrange-docs/agents/openai.yaml": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
@@ -92,7 +93,7 @@
     ".agents/skills/test-audit/languages/ruby.md": "548aaa25eb834944cf477725cd23cbdf79c5c2747728be877404766cb6a0bfb1",
     ".agents/skills/test-audit/languages/rust.md": "19a0571fc0a03ce71cd9e59cd07839efffa92b4815a7bfb1b088e5b8e9e60316",
     ".agents/skills/test-audit/languages/swift.md": "411932ab1d02ca88f5debc8ce9c753f3f00fa694c5e86807b408188457cefa75",
-    ".agents/skills/workflow-approach/SKILL.md": "7cab0cc7b012479542ba639eb5b50cc333e1a54a3d1ce88c48df62a25390c244",
+    ".agents/skills/workflow-approach/SKILL.md": "e3a6c9e8604f3fbadc7a679afe897ff38f72f066ec4283f6f125f1c94c6a6135",
     ".github/workflows/harness-comment-warning.yml": "be0bb60cbfcb8e3eb7b16241f21fab8f3c763b8fcc1dfc57d434331523364e8a"
   }
 }

@@ -188,7 +188,19 @@ def sync_requests(path: Path, session_id: str | None) -> None:
     write_progress(path, progress.sync_user_requests(original, prompts), original)
 
 
+def print_spec_notice() -> None:
+    try:
+        import spec_state
+
+        spec_state.print_notice()
+        sys.stdout.flush()
+    except Exception:
+        # A broken spec directory or config must not fail session start.
+        pass
+
+
 def on_session_start(payload: dict) -> int:
+    print_spec_notice()
     session_id = session_id_of(payload)
     if not session_id or not git_ready():
         return 0

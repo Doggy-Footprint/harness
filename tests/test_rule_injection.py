@@ -8,6 +8,7 @@ from pathlib import Path
 from test_installer import REPO_ROOT, run_git, run_installer
 from test_lazy_rules import split_sections
 from test_progress import ProgressCase
+from text_checks import text_test
 
 INSTRUCTIONS = ".harness/instructions"
 RULE_FILES = ("progress.md", "index-and-staleness.md", "try-n-fail.md", "todos.md", "synced-comments.md")
@@ -247,6 +248,7 @@ class TestRuleText(unittest.TestCase):
     def payload(self, *parts):
         return (REPO_ROOT / "harness" / Path(*parts)).read_text()
 
+    @text_test
     def test_rule_files_section_of_the_block_equals_the_expected_text_in_source_and_install(self):
         for label, text in (("payload", self.payload("instructions", "harness-block.md")),
                             ("installed", (self.repo / INSTRUCTIONS / "harness-block.md").read_text())):
@@ -255,23 +257,28 @@ class TestRuleText(unittest.TestCase):
                 self.assertEqual([h for h, _ in sections].count("## Rule Files"), 1)
                 self.assertEqual(dict(sections)["## Rule Files"].rstrip("\n"), S10.rstrip("\n"))
 
+    @text_test
     def test_synced_comments_rule_names_end_markers_block_hash_and_refresh_command(self):
         text = self.payload("instructions", "synced-comments.md")
         for needle in ("synced end:", "synced-refresh"):
             with self.subTest(needle=needle):
                 self.assertIn(needle, text)
 
+    @text_test
     def test_index_rule_names_the_stale_command(self):
         self.assertIn("records.py stale", self.payload("instructions", "index-and-staleness.md"))
 
+    @text_test
     def test_progress_rule_describes_the_record_only_kind(self):
         self.assertIn("record-only", self.payload("instructions", "progress.md"))
 
+    @text_test
     def test_continue_on_skill_notes_that_record_only_progress_is_skipped(self):
         text = self.payload("skills", "continue-on", "SKILL.md")
         self.assertIn("record-only", text)
         self.assertIn("progress-logs", text)
 
+    @text_test
     def test_readme_mentions_records_command_and_record_only_progress(self):
         text = (REPO_ROOT / "README.md").read_text()
         self.assertIn("records.py", text)
