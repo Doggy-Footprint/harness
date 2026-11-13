@@ -989,6 +989,23 @@ def migrate_synced_blocks(target: Path, dry_run: bool) -> list[str]:
     return planned
 
 
+def migrate_drop_active_marker(target: Path, dry_run: bool) -> list[str]:
+    planned = [
+        "spec lifecycle: agent-docs/specs/.active is no longer read or written; update deletes a leftover one",
+        "spec lifecycle: `start` refuses while .seed/ holds an unrestored seed backup",
+        "spec lifecycle: `abort --spec PATH` archives a spec as aborted and refuses while another live harness "
+        "session exists unless `--other-sessions-confirmed` is given",
+        "SessionStart: the progress hook prints a spec notice (unrestored seed, open and unarchived specs, leftover subagent markers)",
+    ]
+    if dry_run:
+        return planned
+    docs_root, _ = _target_docs_settings(target)
+    marker = docs_root / "specs" / ".active"
+    if marker.is_file() and not marker.is_symlink():
+        marker.unlink()
+    return planned
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -1052,6 +1069,11 @@ MIGRATIONS = (
         parse_version("0.43.0"),
         "keep record-only progress in the hook; hash synced blocks between tag and end marker; add records.py and rule injection",
         migrate_synced_blocks,
+    ),
+    (
+        parse_version("0.44.0"),
+        "drop the spec .active marker; add abort, seed refusal at start, and the SessionStart spec notice",
+        migrate_drop_active_marker,
     ),
 )
 

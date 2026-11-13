@@ -7,16 +7,18 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 import config  # noqa: E402
+import spec_state  # noqa: E402
 
-PATHS = config.load_paths()
-REPO_ROOT = config.REPO_ROOT.resolve()
-SPECS_DIR = PATHS.specs.resolve()
-SPEC_LOGS_DIR = PATHS.spec_logs.resolve()
-ACTIVE_MARKER = SPECS_DIR / ".active"
-SEED_DIR = SPECS_DIR / ".seed"
+PATHS = spec_state.PATHS
+REPO_ROOT = spec_state.REPO_ROOT
+SPECS_DIR = spec_state.SPECS_DIR
+SPEC_LOGS_DIR = spec_state.SPEC_LOGS_DIR
+SEED_DIR = spec_state.SEED_DIR
+frontmatter = spec_state.frontmatter
+seed_files = spec_state.seed_files
+TERMINAL = spec_state.TERMINAL
 RUN_ID_RE = re.compile(r"[0-9a-f]{16}")
 COMMIT_RE = re.compile(r"[0-9a-f]{40,64}")
-TERMINAL = {"complete", "limit", "aborted"}
 QUALITY_CHARACTERISTICS = (
     "functional suitability",
     "performance efficiency",
@@ -49,29 +51,6 @@ REQUIRED_HEADINGS = (
 def fail(message: str) -> int:
     print(f"spec lifecycle: {message}", file=sys.stderr)
     return 1
-
-
-def frontmatter(path: Path) -> dict[str, str]:
-    try:
-        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
-    except OSError:
-        return {}
-    if not lines or lines[0].strip() != "---":
-        return {}
-    values = {}
-    for line in lines[1:]:
-        if line.strip() == "---":
-            return values
-        if ":" in line:
-            key, value = line.split(":", 1)
-            values[key.strip()] = value.strip()
-    return {}
-
-
-def seed_files() -> list[Path]:
-    if not SEED_DIR.is_dir():
-        return []
-    return [path for path in SEED_DIR.rglob("*") if path.is_file()]
 
 
 def validate(path: Path) -> list[str]:
@@ -120,13 +99,6 @@ def validate(path: Path) -> list[str]:
     return errors
 
 
-def active_marker_value() -> str | None:
-    try:
-        return ACTIVE_MARKER.read_text(encoding="utf-8").strip()
-    except OSError:
-        return None
-
-
 def cmd_validate(args) -> int:
     path = Path(args.spec).resolve()
     errors = validate(path)
@@ -135,6 +107,23 @@ def cmd_validate(args) -> int:
             print(f"- {error}", file=sys.stderr)
         return 1
     return 0
+
+
+def seed_refusal() -> str:
+    return f"{SEED_DIR} holds an unrestored seed backup; run `{spec_state.SEED_RESTORE}`"
+
+
+def live_session_refusal(path: Path, confirmed: bool) -> str | None:
+    if confirmed:
+        return None
+    others = spec_state.other_live_sessions()
+    if not others:
+        return None
+    return (
+        f"keeping {path.name}; other harness session(s) are running against this repo: "
+        f"{spec_state.format_sessions(others)}. Ask the user whether any of them runs this workflow, "
+        "then re-run with --other-sessions-confirmed only after the user confirms none does"
+    )
 
 
 def cmd_start(args) -> int:
@@ -147,12 +136,8 @@ def cmd_start(args) -> int:
         return fail("start requires spec status active")
     if values.get("run_id") != args.run_id:
         return fail("--run-id does not match spec frontmatter")
-    SPECS_DIR.mkdir(parents=True, exist_ok=True)
-    current = active_marker_value()
-    if current:
-        if args.resume and current == path.name:
-            return 0
-        return fail(f"another workflow is active: {current}")
+    if seed_files():
+        return fail(f"cannot start; {seed_refusal()}")
     other_active = [
         candidate.name
         for candidate in SPECS_DIR.glob("*.md")
@@ -160,36 +145,98 @@ def cmd_start(args) -> int:
     ]
     if other_active:
         return fail("another workflow is active: " + ", ".join(sorted(other_active)))
-    try:
-        descriptor = os.open(ACTIVE_MARKER, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    except FileExistsError:
-        return fail(f"another workflow is active: {active_marker_value() or 'unknown'}")
-    with os.fdopen(descriptor, "w", encoding="utf-8") as marker:
-        marker.write(path.name + "\n")
     return 0
 
 
-def archive(path: Path, expected_status: str) -> int:
+def archive(path: Path, expected_status: str, confirmed: bool = False) -> int:
     if seed_files():
-        return fail(f"keeping {path}; {SEED_DIR} holds an unrestored seed backup")
+        return fail(f"keeping {path}; {seed_refusal()}")
     values = frontmatter(path)
     if values.get("status") != expected_status or expected_status not in TERMINAL:
         return fail(f"archive requires matching terminal status, got {values.get('status')!r}")
     if path.parent.resolve() != SPECS_DIR or path.suffix != ".md":
-        return fail("refusing to archive a path outside agent-docs/specs")
+        return fail(f"refusing to archive a path outside {spec_state.rel(SPECS_DIR)}")
+    if expected_status == "aborted":
+        refusal = live_session_refusal(path, confirmed)
+        if refusal:
+            return fail(refusal)
     destination = SPEC_LOGS_DIR / path.name
     if destination.exists():
         return fail(f"archive destination already exists: {destination}")
     SPEC_LOGS_DIR.mkdir(parents=True, exist_ok=True)
     path.rename(destination)
-    if active_marker_value() == path.name:
-        ACTIVE_MARKER.unlink(missing_ok=True)
     print(destination.relative_to(REPO_ROOT))
     return 0
 
 
 def cmd_archive(args) -> int:
-    return archive(Path(args.spec).resolve(), args.status)
+    return archive(Path(args.spec).resolve(), args.status, args.other_sessions_confirmed)
+
+
+STATUS_LINE_RE = re.compile(rb"([ \t]*status[ \t]*:[ \t]*)(.*?)([ \t\r\n]*)\Z", re.S)
+
+
+def with_status_aborted(data: bytes) -> bytes | None:
+    lines = data.splitlines(keepends=True)
+    if not lines or lines[0].strip() != b"---":
+        return None
+    index = None
+    for number, line in enumerate(lines[1:], start=1):
+        if line.strip() == b"---":
+            if index is None:
+                return None
+            match = STATUS_LINE_RE.match(lines[index])
+            lines[index] = match.group(1) + b"aborted" + match.group(3)
+            return b"".join(lines)
+        if b":" in line and line.split(b":", 1)[0].strip() == b"status":
+            index = number
+    return None
+
+
+def cmd_abort(args) -> int:
+    path = Path(args.spec).resolve()
+    if path.parent != SPECS_DIR or path.suffix != ".md" or not path.is_file():
+        return fail(f"abort requires an existing direct .md child of {spec_state.rel(SPECS_DIR)}")
+    try:
+        data = path.read_bytes()
+    except OSError as error:
+        return fail(f"cannot read {path.name}: {error.strerror}")
+    rewritten = with_status_aborted(data)
+    if rewritten is None:
+        return fail(f"{path.name} needs a frontmatter block with a status line")
+    status = frontmatter(path).get("status")
+    if status in {"complete", "limit"}:
+        return fail(f"{path.name} is {status}; use archive --status {status}")
+    if status not in {"draft", "active", "aborted"}:
+        return fail(f"{path.name} has status {status!r}; abort needs draft, active, or aborted")
+    if seed_files():
+        return fail(f"cannot abort; {seed_refusal()}")
+    refusal = live_session_refusal(path, args.other_sessions_confirmed)
+    if refusal:
+        return fail(refusal)
+    destination = SPEC_LOGS_DIR / path.name
+    if destination.exists():
+        return fail(f"archive destination already exists: {destination}")
+    SPEC_LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    mode = path.stat().st_mode & 0o777
+    try:
+        descriptor = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
+    except FileExistsError:
+        return fail(f"archive destination already exists: {destination}")
+    try:
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(rewritten)
+    except OSError as error:
+        destination.unlink(missing_ok=True)
+        return fail(f"cannot write {destination}: {error.strerror}")
+    path.unlink()
+    print(destination.relative_to(REPO_ROOT))
+    return 0
+
+
+def cmd_notice(_args) -> int:
+    spec_state.print_notice()
+    return 0
 
 
 def cmd_session(_args) -> int:
@@ -202,9 +249,6 @@ def cmd_session(_args) -> int:
             file=sys.stderr,
         )
         return 0
-    marker_value = active_marker_value()
-    if marker_value and not (SPECS_DIR / marker_value).is_file():
-        ACTIVE_MARKER.unlink(missing_ok=True)
     for path in sorted(SPECS_DIR.glob("*.md")):
         values = frontmatter(path)
         status = values.get("status")
@@ -235,7 +279,14 @@ def parser() -> argparse.ArgumentParser:
     archive_command = commands.add_parser("archive")
     archive_command.add_argument("--spec", required=True)
     archive_command.add_argument("--status", required=True, choices=sorted(TERMINAL))
+    archive_command.add_argument("--other-sessions-confirmed", action="store_true")
     archive_command.set_defaults(handler=cmd_archive)
+    abort = commands.add_parser("abort")
+    abort.add_argument("--spec", required=True)
+    abort.add_argument("--other-sessions-confirmed", action="store_true")
+    abort.set_defaults(handler=cmd_abort)
+    notice = commands.add_parser("notice")
+    notice.set_defaults(handler=cmd_notice)
     session = commands.add_parser("session")
     session.set_defaults(handler=cmd_session)
     return value

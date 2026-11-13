@@ -12,6 +12,7 @@ from pathlib import Path
 
 from test_installer import REPO_ROOT, run_git, run_installer
 from test_progress import NAME0, NAME1, NAME2, ProgressCase, build, frontmatter, load_progress, out, sized
+from text_checks import text_test
 from test_update_commit import UpdateCommitCase
 
 S = "sessa"
@@ -1425,12 +1426,14 @@ def harness_text_files():
 
 
 class TestTextScan(unittest.TestCase):
+    @text_test
     def test_removed_wording_does_not_occur_in_harness_or_readme(self):
         for needle in ("commit: <sha checked against>", "stale: not ancestor"):
             with self.subTest(needle=needle):
                 hits = [str(path.relative_to(REPO_ROOT)) for path, text in harness_text_files() if needle in text]
                 self.assertEqual(hits, [])
 
+    @text_test
     def test_progress_rule_text_contains_the_required_phrases(self):
         text = (REPO_ROOT / "harness" / "instructions" / "progress.md").read_text()
         for phrase in (PLACEHOLDER, "`auto`", "  - files:", "does not decide freshness", "staged", "harness.py update"):
@@ -1446,13 +1449,14 @@ class TestTextScan(unittest.TestCase):
             installed = (repo / ".harness" / "instructions" / "progress.md").read_bytes()
         self.assertEqual(installed, (REPO_ROOT / "harness" / "instructions" / "progress.md").read_bytes())
 
+    @text_test
     def test_readme_mentions_the_placeholder_and_drops_the_one_time_notice_wording(self):
         text = (REPO_ROOT / "README.md").read_text()
         self.assertIn(PLACEHOLDER, text)
         self.assertNotIn("한 번 안내", text)
 
-    def test_version_is_0_43_0(self):
-        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.43.0")
+    def test_version_is_0_44_0(self):
+        self.assertEqual((REPO_ROOT / "harness" / "VERSION").read_text().strip(), "0.44.0")
 
 
 class TestUpdateFrom0410(unittest.TestCase):
@@ -1491,7 +1495,7 @@ class TestUpdateFrom0410(unittest.TestCase):
         result = run_installer("update", str(repo), "--no-ci", "--no-commit", input="y\n" * 20, exact=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         announced = re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE)
-        self.assertEqual(announced, ["0.42.0", "0.43.0"], result.stdout)
+        self.assertEqual(announced, ["0.42.0", "0.43.0", "0.44.0"], result.stdout)
         start = result.stdout.index("migration 0.42.0:")
         positions = []
         for line in S9:
@@ -1499,7 +1503,7 @@ class TestUpdateFrom0410(unittest.TestCase):
             positions.append(result.stdout.index(line, start))
         self.assertEqual(positions, sorted(positions))
         self.assertEqual((repo / "AGENTS.md").read_bytes(), agents)
-        self.assertEqual(json.loads((repo / ".harness" / "manifest.json").read_text())["version"], "0.43.0")
+        self.assertEqual(json.loads((repo / ".harness" / "manifest.json").read_text())["version"], "0.44.0")
         doctor = run_installer("doctor", str(repo))
         self.assertEqual(doctor.returncode, 0, doctor.stdout + doctor.stderr)
 
