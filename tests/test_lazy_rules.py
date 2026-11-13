@@ -563,8 +563,8 @@ class TestMigration0410(InstallerTestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         announced = re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE)
-        self.assertEqual(announced[-1], "0.44.0")
-        self.assertEqual(announced, ["0.41.0", "0.42.0", "0.43.0", "0.44.0"])
+        self.assertEqual(announced[-1], "0.45.0")
+        self.assertEqual(announced, ["0.41.0", "0.42.0", "0.43.0", "0.44.0", "0.45.0"])
         self.assertIn(f"migration 0.41.0: {S6_LABEL}", result.stdout)
         start = result.stdout.index("migration 0.41.0:")
         positions = []
@@ -573,7 +573,7 @@ class TestMigration0410(InstallerTestCase):
             positions.append(result.stdout.index(line, start))
         self.assertEqual(positions, sorted(positions))
         self.assertEqual((repo / "AGENTS.md").read_bytes(), agents_before)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.44.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.45.0")
         for name in MOVED.values():
             self.assertTrue((repo / INSTRUCTIONS / name).is_file(), name)
         block_headings = [h for h, _ in split_sections(read_block(repo))]
@@ -645,24 +645,6 @@ class TestWordingReplacements(InstallerTestCase):
         text = self.installed_text(shared_install(), "continue-on")
         self.assertIn("(`.harness/instructions/progress.md`)", text)
         self.assertNotIn("(Progress Rule in `AGENTS.md`)", text)
-
-    def test_v9_test_audit_skill_points_at_todos_md(self):
-        text = self.installed_text(shared_install(), "test-audit")
-        self.assertIn("following `.harness/instructions/todos.md`:", text)
-        self.assertNotIn("following the Todo Rule in `AGENTS.md`:", text)
-
-    def test_v9_rearrange_docs_skill_points_at_the_rule_files(self):
-        text = self.installed_text(shared_install(), "rearrange-docs")
-        self.assertIn(
-            "the rules live in `.harness/instructions/` (`harness-block.md` and the rule files it lists), manifest files;",
-            text,
-        )
-        self.assertIn(
-            "under the Index & Staleness Management rule in `.harness/instructions/index-and-staleness.md`.",
-            text,
-        )
-        self.assertNotIn("the rules live in `.harness/instructions/harness-block.md`, a manifest file;", text)
-        self.assertNotIn("under the Index & Staleness Management rule.", text)
 
     def test_v9_installer_handoff_template_points_at_the_rule_files(self):
         text = INSTALLER.read_text()

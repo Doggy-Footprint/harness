@@ -9,6 +9,6 @@ Related Files: harness/skills/workflow-approach/SKILL.md, harness/lib/isolation.
 Related Symbols: detect, _dispatch, _harness_hacking, migrate_isolation_telemetry
 ---
 File: d706c17a1d003208-speed-up-test-suite.md
-Summary: Full test suite takes 456-637 s for about 1100 tests; measure the slowest modules, then shorten it
-Related Files: tests/test_installer.py, tests/test_progress.py, tests/test_hook_owned_progress.py
-Related Symbols: run_installer
+Summary: Full test suite takes about 457 s single-core for 1219 tests; git hook commits are only ~10% of it; try per-file parallel runs, then measure hook payload subprocesses
+Related Files: tests/test_installer.py, tests/test_progress.py, tests/test_hook_owned_progress.py, tests/test_doc_records.py, tests/test_message_nudge.py, tests/legacy_migrations.py
+Related Symbols: run_installer, skip_legacy_update, DocRecordsTestCase.commit_all

@@ -989,6 +989,31 @@ def migrate_synced_blocks(target: Path, dry_run: bool) -> list[str]:
     return planned
 
 
+DROPPED_SKILLS_0450 = ("requirement-oracle", "architecture-options", "harness-import", "rearrange-docs", "test-audit")
+
+
+def migrate_drop_skills(target: Path, dry_run: bool) -> list[str]:
+    planned = [
+        "delete .agents/skills/<name>/ for " + ", ".join(DROPPED_SKILLS_0450) + ", and .harness/bin/test_scan.py; "
+        "user-modified files are kept and reported",
+        "workflow-approach no longer points to requirement-oracle",
+        "agent-docs/sync-state.json, written only by rearrange-docs, is left in place",
+    ]
+    links = []
+    for name in DROPPED_SKILLS_0450:
+        link = target / ".claude" / "skills" / name
+        if link.is_symlink() and os.readlink(link) == f"../../.agents/skills/{name}":
+            links.append(link)
+            planned.append(f"remove the .claude/skills/{name} symlink")
+        elif link.exists() or link.is_symlink():
+            planned.append(f".claude/skills/{name} is not the harness symlink; left in place")
+    if dry_run:
+        return planned
+    for link in links:
+        link.unlink()
+    return planned
+
+
 def migrate_drop_active_marker(target: Path, dry_run: bool) -> list[str]:
     planned = [
         "spec lifecycle: agent-docs/specs/.active is no longer read or written; update deletes a leftover one",
@@ -1074,6 +1099,11 @@ MIGRATIONS = (
         parse_version("0.44.0"),
         "drop the spec .active marker; add abort, seed refusal at start, and the SessionStart spec notice",
         migrate_drop_active_marker,
+    ),
+    (
+        parse_version("0.45.0"),
+        "remove the requirement-oracle, architecture-options, harness-import, rearrange-docs, and test-audit skills",
+        migrate_drop_skills,
     ),
 )
 
