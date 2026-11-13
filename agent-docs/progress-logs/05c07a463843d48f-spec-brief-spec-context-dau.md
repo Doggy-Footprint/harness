@@ -3,7 +3,7 @@ session: ba7e2a0d-ff0b-4a0c-b4cf-644931bd9ec8
 before: none
 previous: none
 branch: brief-fact-questions
-commit: 1daddfb8bc845eebabfd370a6fbd3e2ac7959dff
+commit: 7bcaf1e6d779aeb0a71f12fe1d2b732679e3823d
 ---
 
 # Brief: fact questions, user-owned engineering decisions, and a fact-question evaluation
@@ -19,10 +19,12 @@ commit: 1daddfb8bc845eebabfd370a6fbd3e2ac7959dff
   - files: harness/skills/workflow-approach/SKILL.md, evaluation/brief_facts/grader.md
 - comments and docstrings that restated code (module docstrings of verify_rules, progress_hook, isolation, session_metrics, telemetry, generate, workflow_marker; first lines of seed, session_lock, hook_shared; two function docstrings; the pre-commit header; section separators and one restating comment in tests; unresolvable labels U5 and QR3) were removed, and 15 retrospective rows in agent-docs/spec-logs that a test run, an error message, or git history reproduces were removed, leaving a none row where a table emptied
   - files: harness/git/pre-commit, harness/lib/hook_shared.py, agent-docs/spec-logs
+- branch brief-fact-questions is pushed and PR #38 (https://github.com/Doggy-Footprint/harness/pull/38) is open against master with a Korean title and description
+  - files: none
 
 ### Next Step
-- evaluation items 2 to 5 of evaluation/brief_facts/README.md (classification after answers, hidden recommendation in the decision round, fact search, decision cap) are not implemented; item 2 would show whether a choice deferred from the first message reaches the user in the decision round
-  - files: evaluation/brief_facts/README.md
+- evaluation items 2 to 5 of evaluation/brief_facts/README.md (classification after answers, hidden recommendation in the decision round, fact search, decision cap) are not implemented; item 2 would show whether a choice deferred from the first message reaches the user in the decision round; re-checked at 7c1e04d, the README still lists them as not implemented
+  - commit: 7c1e04d; files: evaluation/brief_facts/README.md
 - case-file changes evaluators reported: log-retention lacks an item for comments older than the reconciler's 72-hour lookback, and docs/stack.md names a 0.5 GB plan while its hidden context says 10 GB; mail-backfill lacks items for whether reps already connected need the backfill and how many reps connect at once; several unknowns give full credit to questions that reach part of the fact
   - files: evaluation/brief_facts/cases
 - the user chose a per-person untracked preference file copied into new worktrees; two fact questions sent for it are unanswered: whether other local files should be copied too, and whether collaborators already use installed repositories
@@ -49,8 +51,8 @@ commit: 1daddfb8bc845eebabfd370a6fbd3e2ac7959dff
   - files: evaluation/brief_facts/run_model.py, evaluation/brief_facts/cases/mail-backfill.json
 
 ### Dead Ends
-- the wording "an unknown you are willing to guess belongs under assumptions" moved unknowns behind significant decisions (file count, where it runs) from questions into the assumptions list: 9 assumed against 37 asked in iteration 2; replaced by a rule against moving them
-  - files: harness/skills/workflow-approach/SKILL.md
+- the wording "an unknown you are willing to guess belongs under assumptions" moved unknowns behind significant decisions (file count, where it runs) from questions into the assumptions list: 9 assumed against 37 asked in iteration 2; replaced by a rule against moving them; at 7c1e04d the wording is absent from SKILL.md (`grep -n "willing to guess"` prints nothing)
+  - commit: 7c1e04d; files: harness/skills/workflow-approach/SKILL.md
 - a runner prompt made of the skill body plus `ARGUMENTS:` and a stop rule ending in "Do not create or edit files" made haiku skip the workflow and answer the tsv task directly as a no-edit session; the current runner wraps the prompt in the `/workflow-approach` command tags and states that the session ends where the skill waits for the user
   - commit: 1daddfb; files: evaluation/brief_facts/run_model.py
 
@@ -220,3 +222,7 @@ commit: 1daddfb8bc845eebabfd370a6fbd3e2ac7959dff
 > <status>completed</status>
 > <summary>Background command "Run the full test suite with the project venv" completed (exit code 0)</summary>
 > </task-notification>
+
+#### 22 — 2026-11-13T23:10:56Z
+
+> 한글로 올려줘
