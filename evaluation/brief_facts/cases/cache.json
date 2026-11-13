@@ -12,18 +12,63 @@
     "anydoc is upgraded monthly and its output changes between versions."
   ],
   "unknowns": [
-    {"id": "U1", "fact": "which conversions are slow and how slow (the README states a median under 5 ms)", "settles": "what to cache: local conversion versus the hosted OCR round trip"},
-    {"id": "U2", "fact": "how anydoc is run: one-shot CLI, or a long-lived process, and through which binding", "settles": "where a cache can live and in which layer (Rust core, Node, Python)"},
-    {"id": "U3", "fact": "how many processes or instances serve conversions", "settles": "in-process cache versus a shared store"},
-    {"id": "U4", "fact": "how a repeated document is recognized, and whether its content can change", "settles": "cache key and invalidation"},
-    {"id": "U5", "fact": "how sensitive the documents are and whether cached output has isolation or deletion requirements", "settles": "storage medium, tenant isolation, retention"},
-    {"id": "U6", "fact": "the memory or storage budget and typical document size", "settles": "capacity and eviction"}
+    {
+      "id": "U1",
+      "fact": "which conversions are slow and how slow, including whether hosted OCR is on the repeated path (the README states a median under 5 ms for local conversion)",
+      "settles": "what to cache: local conversion versus the hosted OCR round trip"
+    },
+    {
+      "id": "U2",
+      "fact": "how anydoc is run: one-shot CLI, or a long-lived process, and through which binding",
+      "settles": "where a cache can live and in which layer (Rust core, Node, Python)"
+    },
+    {
+      "id": "U3",
+      "fact": "how many processes or instances serve conversions",
+      "settles": "in-process cache versus a shared store"
+    },
+    {
+      "id": "U5",
+      "fact": "how sensitive the documents are and whether cached output has isolation or deletion requirements",
+      "settles": "storage medium, tenant isolation, retention"
+    },
+    {
+      "id": "U6",
+      "fact": "the memory or storage budget and typical document size",
+      "settles": "capacity and eviction"
+    }
   ],
   "repo_answerable": [
-    {"id": "R1", "question": "whether anydoc already caches anything", "evidence": "no cache in src/, node/, python/"},
-    {"id": "R2", "question": "how fast local conversion is", "evidence": "README.md benchmark: median 4.4 ms"},
-    {"id": "R3", "question": "whether hosted OCR is a network call", "evidence": "node/anydoc.js parseHosted"},
-    {"id": "R4", "question": "whether the core keeps state between conversions", "evidence": "src/lib.rs: pure functions"}
+    {
+      "id": "R1",
+      "question": "whether anydoc already caches anything",
+      "evidence": "no cache in src/, node/, python/"
+    },
+    {
+      "id": "R2",
+      "question": "how fast local conversion is",
+      "evidence": "README.md benchmark: median 4.4 ms"
+    },
+    {
+      "id": "R3",
+      "question": "whether hosted OCR is a network call",
+      "evidence": "node/anydoc.js parseHosted"
+    },
+    {
+      "id": "R4",
+      "question": "whether the core keeps state between conversions",
+      "evidence": "src/lib.rs: pure functions"
+    }
   ],
-  "dont_care": ["names of internal functions or files", "which hash crate or function", "test file naming"]
+  "dont_care": [
+    "names of internal functions or files",
+    "which hash crate or function",
+    "test file naming"
+  ],
+  "settled_without_fact": [
+    {
+      "decision": "cache key",
+      "reason": "a key of content hash, format, options and anydoc version is correct whether or not documents change, so no fact is needed; all 12 runs of iteration 1 chose it"
+    }
+  ]
 }

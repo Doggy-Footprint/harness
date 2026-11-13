@@ -1,0 +1,37 @@
+{
+  "id": "logs-filter-control",
+  "repo": "diwenne/openreply@c78b2d2f68c9764ef7a7dde51dfa5bfa99304a09",
+  "task": "로그 목록 API(`/api/logs`)에 `automationId` 필터도 받게 해줘. status나 계정 필터처럼.",
+  "hidden_context": [
+    "The user wants a link from a campaign page to that campaign's logs.",
+    "Nothing else about the product bears on this change."
+  ],
+  "unknowns": [],
+  "repo_answerable": [
+    {
+      "id": "R1",
+      "question": "where the existing filters are parsed",
+      "evidence": "app/api/logs/route.ts:15-36"
+    },
+    {
+      "id": "R2",
+      "question": "whether filtering by automationId is indexed",
+      "evidence": "prisma/schema.prisma DmLog @@index([automationId])"
+    },
+    {
+      "id": "R3",
+      "question": "whether a caller could read another workspace's logs through the filter",
+      "evidence": "app/api/logs/route.ts: `where` always carries workspaceId"
+    },
+    {
+      "id": "R4",
+      "question": "how an invalid filter value is treated",
+      "evidence": "app/api/logs/route.ts: an unknown status is ignored, and 'all' means no account filter"
+    }
+  ],
+  "dont_care": [
+    "names of internal functions or files",
+    "test file naming",
+    "whether the logs page UI gets a control for it"
+  ]
+}

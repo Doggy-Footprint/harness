@@ -13,20 +13,73 @@
     "Next quarter the same batch will be called from a Python pipeline (Airflow) instead of the CLI."
   ],
   "unknowns": [
-    {"id": "U1", "fact": "how many files one run handles and how long it may take", "settles": "sequential conversion versus parallel workers"},
-    {"id": "U2", "fact": "the CPU and memory available where it runs", "settles": "how many conversions may run at once (one archive may decompress to 512 MiB, src/package/limits.rs)"},
-    {"id": "U3", "fact": "what must happen when one file fails, and who or what reads the failures", "settles": "stop versus continue, exit code, and the failure report format"},
-    {"id": "U4", "fact": "whether the folder is nested and whether file names repeat", "settles": "recursion and the output path layout"},
-    {"id": "U5", "fact": "whether the command is re-run over the same folder", "settles": "overwrite versus skip existing outputs"},
-    {"id": "U6", "fact": "whether the documents may leave the machine", "settles": "whether --ocr hosted may apply to a whole folder"},
-    {"id": "U7", "fact": "whether anything other than the CLI will call the folder conversion", "settles": "implementing it in node/cli.js versus in a layer the bindings share"}
+    {
+      "id": "U1",
+      "fact": "how many files one run handles and how long it may take",
+      "settles": "sequential conversion versus parallel workers"
+    },
+    {
+      "id": "U2",
+      "fact": "where it runs (a person's machine, CI, a container) and the CPU and memory available there",
+      "settles": "how many conversions may run at once (one archive may decompress to 512 MiB, src/package/limits.rs)"
+    },
+    {
+      "id": "U3",
+      "fact": "what must happen when one file fails, and who or what reads the failures",
+      "settles": "stop versus continue, exit code, and the failure report format"
+    },
+    {
+      "id": "U4",
+      "fact": "whether the folder is nested and whether file names repeat",
+      "settles": "recursion and the output path layout"
+    },
+    {
+      "id": "U5",
+      "fact": "whether the command is re-run over the same folder",
+      "settles": "overwrite versus skip existing outputs"
+    },
+    {
+      "id": "U6",
+      "fact": "whether the documents may leave the machine",
+      "settles": "whether --ocr hosted may apply to a whole folder"
+    },
+    {
+      "id": "U7",
+      "fact": "whether anything other than the CLI will call the folder conversion",
+      "settles": "implementing it in node/cli.js versus in a layer the bindings share"
+    }
   ],
   "repo_answerable": [
-    {"id": "R1", "question": "which file implements the CLI", "evidence": "node/cli.js"},
-    {"id": "R2", "question": "what exit codes the CLI uses today", "evidence": "node/cli.js HELP: 0, 1, 2, 3"},
-    {"id": "R3", "question": "whether the CLI accepts more than one input today", "evidence": "node/cli.js: 'one document per invocation' usage error"},
-    {"id": "R4", "question": "which extensions are supported", "evidence": "src/lib.rs Format::from_extension"},
-    {"id": "R5", "question": "whether Node conversion blocks the event loop", "evidence": "README.md: runs on the libuv thread pool"}
+    {
+      "id": "R1",
+      "question": "which file implements the CLI",
+      "evidence": "node/cli.js"
+    },
+    {
+      "id": "R2",
+      "question": "what exit codes the CLI uses today",
+      "evidence": "node/cli.js HELP: 0, 1, 2, 3"
+    },
+    {
+      "id": "R3",
+      "question": "whether the CLI accepts more than one input today",
+      "evidence": "node/cli.js: 'one document per invocation' usage error"
+    },
+    {
+      "id": "R4",
+      "question": "which extensions are supported",
+      "evidence": "src/lib.rs Format::from_extension"
+    },
+    {
+      "id": "R5",
+      "question": "whether Node conversion blocks the event loop",
+      "evidence": "README.md: runs on the libuv thread pool"
+    }
   ],
-  "dont_care": ["names of internal functions or files", "argument parser structure", "which fs API to call", "test file naming"]
+  "dont_care": [
+    "names of internal functions or files",
+    "argument parser structure",
+    "which fs API to call",
+    "test file naming"
+  ]
 }

@@ -124,10 +124,14 @@ Write for a developer with 4 years of experience, explain anything beyond that, 
 
 ## Decision sweep
 
-Run the sweep before each round, on every decision the spec depends on. It sorts decisions by what would settle them. The user holds facts the repository does not (load, environment, plans), and a decision made without them is a guess presented as a default.
+Run the sweep before each round. It sorts decisions by what would settle them. The user holds facts the repository does not (load, environment, plans), and a decision made without them is a guess presented as a default.
+
+**Context pass.** Before listing decisions, go through the dimensions once for the task as a whole: `load` (volume, peak, growth), `data` (size, shape, sensitivity), `concurrency` (parallel callers, processes, instances), `environment` (where and how it runs or is deployed, and who or what starts it), `consumers` (who calls or reads this and what they already depend on), `roadmap` (planned work this must not block), `failure` (what a failure costs and what loss is tolerable), `cost` (money, quota, latency budget). For each, note what a citation says about it for this task, or that it is unknown. For an unknown dimension, picture the task at both ends of it (ten items or ten million; a laptop or a memory-limited container; a person at a terminal or a scheduled pipeline; one caller or a second one already planned) and add every decision that comes out differently at the two ends. Decisions nobody lists hide in the dimensions nobody looked at.
+
+**Per decision.** For every decision the spec depends on, including those the context pass added:
 
 1. Write the decision as a question, your leading option, one alternative a reasonable engineer could pick, and the **reversal condition**: the state of the world in which the alternative wins.
-2. Look for the reversal condition along each dimension: `load` (volume, peak, growth), `data` (size, shape, sensitivity), `concurrency` (parallel callers, processes, instances), `environment` (where and how it runs or is deployed), `consumers` (who calls or reads this and what they already depend on), `roadmap` (planned work this must not block), `failure` (what a failure costs and what loss is tolerable), `cost` (money, quota, latency budget).
+2. Place the reversal condition in the dimension it belongs to.
 3. Settle the reversal condition with a citation: a repository `path:line`, a project fact found by search (see Project facts), or a statement by the user. A condition you cannot cite is unknown. Do not settle it from what is typical for such projects.
 4. Classify:
    - No reasonable alternative, an existing project convention, or no observable difference between the options → *Decided for you*.
@@ -148,10 +152,13 @@ Example, for the task "add CSV export of orders":
 
 ## Rounds
 
-**1. Understanding round.** Before drafting, state "Here's what I understood": what the project is, where this task fits, what success looks like, and what this task will NOT do. Build it from every available source (project definition, README, docs, code, history, prior specs, the conversation), not from any single required file. Then list:
-- *Assumptions about the world*: each unknown behind a decision that is not significant, and each project fact you rely on with its date, as one falsifiable sentence ("assumed: one process, no concurrent writers"). The user corrects a wrong assumption faster than the decisions built on it.
-- *Fact questions*: each unknown behind a significant decision. Ask for the fact, not for the decision: name the fact, the decision it settles, and where each answer leads. There is no cap, since a fact costs the user a few words; ask nothing the repository answers.
-- One invitation: "If you already see decisions you want to make yourself, list them." Answering is optional.
+**1. Understanding round.** Before drafting, state "Here's what I understood": what the project is, where this task fits, what success looks like, and what this task will NOT do. Build it from every available source (project definition, README, docs, code, history, prior specs, the conversation), not from any single required file. An exclusion is a decision too: one that drops a safeguard or cannot be added back later ("no archive before deletion", "existing rows are not migrated") goes through the sweep like any other decision instead of being listed under what the task will not do. Then list:
+- *Assumptions about the world*: each unknown behind a decision that is not significant, and each project fact you rely on with its date. Write each as one sentence that is true or false whatever gets built ("assumed: one process, no concurrent writers"). The user corrects a wrong assumption faster than the decisions built on it. A sentence about what the software will do ("unsupported files are skipped") is a decision, not an assumption: state the fact it rests on instead ("assumed: a person watches the run and can retry a file"), and keep the decision for the approval brief. A decision confirmed under the name of an assumption is approved without being seen as one.
+- *Fact questions*: each unknown behind a significant decision. Ask for the fact, not for the decision: name the fact, the decision it settles, and where each answer leads. Add no guess of the answer, because a guess anchors the reply. Do not move such an unknown to the assumptions to save a question: an assumption the user skims past decides a significant choice without them. There is no cap, since a fact costs the user a few words; ask nothing the repository answers.
+- *Not asked*: a single line, not a list, naming each dimension on which you ask nothing and assume nothing, with a few words of why the design is the same wherever the project stands on it ("Not asked: cost (no paid service or quota), concurrency (read-only lookup)"). That the repository is silent is not such a reason; silence is what makes a dimension unknown, and `roadmap` and `consumers` are rarely written down anywhere. The user knows where the line is wrong, and it is the only place a dimension you misjudged becomes visible.
+- One invitation, with no examples: "If you already see decisions you want to make yourself, list them." Answering is optional. Naming candidates turns the invitation into a hint; the decision round names them after the user has had the chance to see them unaided.
+
+The round holds these parts and nothing else: no decisions, chosen or pending, and no notes on what you searched or found missing.
 
 Continue only after the user confirms or corrects the round. Record each answered fact (see Project facts).
 

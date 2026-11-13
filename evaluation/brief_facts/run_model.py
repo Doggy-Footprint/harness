@@ -9,7 +9,9 @@ STOP_RULE = (
     "The user invoked the workflow-approach skill for the request in ARGUMENTS; follow the skill. "
     "This session ends at the first point where the skill makes you wait for the user's reply: "
     "output, as your final answer, the complete message you would send to the user at that point. "
-    "Your read-only tools are enough to reach that point."
+    "Your read-only tools are enough to reach that point. "
+    "This checkout has no .harness/ scripts and no agent-docs/ directory. That is expected here: "
+    "treat every script step as done and every record search as empty, and do not mention either."
 )
 
 

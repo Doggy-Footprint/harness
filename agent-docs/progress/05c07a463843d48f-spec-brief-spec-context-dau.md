@@ -3,7 +3,7 @@ session: ba7e2a0d-ff0b-4a0c-b4cf-644931bd9ec8
 before: none
 previous: none
 branch: brief-fact-questions
-commit: 9312c97d0158cd1d8b20463343f9abfd15f57737
+commit: bc71362de7179ea459c1d9d1ac574cdfc52ea9e3
 ---
 
 # Brief: fact questions, user-owned engineering decisions, and a fact-question evaluation
@@ -11,20 +11,28 @@ commit: 9312c97d0158cd1d8b20463343f9abfd15f57737
 ## Next Session
 
 ### State
-- the Brief section of the workflow-approach skill is rewritten as a draft (decision sweep with reversal conditions and dimensions, significance criteria, three rounds: understanding, decision without options or recommendation, approval brief; cap of 3 user decisions with a split recommendation; project facts under agent-docs/facts/ found by grep); rules 5-7, the Assumptions and Defaults column, and Workflow step 2 follow it; it is committed on branch brief-fact-questions as a checkpoint without a VERSION bump, a migration entry, or `harness.py update`, so .harness/ and .claude/ still hold the 0.45.0 skill
+- the Brief section of the workflow-approach skill is rewritten as a draft (decision sweep with reversal conditions and dimensions, significance criteria, three rounds: understanding, decision without options or recommendation, approval brief; cap of 3 user decisions with a split recommendation; project facts under agent-docs/facts/ found by grep); rules 5-7, the Assumptions and Defaults column, and Workflow step 2 follow it; that draft is commit bc71362 on branch brief-fact-questions, a checkpoint without a VERSION bump, a migration entry, or `harness.py update`, so .harness/ and .claude/ still hold the 0.45.0 skill; after bc71362 the skill source gained, uncommitted: a context pass over the eight dimensions before the per-decision sweep, an assumption defined as a sentence true or false whatever gets built, no guess on a fact question and no moving of a significant unknown into the assumptions, a single "Not asked" line whose reasons may not be that the repository is silent, an invitation without examples, no decisions or search notes in the understanding round, and exclusions that drop a safeguard or cannot be added back treated as decisions
   - files: harness/skills/workflow-approach/SKILL.md
-- evaluation/brief_facts/ holds three cases on firecrawl/anydoc@e7178e0 (batch-cli with 7 unknown facts, cache with 6, tsv-control with none), a runner that calls `claude -p --model haiku` with read-only tools, grading rules for a sonnet evaluator, and a scorer that writes skill-creator grading.json; one smoke run per skill variant on the cache case returned an understanding-round message
+- evaluation/brief_facts/ holds five cases: on firecrawl/anydoc@e7178e0 batch-cli (7 unknown facts), cache (5; the cache-key item was removed because a content-hash key is right whatever the answer) and tsv-control (none, one minor unknown); on diwenne/openreply@c78b2d2 log-retention (6) and logs-filter-control (none); plus a runner that calls `claude -p --model <m>` with read-only tools, grading rules for a sonnet evaluator, and a scorer that writes skill-creator grading.json; after bc71362 the grader gained the `dismissed` status, multi-target questions, `decisions_as_assumptions` and `invitation_examples`, and the runner tells the model the missing harness is expected (uncommitted)
   - files: evaluation/brief_facts/README.md, evaluation/brief_facts/run_model.py, evaluation/brief_facts/score.py, evaluation/brief_facts/grader.md, evaluation/brief_facts/cases
 - iteration 1 ran: 3 cases x 2 skill variants x 3 haiku runs, graded by one sonnet agent per case, all 18 runs succeeded; over the 39 unknown-fact slots of batch-cli and cache the new skill scored asked 22, decided 11, absent 6 and the HEAD skill asked 12, decided 17, absent 10; of all questions the new skill asked 23 as facts and 6 as design choices, the HEAD skill 1 and 25; no run of either variant asked about CPU or memory (batch-cli U2) or about other callers (batch-cli U7), and all 6 cache runs fixed the cache key without asking (cache U4); outputs are in the session scratchpad under ws/iteration-1, outside the repository
   - files: evaluation/brief_facts/score.py, evaluation/brief_facts/grader.md, evaluation/brief_facts/cases, harness/skills/workflow-approach/SKILL.md
 - the same 18 runs with `--model sonnet --effort low` as the model under test (skill, cases, grader unchanged; outputs under ws/iteration-1-sonnet-low): new skill asked 26, assumed 1, decided 6, absent 6 of 39; HEAD skill asked 15, decided 16, absent 8; new-skill questions were 31 facts and 1 design choice with 1 recommended answer (haiku: 23, 6, 11); on tsv-control the new skill asked 1 question in 3 runs (haiku: 5); with the new skill neither model asked about CPU or memory (batch-cli U2, 0 of 6 runs) or other callers (batch-cli U7, 0 of 6 asked, 1 assumed), and both fixed the cache key in all runs (cache U4); a sonnet-low tsv-control message still listed a design choice ("탭을 강제하지 않습니다") under assumptions about the world
   - files: evaluation/brief_facts/run_model.py, evaluation/brief_facts/cases, harness/skills/workflow-approach/SKILL.md
-- new-skill messages listed design choices (overwrite existing outputs, cache key) and harness-environment notes under "Assumptions about the world"; every message spent lines on the target clone having no .harness/ or agent-docs/
-  - files: harness/skills/workflow-approach/SKILL.md, evaluation/brief_facts/run_model.py
+- iteration 2 (sonnet at low effort, 5 cases x 3 variants x 3 runs, all 45 succeeded; ws/iteration-2-sonnet-low): over 54 unknown-fact slots the bc71362 draft scored asked 36, assumed 2, decided 12, absent 4 with 41 questions, 40 design choices listed as assumptions and examples in the invitation in 10 of 15 runs; the variant with the context pass and the stricter round rules scored asked 39, assumed 4, decided 8 with 57 questions (5 repository-answerable, 4 noise); the same plus the "Not asked" line scored asked 37, assumed 9, dismissed 3, decided 2 with 47 questions (1 repository-answerable, 2 noise), 5 design choices as assumptions and no invitation examples
+  - files: harness/skills/workflow-approach/SKILL.md, evaluation/brief_facts/cases, evaluation/brief_facts/grader.md, evaluation/brief_facts/score.py
+- iteration 3 (ws/iteration-3; the "Not asked" variant with the single-line rule and the no-moving rule): sonnet at low effort scored asked 44, assumed 1, dismissed 2, decided 5, absent 2 with 58 questions (5 noise) and 9 design choices as assumptions; haiku scored asked 44, dismissed 2, decided 4, absent 4 with 49 questions (2 decision-form, 0 recommended answers, 3 noise); haiku with the bc71362 draft scored asked 31, decided 12, absent 11 with 40 questions (10 decision-form, 12 recommended answers, 7 noise) and 35 design choices as assumptions
+  - files: harness/skills/workflow-approach/SKILL.md, evaluation/brief_facts/cases, evaluation/brief_facts/grader.md, evaluation/brief_facts/score.py
+- iteration 4 (ws/iteration-4; adds the exclusion rule): on log-retention, "planned features need old rows" and "deleted logs must be recoverable" were decided in 1 of 6 runs each (iteration 3: 3 and 4 of 6), asked in 1 of 6 each, and absent in the rest; one message deferred the archive choice to the decision round, which the first-message grading counts as absent; on the two control cases sonnet at low effort asked 5 questions in 6 runs, the same as in iteration 3
+  - files: harness/skills/workflow-approach/SKILL.md, evaluation/brief_facts/cases/log-retention.json, evaluation/brief_facts/grader.md
 
 ### Next Step
-- get the user's review of iteration 1 (static viewer review.html in the scratchpad iteration directory), then revise the skill and the cases: tsv-control is not a clean control (forcing tab for .tsv versus sniffing is a design choice), cache lacks an item for caching hosted-OCR results, batch-cli U1 and U2 are settled by one choice, and the grader allows one target per question
-  - files: harness/skills/workflow-approach/SKILL.md, evaluation/brief_facts/cases, evaluation/brief_facts/grader.md
+- commit the post-bc71362 skill and evaluation changes when the user asks
+  - files: harness/skills/workflow-approach/SKILL.md, evaluation/brief_facts
+- case-file changes the evaluators reported and that were held back to keep iterations comparable: log-retention has no item for whether a comment older than the reconciler's 72-hour lookback can come back (asked in 4 of 9 runs of iteration 2), and docs/stack.md names a 0.5 GB free database plan while the hidden context says 10 GB; batch-cli U2, U3, U4 and U7 and cache U3, U5 and U6 give full credit to questions that reach only part of the fact
+  - files: evaluation/brief_facts/cases, evaluation/brief_facts/grader.md
+- evaluation items 2 to 5 of evaluation/brief_facts/README.md (classification after answers, hidden recommendation in the decision round, fact search, decision cap) are not implemented; item 2 is what would show whether a choice deferred from the first message reaches the user in the decision round
+  - files: evaluation/brief_facts/README.md
 - after the draft settles: add agent-docs/facts/ to the installer (managed directory, migration entry, VERSION bump), run `python3 installer/harness.py update . --no-commit`, and run the tests
   - files: installer/harness.py, harness/VERSION, harness/skills/workflow-approach/SKILL.md
 - the user chose a per-person untracked preference file copied into new worktrees; an understanding round for that feature (untracked file, .gitignore line, post-checkout copy, installer and migration, version 0.47.0) was sent and two fact questions are unanswered: whether other local files should be copied too, and whether collaborators already use installed repositories; decision-history aggregation from spec-logs and the category column are not drafted
@@ -49,6 +57,8 @@ commit: 9312c97d0158cd1d8b20463343f9abfd15f57737
   - files: evaluation/brief_facts/run_model.py, evaluation/brief_facts/cases
 
 ### Dead Ends
+- the wording "an unknown you are willing to guess belongs under assumptions" moved unknowns behind significant decisions (file count, where it runs) from questions into the assumptions list: 9 assumed against 37 asked in iteration 2; replaced by a rule against moving them
+  - files: harness/skills/workflow-approach/SKILL.md
 - a runner prompt made of the skill body plus `ARGUMENTS:` and a stop rule ending in "Do not create or edit files" made haiku skip the workflow and answer the tsv task directly as a no-edit session; wrapping the prompt in the `/workflow-approach` command tags and stating that the session ends where the skill waits for the user fixed it
   - files: evaluation/brief_facts/run_model.py
 
@@ -61,12 +71,16 @@ commit: 9312c97d0158cd1d8b20463343f9abfd15f57737
 - harness/skills/workflow-approach/SKILL.md: Brief section replaced (Decision sweep, Rounds, Project facts); Identity and lifecycle rules 5-7, the Assumptions and Defaults approval column, and Workflow step 2 adjusted
 - evaluation/brief_facts/: README.md, run_model.py, score.py, grader.md, cases/batch-cli.json, cases/cache.json, cases/tsv-control.json added
 - AGENTS.md: the project definition names evaluation/brief_facts/
+- after bc71362: harness/skills/workflow-approach/SKILL.md (Decision sweep context pass; Understanding round rules for assumptions, fact questions, Not asked, invitation, exclusions)
+- after bc71362: evaluation/brief_facts/cases (batch-cli U2 reworded, cache U4 removed, tsv-control minor unknown, new log-retention and logs-filter-control), grader.md, score.py, run_model.py stop rule, README.md
 
 ### Commands
 - `gh api search/repositories` with `created:>2026-07-15 stars:>1000`; `git clone --depth 1 https://github.com/firecrawl/anydoc.git` into the session scratchpad (HEAD e7178e099b6bf9171e2c52b832cbdb4134b69112)
 - `python3 evaluation/brief_facts/run_model.py` smoke runs: tsv-control with the new skill, cache with the new and the HEAD skill
 - three sonnet agents, one per case, each ran six haiku runs and wrote judgement.json; `python3 evaluation/brief_facts/score.py <iteration dir>`; skill-creator `scripts.aggregate_benchmark` and `eval-viewer/generate_review.py --static`
 - the same three-agent run with `--model sonnet --effort low` as the model under test, then the same scoring and viewer commands
+- `git clone --depth 1 https://github.com/diwenne/openreply.git` into the session scratchpad (HEAD c78b2d2f68c9764ef7a7dde51dfa5bfa99304a09); one smoke run of cfg-r on log-retention with sonnet at low effort
+- iterations 2 to 4: 5 + 5 + 2 sonnet evaluator agents, 45 + 45 + 12 runs of the model under test; `python3 evaluation/brief_facts/score.py <dir>`; skill-creator `scripts.aggregate_benchmark` and `eval-viewer/generate_review.py --static` for iterations 2 and 3
 - tests and `harness.py update` not run
 
 ### Failed Attempts
@@ -76,6 +90,7 @@ commit: 9312c97d0158cd1d8b20463343f9abfd15f57737
 
 ### Sources
 - https://github.com/firecrawl/anydoc at e7178e099b6bf9171e2c52b832cbdb4134b69112 (README.md, src/lib.rs, src/package/limits.rs, src/error.rs, src/formats/csv.rs, node/cli.js, node/anydoc.js)
+- https://github.com/diwenne/openreply at c78b2d2f68c9764ef7a7dde51dfa5bfa99304a09 (docs/stack.md, docs/delivery-retries.md, prisma/schema.prisma, vercel.json, scripts/cron.sh, app/api/logs/route.ts, lib/queue/dm-worker.ts, lib/polling/comment-reconciler.ts, lib/reports/data.ts, app/privacy/page.tsx)
 - skill-creator plugin: scripts/aggregate_benchmark.py, references/schemas.md, eval-viewer/generate_review.py (directory layout and grading.json fields)
 
 ### User Requests
@@ -146,3 +161,7 @@ commit: 9312c97d0158cd1d8b20463343f9abfd15f57737
 #### 9 — 2026-11-13T12:40:12Z
 
 > 추가 개선을 해보자고
+
+#### 10 — 2026-11-13T13:11:00Z
+
+> 커밋

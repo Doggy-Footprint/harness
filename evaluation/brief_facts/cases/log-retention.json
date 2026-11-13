@@ -1,0 +1,79 @@
+{
+  "id": "log-retention",
+  "repo": "diwenne/openreply@c78b2d2f68c9764ef7a7dde51dfa5bfa99304a09",
+  "task": "DM 로그 테이블이 계속 커져서 DB 용량이 걱정돼. 오래된 로그는 자동으로 정리되게 해줘.",
+  "hidden_context": [
+    "The user operates OpenReply as a hosted service for 38 agency workspaces; it is not a single self-hosted instance.",
+    "DmLog grows by about 1.5 million rows a month, about 15% more each month. The database is a paid 10 GB Postgres plan, 78% full, and DmLog is about 70% of it.",
+    "Agencies share report links with their clients, and the service contract promises campaign totals (sent, clicked) for 12 months. Nobody opens individual log rows older than about 30 days; support tickets look back at most 30 days.",
+    "The commitments made to Meta during app review and the hosted service's privacy policy say commenter names and comment text are deleted within 90 days.",
+    "The web app runs on Vercel with a 60-second function limit; the worker is one always-on instance on Railway. Scheduled jobs run from Vercel cron.",
+    "One agency asked for a CSV export of all DM logs into their CRM; it is planned for next quarter.",
+    "The database has 7 days of point-in-time recovery and no other backup. A log deleted by mistake cannot be restored after that."
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "fact": "how large the table is, how fast it grows, and the database's size limit",
+      "settles": "how urgent it is, the cutoff age, and whether deletion must run in batches"
+    },
+    {
+      "id": "U2",
+      "fact": "how long logs must be kept, or by when they must be deleted (policy, contract, law)",
+      "settles": "the retention period and whether it is one value or per workspace"
+    },
+    {
+      "id": "U3",
+      "fact": "who reads old logs or totals computed from them, and how far back (client reports, dashboards, support)",
+      "settles": "deleting rows outright versus keeping aggregated totals or stripping personal fields"
+    },
+    {
+      "id": "U4",
+      "fact": "where this deployment runs its scheduled jobs and the execution time limit there",
+      "settles": "whether the cleanup is a /api/cron route or a worker job, and its batch size"
+    },
+    {
+      "id": "U5",
+      "fact": "whether planned features need old rows (exports, billing, analytics)",
+      "settles": "archiving before deletion versus deleting"
+    },
+    {
+      "id": "U6",
+      "fact": "whether deleted logs must be recoverable and what backups exist",
+      "settles": "hard delete versus archive or soft delete, and a dry-run mode"
+    }
+  ],
+  "repo_answerable": [
+    {
+      "id": "R1",
+      "question": "whether DmLog rows do anything besides recording history",
+      "evidence": "lib/queue/dm-worker.ts:338 and lib/polling/comment-reconciler.ts:240 use the row for (automationId, commentId) as the guard against sending a second DM; prisma/schema.prisma DmLog @@unique([automationId, commentId])"
+    },
+    {
+      "id": "R2",
+      "question": "how periodic jobs are scheduled and authenticated",
+      "evidence": "app/api/cron/*, vercel.json crons, scripts/cron.sh with CRON_SECRET"
+    },
+    {
+      "id": "R3",
+      "question": "whether report and dashboard totals are stored separately from DmLog",
+      "evidence": "lib/reports/data.ts, app/api/dashboard/stats/route.ts, app/api/automations/route.ts count and group DmLog rows directly"
+    },
+    {
+      "id": "R4",
+      "question": "whether any cleanup or retention code exists",
+      "evidence": "no deleteMany on dmLog, webhookEvent or operationalEvent anywhere"
+    },
+    {
+      "id": "R5",
+      "question": "whether the published privacy page states a retention period",
+      "evidence": "app/privacy/page.tsx 'Retention And Deletion' names no period"
+    }
+  ],
+  "dont_care": [
+    "names of internal functions or files",
+    "test file naming",
+    "log message wording",
+    "which Prisma call deletes the rows"
+  ]
+}

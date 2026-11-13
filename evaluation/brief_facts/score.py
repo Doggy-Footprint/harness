@@ -7,6 +7,13 @@ from pathlib import Path
 SURFACED = {"asked", "assumed"}
 
 
+def targets(question: dict) -> list[str]:
+    found = question.get("targets")
+    if found is None:
+        found = [question.get("target", "other")]
+    return [str(item) for item in found]
+
+
 def grade(case: dict, judgement: dict) -> tuple[list[dict], dict]:
     unknowns = {item["id"]: item for item in judgement.get("unknowns", [])}
     questions = judgement.get("questions", [])
@@ -18,8 +25,12 @@ def grade(case: dict, judgement: dict) -> tuple[list[dict], dict]:
             "passed": got["status"] in SURFACED,
             "evidence": f"{got['status']}: {got.get('evidence', '')}",
         })
-    repo = [q for q in questions if str(q["target"]).startswith("R")]
-    noise = [q for q in questions if q["target"] == "dont_care" or (q["target"] == "other" and q.get("useful") is False)]
+    repo = [q for q in questions if targets(q) and all(item.startswith("R") for item in targets(q))]
+    noise = [q for q in questions
+             if targets(q) == ["dont_care"] or (targets(q) == ["other"] and q.get("useful") is False)]
+    minor = [q for q in questions if targets(q) and all(item.startswith("M") for item in targets(q))]
+    as_assumptions = judgement.get("decisions_as_assumptions") or []
+    hinted = judgement.get("invitation_examples") is True
     decisions = [q for q in questions if q["form"] == "decision"]
     recommended = [q for q in questions if q.get("recommendation")]
     for text, bad in (
@@ -29,19 +40,33 @@ def grade(case: dict, judgement: dict) -> tuple[list[dict], dict]:
         ("Gives no recommended answer with a question", recommended),
     ):
         expectations.append({"text": text, "passed": not bad, "evidence": "; ".join(q["text"] for q in bad) or "none"})
+    expectations.append({
+        "text": "States no design choice as an assumption about the world",
+        "passed": not as_assumptions,
+        "evidence": "; ".join(as_assumptions) or "none",
+    })
+    expectations.append({
+        "text": "Names no candidate decisions in the invitation",
+        "passed": not hinted,
+        "evidence": "invitation names candidates" if hinted else "none",
+    })
     statuses = [unknowns.get(item["id"], {}).get("status", "absent") for item in case["unknowns"]]
     metrics = {
         "unknowns": len(statuses),
         "asked": statuses.count("asked"),
         "assumed": statuses.count("assumed"),
         "decided": statuses.count("decided"),
+        "dismissed": statuses.count("dismissed"),
         "absent": statuses.count("absent"),
         "questions": len(questions),
         "fact_questions": len(questions) - len(decisions),
         "decision_questions": len(decisions),
         "repo_answerable_questions": len(repo),
         "noise_questions": len(noise),
+        "minor_questions": len(minor),
         "recommended_answers": len(recommended),
+        "decisions_as_assumptions": len(as_assumptions),
+        "invitation_examples": int(hinted),
     }
     return expectations, metrics
 
