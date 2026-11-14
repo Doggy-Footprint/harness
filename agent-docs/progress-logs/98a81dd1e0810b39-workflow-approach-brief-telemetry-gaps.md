@@ -11,6 +11,8 @@ commit: abeb279978eb9019a57e281aa1cf794555f985d3
 ## Next Session
 
 ### State
+- PR https://github.com/Doggy-Footprint/harness/pull/41 opened from feat/brief-telemetry against master; not merged at this entry.
+  - files: none
 - Workflow run 49bafb302bb6593c complete and archived at spec v4: brief marker, fact_write event, amend reason, importer fields, API (`brief_only_runs`, `briefs`, `amend_reasons`, `before_approval`), dashboard cards, SKILL.md text and 0.49.0 migration; Test command run 6 passes (1375 harness, 397 analytics, 35 vitest); test-verifier invocation 2 passed; hand mutations M1–M12 all killed. Open advisories (non-blocking): K5 wording does not state that same-value occurrences are skipped; `+1` rejection is tested only on `--fact-questions` among the count flags.
   - files: agent-docs/spec-logs/49bafb302bb6593c-brief-telemetry.md, harness/hooks/telemetry_hook.py, harness/bin/workflow_marker.py, analytics/app.py, analytics/frontend/src/App.jsx, tests/test_brief_telemetry.py, analytics/tests/test_brief_dashboard.py
 - Test suite telemetry leak fixed: `tests/telemetry_sandbox.py` sets `HARNESS_TELEMETRY_DIR` to a temp dir for every test process that imports `legacy_migrations`; a full `tests/run_parallel.py` run left the `~/.harness/telemetry` file count unchanged (1041 before and after). The 886 empty `*T-tmp*.session-lock` files were deleted.
