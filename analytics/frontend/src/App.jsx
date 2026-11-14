@@ -242,8 +242,85 @@ function HarnessHacking({ data }) {
   );
 }
 
+const AMEND_REASONS = ["intent_mismatch", "brief_change", "contract_change", "correction", "unspecified"];
+
+function BriefCard({ briefs, amendReasons }) {
+  return (
+    <section aria-label="Brief" className="card">
+      <Tip as="h2" hint="brief">Brief</Tip>
+      {briefs.length === 0 ? <p className="muted">No brief events.</p> : (
+        <div className="table-wrap">
+          <table>
+            <thead><tr>
+              <Tip as="th" hint="brief_stage">Stage</Tip><Tip as="th" hint="brief_round" className="num">Round</Tip>
+              <Tip as="th" hint="brief_fact_questions" className="num">Fact questions</Tip><Tip as="th" hint="brief_user_decisions" className="num">User decisions</Tip>
+              <Tip as="th" hint="brief_split">Split</Tip><Tip as="th" hint="brief_picks_differ" className="num">Picks differing</Tip>
+              <th>Time</th><Tip as="th" hint="brief_session_id">Session ID</Tip><Tip as="th" hint="brief_tool_use_id">Tool use ID</Tip>
+            </tr></thead>
+            <tbody>
+              {briefs.map((item, i) => (
+                <tr key={i}>
+                  <td>{item.stage ?? ""}</td>
+                  <td className="num">{item.round ?? ""}</td>
+                  <td className="num">{item.fact_questions ?? ""}</td>
+                  <td className="num">{item.user_decisions ?? ""}</td>
+                  <td>{item.split ?? ""}</td>
+                  <td className="num">{item.picks_differ ?? ""}</td>
+                  <td className="muted nowrap">{item.ts ?? ""}</td>
+                  <td className="mono">{item.session_id ?? ""}</td>
+                  <td className="mono">{item.tool_use_id ?? ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <Tip as="h2" hint="amend_reasons">Amend reasons</Tip>
+      <ul className="legend">
+        {AMEND_REASONS.map(reason => (
+          <li key={reason}>
+            <Tip hint={`amend_${reason}`} className="legend-name mono">{reason}</Tip>
+            <span className="legend-value" data-metric={`amend-reason-${reason}`}>{formatNumber(amendReasons?.[reason] ?? 0)}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function BriefOnlyRuns({ runs, onSelect }) {
+  return (
+    <div className="card">
+      <div className="card-head"><Tip as="h2" hint="brief_only_runs">Briefs before approval</Tip><span className="muted">{runs.length}</span></div>
+      {runs.length === 0 ? (
+        <p className="muted">No briefs before approval.</p>
+      ) : (
+        <nav aria-label="Briefs before approval" className="table-wrap">
+          <table className="runs">
+            <thead><tr><Tip as="th" hint="run_id">Run</Tip><Tip as="th" hint="brief_rounds" className="num">Rounds</Tip><Tip as="th" hint="brief_last_stage">Last stage</Tip></tr></thead>
+            <tbody>
+              {runs.map(run => (
+                <tr key={run.run_id}>
+                  <td>
+                    <a className="mono" href={`/runs/${encodeURIComponent(run.run_id)}`} onClick={(event) => { event.preventDefault(); onSelect(run.run_id); }}>
+                      {run.run_id}
+                    </a>
+                  </td>
+                  <td className="num">{formatNumber(run.rounds)}</td>
+                  <td>{run.last_stage ?? ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </nav>
+      )}
+    </div>
+  );
+}
+
 function RunDetail({ detail, onBack }) {
   const reasons = detail.compliance_reasons ?? [];
+  const beforeApproval = detail.status === "before_approval";
   return (
     <section className="stack-gap">
       <div className="detail-head">
@@ -251,7 +328,7 @@ function RunDetail({ detail, onBack }) {
         <h1 className="mono">Run {detail.run_id}</h1>
         <div className="badges">
           <Badge tone={statusTone(detail.status)}>{detail.status}</Badge>
-          <Badge tone={detail.compliant ? "good" : "bad"}>{detail.compliant ? "compliant" : "noncompliant"}</Badge>
+          {!beforeApproval && <Badge tone={detail.compliant ? "good" : "bad"}>{detail.compliant ? "compliant" : "noncompliant"}</Badge>}
         </div>
       </div>
       <div className="grid three">
@@ -285,6 +362,7 @@ function RunDetail({ detail, onBack }) {
           ))}
         </ul>
       </div>
+      <BriefCard briefs={detail.briefs ?? []} amendReasons={detail.amend_reasons} />
       <HarnessHacking data={detail.harness_hacking} />
     </section>
   );
@@ -350,6 +428,7 @@ function WorkflowSummary({ summary, onSelect }) {
           </nav>
         )}
       </div>
+      <BriefOnlyRuns runs={summary.brief_only_runs ?? []} onSelect={onSelect} />
     </section>
   );
 }

@@ -1050,6 +1050,19 @@ def migrate_brief_picks_and_cap(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_brief_telemetry(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "workflow-approach: each understanding round, decision round, and approval brief runs "
+        "`workflow_marker.py brief`, and the PostToolUse telemetry hook records it as a brief event with its "
+        "run id, stage, round, counts, session id, and tool_use_id",
+        "telemetry: a Write, Edit, or apply_patch of a file in agent-docs/facts/ records a fact_write event "
+        "with the fact id and dimension, never the file name",
+        "workflow-approach: `workflow_marker.py phase --phase amend` takes --reason "
+        "intent_mismatch|brief_change|contract_change|correction, recorded as the amend event's reason",
+        "no existing files change",
+    ]
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -1133,6 +1146,11 @@ MIGRATIONS = (
         parse_version("0.48.0"),
         "brief records the agent's picks before the decision round; the decision cap counts the whole task",
         migrate_brief_picks_and_cap,
+    ),
+    (
+        parse_version("0.49.0"),
+        "record brief rounds, fact writes, and amend reasons in telemetry",
+        migrate_brief_telemetry,
     ),
 )
 

@@ -11,13 +11,13 @@ commit: 38d9b7eedb6418b1d4298e9235cf94927134d46a
 ## Next Session
 
 ### State
-- Workflow run 49bafb302bb6593c: spec v1 approved by the user on 2026-11-14; implementation not started at this entry.
-  - files: agent-docs/specs/49bafb302bb6593c-brief-telemetry.md
+- Workflow run 49bafb302bb6593c at spec v4: brief marker, fact_write event, amend reason, importer fields, API (`brief_only_runs`, `briefs`, `amend_reasons`, `before_approval`), dashboard cards, SKILL.md text and 0.49.0 migration implemented; Test command run 5 passes (1375 harness, 397 analytics, 35 vitest); test-verifier invocation 2 passed with all obligations accepted; hand mutations M1–M12 all killed; installed copy synced to 0.49.0.
+  - files: agent-docs/specs/49bafb302bb6593c-brief-telemetry.md, harness/hooks/telemetry_hook.py, harness/bin/workflow_marker.py, analytics/app.py, analytics/frontend/src/App.jsx, tests/test_brief_telemetry.py, analytics/tests/test_brief_dashboard.py
 - Test suite telemetry leak fixed: `tests/telemetry_sandbox.py` sets `HARNESS_TELEMETRY_DIR` to a temp dir for every test process that imports `legacy_migrations`; a full `tests/run_parallel.py` run left the `~/.harness/telemetry` file count unchanged (1041 before and after). The 886 empty `*T-tmp*.session-lock` files were deleted.
   - files: tests/telemetry_sandbox.py, tests/legacy_migrations.py
 
 ### Next Step
-- Start the run (spec status active, `spec_lifecycle.py start`, `workflow_marker.py start`), emit implement_test, dispatch implementer and test-implementer.
+- Write the user-approved retrospective into the spec, set status complete, `spec_lifecycle.py archive --status complete`, emit `workflow_marker.py end --status complete`, commit.
   - files: agent-docs/specs/49bafb302bb6593c-brief-telemetry.md
 
 ### Constraints
@@ -29,8 +29,8 @@ commit: 38d9b7eedb6418b1d4298e9235cf94927134d46a
   - source: User Requests 7
 
 ### Verify
-- `uv run --python 3.12 --with-requirements analytics/requirements.txt --with pytest --with hypothesis python tests/run_parallel.py`, counting `ls ~/.harness/telemetry | wc -l` before and after; the count must not change.
-  - files: tests/telemetry_sandbox.py, tests/legacy_migrations.py
+- `uv run --python 3.12 --with-requirements analytics/requirements.txt --with pytest --with hypothesis sh -c 'python tests/run_parallel.py && python -m pytest -q -p no:cacheprovider analytics/tests' && cd analytics/frontend && npx vitest run`, counting `ls ~/.harness/telemetry | wc -l` before and after; it must pass and the count must not change.
+  - files: tests/telemetry_sandbox.py, tests/test_brief_telemetry.py, analytics/tests/test_brief_dashboard.py, analytics/frontend/src/BriefTelemetry.test.jsx
 
 ### Dead Ends
 - Running analytics tests with `/Users/hwansu/tools/harness/.venv` fails 58 tests with `Router.__init__() got an unexpected keyword argument 'on_startup'` (starlette and fastapi versions mismatch); use uv with `analytics/requirements.txt`.
@@ -63,14 +63,25 @@ commit: 38d9b7eedb6418b1d4298e9235cf94927134d46a
 - agent-docs/todos/stale/e00f26d26c7ef940-tests-write-real-telemetry-dir.md: marked stale (leak fixed)
 - tests/telemetry_sandbox.py: new; sets HARNESS_TELEMETRY_DIR to a per-process temp dir removed at exit
 - tests/legacy_migrations.py: imports telemetry_sandbox
+- harness/bin/workflow_marker.py, harness/hooks/telemetry_hook.py, harness/lib/telemetry.py, harness/lib/config.py, harness/skills/workflow-approach/SKILL.md, harness/VERSION, installer/harness.py: brief marker, fact_write, amend reason, 0.49.0 migration (implementer)
+- analytics/importer.py, analytics/app.py, analytics/frontend/src/App.jsx, analytics/frontend/src/hints.js: brief fields, brief-only runs, Brief card (implementer)
+- tests/test_brief_telemetry.py, analytics/tests/test_brief_dashboard.py, analytics/frontend/src/BriefTelemetry.test.jsx: new tests (test-implementer, main corrections in spec ledger)
+- tests/*.py version strings 0.48.0 → 0.49.0; analytics/tests/test_classification_v4.py admits `brief_only_runs`
+- .harness/, .claude/, .agents/: `harness.py update . --no-commit` (migration 0.49.0 confirmed with `y`)
 
 ### Commands
+- Test command runs 1–5 saved under the session scratchpad as test-run-<n>.txt; run 5 rc 0
+- hand mutations: scratchpad `mutate.py` (12 mutants, all killed)
 - leak check: T-tmp lock count 879 → 886 across one suite run before the fix; 886 → 886 and total 1041 → 1041 after it
 - `find ~/.harness/telemetry -maxdepth 1 -name '*T-tmp*.session-lock' -size 0 -delete` (886 files, all empty)
 
 ### Failed Attempts
 | attempt | failure evidence | cause |
 | --- | --- | --- |
+| Test command run 1 | 3 failures in tests/test_brief_telemetry.py (snapshot saw `__pycache__`; K2/K4 literal SKILL phrases) | test defects (verified: run 2 harness suite OK after fix) |
+| Test command run 2 | MR2 transcript_metadata path differs; test_classification_v4 Q1 rejects new summary key | fixture path and pre-existing whole-summary assertion (verified: run 3 OK) |
+| Test command run 4 | K5 `correction` segment cut at the word inside "correction batch" | test segment rule (verified: run 5 OK) |
+| `python3 installer/harness.py update . --no-commit` without input | EOFError at "Apply migration 0.49.0 ...? [y/N]" | update prompts per migration (verified: `echo y |` applied it) |
 | analytics tests under `/Users/hwansu/tools/harness/.venv` | 58 failed, `Router.__init__() got an unexpected keyword argument 'on_startup'` | starlette/fastapi version mismatch in that venv (verified: passes under uv with analytics/requirements.txt) |
 | propose extra transcript-parser fields | user: "추천 필드는 전부 배제(포인터 있으니 복원 가능한 게 이유)" | user rejection (verified) |
 | brief event fields Tier 1 + pointer | user moved to Tier 2 at the approval brief: "이미 있는 값을 넣지 않을 이유도 없지" | user change (verified) |

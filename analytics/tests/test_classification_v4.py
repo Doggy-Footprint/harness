@@ -362,7 +362,7 @@ class Q1CoexistenceMeasurementTests(ClassificationV4TestCase):
         self.assertNotIn("classification", base_summary)
 
         added = {"fuzz_execs", "fuzz_violations", "mutants", "killed", "survived", "equivalent", "overturned",
-                 "harness_hacking", "isolation_candidates"}
+                 "harness_hacking", "isolation_candidates", "brief_only_runs"}
         current_pre_existing = {k: v for k, v in current_summary.items() if k != "classification" and k not in added}
         for run in current_pre_existing["workflow"]["runs"]:
             for key in added:

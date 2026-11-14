@@ -209,6 +209,35 @@ def _workflow_entry(run_id, events, sessions, sessions_by_key, prices):
     }
 
 
+_AMEND_REASONS = ("intent_mismatch", "brief_change", "contract_change", "correction")
+_BRIEF_FIELDS = ("stage", "round", "fact_questions", "user_decisions", "split", "picks_differ", "ts", "session_id", "tool_use_id")
+
+
+def _briefs(events):
+    return [{key: event.get(key) for key in _BRIEF_FIELDS} for event in events]
+
+
+def _amend_reasons(events):
+    counts = {reason: 0 for reason in _AMEND_REASONS}
+    counts["unspecified"] = 0
+    for event in events:
+        if event.get("event") != "workflow_phase" or event.get("phase") != "amend":
+            continue
+        reason = event.get("reason")
+        counts[reason if reason in _AMEND_REASONS else "unspecified"] += 1
+    return counts
+
+
+def _brief_only_runs(briefs, grouped):
+    output = []
+    for run_id, events in briefs.items():
+        if run_id in grouped:
+            continue
+        latest = max(enumerate(events), key=lambda pair: (pair[1].get("ts") or "", pair[0]))[1]
+        output.append({"run_id": run_id, "rounds": len(events), "last_stage": latest.get("stage"), "last_ts": latest.get("ts")})
+    return sorted(output, key=lambda item: item["last_ts"] or "", reverse=True)
+
+
 def _non_workflow_section(sessions, workflow_keys, prices):
     others = [s for s in sessions if (s.get("client"), s.get("session_id")) not in workflow_keys]
 
@@ -280,10 +309,19 @@ def create_app(database_path: Path, telemetry_dir: Path, price_path: Path, trans
             rows = connection.execute("SELECT * FROM events ORDER BY id").fetchall()
             sessions = cached_sessions(connection)
         grouped: dict[str, list[dict]] = {}
+        briefs: dict[str, list[dict]] = {}
         for row in rows:
             event = event_dict(row)
             run_id = event.get("workflow_run_id")
             if run_id is None:
+                continue
+            # brief and fact_write events stay out of the run groups so they
+            # never link sessions to a run and never change any metric derived
+            # from the groups; brief events are reported separately.
+            if event.get("event") == "brief":
+                briefs.setdefault(run_id, []).append(event)
+                continue
+            if event.get("event") == "fact_write":
                 continue
             grouped.setdefault(run_id, []).append(event)
         for group in grouped.values():
@@ -298,7 +336,7 @@ def create_app(database_path: Path, telemetry_dir: Path, price_path: Path, trans
                 if event.get("spec_version") is None:
                     event["spec_version"] = run_spec_version
         sessions_by_key = {(session.get("client"), session.get("session_id")): session for session in sessions}
-        return grouped, sessions_by_key, sessions
+        return grouped, sessions_by_key, sessions, briefs
 
     def candidates():
         with lock:
@@ -310,7 +348,7 @@ def create_app(database_path: Path, telemetry_dir: Path, price_path: Path, trans
         transcript_metadata = _linked_usage(events, sessions_by_key, prices)
         costs = [u["linked_cost_usd"] for u in transcript_metadata]
         total = None if any(value is None for value in costs) else sum(costs)
-        first = events[0]
+        first = events[0] if events else {}
         end = next((event for event in reversed(events) if event.get("event") == "workflow_end"), None)
         status = end.get("status") if end else "in_progress"
         return {"run_id": run_id, "spec": first.get("spec"), "spec_version": first.get("spec_version"),
@@ -325,7 +363,7 @@ def create_app(database_path: Path, telemetry_dir: Path, price_path: Path, trans
 
     @app.get("/api/summary")
     def summary():
-        grouped, sessions_by_key, sessions = runs()
+        grouped, sessions_by_key, sessions, briefs = runs()
         details = [detail(key, value, sessions, sessions_by_key) for key, value in grouped.items()]
         completed = [item for item in details if item["status"] != "in_progress"]
         costs = [item["linked_cost_usd"] for item in details]
@@ -345,14 +383,20 @@ def create_app(database_path: Path, telemetry_dir: Path, price_path: Path, trans
                 "run_items": [{key: item[key] for key in ("run_id", "spec", "status", "compliant")} for item in details],
                 "workflow": {"runs": workflow_runs},
                 "non_workflow": _non_workflow_section(sessions, workflow_keys, prices),
-                "classification": classification, "harness_hacking": _harness_hacking(candidates())}
+                "classification": classification, "harness_hacking": _harness_hacking(candidates()),
+                "brief_only_runs": _brief_only_runs(briefs, grouped)}
 
     @app.get("/api/runs/{run_id}")
     def run(run_id: str):
-        grouped, sessions_by_key, sessions = runs()
-        if run_id not in grouped:
+        grouped, sessions_by_key, sessions, briefs = runs()
+        if run_id not in grouped and run_id not in briefs:
             raise HTTPException(status_code=404, detail="run not found")
-        result = detail(run_id, grouped[run_id], sessions, sessions_by_key)
+        events = grouped.get(run_id, [])
+        result = detail(run_id, events, sessions, sessions_by_key)
+        if run_id not in grouped:
+            result["status"] = "before_approval"
+        result["briefs"] = _briefs(briefs.get(run_id, []))
+        result["amend_reasons"] = _amend_reasons(events)
         result["harness_hacking"] = _harness_hacking([e for e in candidates() if e.get("workflow_run_id") == run_id])
         return result
 

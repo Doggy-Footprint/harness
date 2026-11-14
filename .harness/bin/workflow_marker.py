@@ -37,6 +37,18 @@ def _parser() -> argparse.ArgumentParser:
     phase = commands.add_parser("phase", add_help=False)
     phase.add_argument("--run-id", required=True)
     phase.add_argument("--phase", required=True, choices=("implement_test", "verify", "amend"))
+    phase.add_argument("--reason", choices=("intent_mismatch", "brief_change", "contract_change", "correction"))
+
+    # Parsed only for argv compatibility: the PostToolUse hook emits the brief
+    # line, because this process has no session id or tool_use_id.
+    brief = commands.add_parser("brief", add_help=False)
+    brief.add_argument("--run-id", required=True)
+    brief.add_argument("--stage", required=True, choices=("understanding", "decision", "approval"))
+    brief.add_argument("--round", required=True, type=_non_negative)
+    brief.add_argument("--fact-questions", type=_non_negative)
+    brief.add_argument("--user-decisions", type=_non_negative)
+    brief.add_argument("--split", choices=("none", "proposed", "accepted", "declined"))
+    brief.add_argument("--picks-differ", type=_non_negative)
 
     verifier = commands.add_parser("verifier", add_help=False)
     verifier.add_argument("--run-id", required=True)
@@ -70,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "start":
             telemetry.workflow_start(args.run_id, args.spec, args.spec_version)
         elif args.command == "phase":
-            telemetry.workflow_phase(args.run_id, args.phase)
+            telemetry.workflow_phase(args.run_id, args.phase, args.reason)
         elif args.command == "verifier":
             telemetry.verifier_result(
                 args.run_id,
