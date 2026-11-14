@@ -1,7 +1,7 @@
 ---
 version: 4
 run_id: 49bafb302bb6593c
-status: active
+status: complete
 base_commit: 38d9b7eedb6418b1d4298e9235cf94927134d46a
 max_verifier_invocations: 2
 commit: 38d9b7eedb6418b1d4298e9235cf94927134d46a
@@ -199,3 +199,7 @@ Execution ledger (append attempts; preserve failed approaches):
 - Initial draft from the understanding and decision rounds of 2026-11-14; the run was split, transcript parsing moved to todo `b2373e0fdc356594`.
 
 # Retrospective
+## 2026-11-14
+| observation | evidence | how to re-check |
+| --- | --- | --- |
+| Running analytics tests with `/Users/hwansu/tools/harness/.venv` fails 58 tests with `Router.__init__() got an unexpected keyword argument 'on_startup'` (starlette/fastapi version mismatch in that venv); the same tests pass under `uv run --python 3.12 --with-requirements analytics/requirements.txt` | baseline run before implementation, 58 failed / 321 passed under the venv, 379 passed under uv | `/Users/hwansu/tools/harness/.venv/bin/python -m pytest -q analytics/tests` |

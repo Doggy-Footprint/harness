@@ -207,8 +207,6 @@ def handle_post_tool_use(payload: dict) -> None:
     tool_input = payload.get("tool_input") or {}
     tool_response = payload.get("tool_response")
     if tool_name == "Bash":
-        # Brief detection is additive: a failure in it must not change or
-        # suppress the test_command / seed handling of the same call.
         try:
             emit_briefs(payload, tool_input, tool_response)
         except Exception:

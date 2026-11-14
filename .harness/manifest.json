@@ -24,7 +24,7 @@
     ".harness/hooks/doc_commit.py": "f3027e72682261e97c6cf13f1d2243f5b5eb231b0a4678bf2445933d06f185de",
     ".harness/hooks/spec_gate.py": "81a40d87ca6b97fec0c3fe608291aa85069ee233169c7fff0e24ad8b6d889db7",
     ".harness/hooks/session_lock.py": "b15ff8b1018645a50a8d45b64c0dd5a754a96933007cd1e45764320735e2f1f4",
-    ".harness/hooks/telemetry_hook.py": "e8b3e1546deb2436afea0b90e0c679a6925dc65de63d7fca2c6909c2250d7cfb",
+    ".harness/hooks/telemetry_hook.py": "d24fd8a9f7adeef2b01e65d3e0c76b08dccbd92056e7f6e0dd41d4e863c5992b",
     ".harness/hooks/hooks.spec.json": "1a90b7220f0055081a518b062390b75d67deea2595a9eafb20a4b38178c6f7df",
     ".harness/hooks/pr_message_nudge.py": "d6b27292389f4b808d31afb01e4ae5f39dee026def7653804d97cb13086f67e5",
     ".harness/lib/isolation.py": "6ae9f9535c06d8e776d5ab83c25f92798cba7917df4e2727bb4fbc59f1d92cf7",

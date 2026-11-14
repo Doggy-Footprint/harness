@@ -3,7 +3,7 @@ session: a57c23b5-f803-408b-848a-ef0b960b7dde
 before: none
 previous: none
 branch: feat/brief-telemetry
-commit: 38d9b7eedb6418b1d4298e9235cf94927134d46a
+commit: abeb279978eb9019a57e281aa1cf794555f985d3
 ---
 
 # Brief telemetry gaps and test telemetry leak
@@ -11,14 +11,14 @@ commit: 38d9b7eedb6418b1d4298e9235cf94927134d46a
 ## Next Session
 
 ### State
-- Workflow run 49bafb302bb6593c at spec v4: brief marker, fact_write event, amend reason, importer fields, API (`brief_only_runs`, `briefs`, `amend_reasons`, `before_approval`), dashboard cards, SKILL.md text and 0.49.0 migration implemented; Test command run 5 passes (1375 harness, 397 analytics, 35 vitest); test-verifier invocation 2 passed with all obligations accepted; hand mutations M1–M12 all killed; installed copy synced to 0.49.0.
-  - files: agent-docs/specs/49bafb302bb6593c-brief-telemetry.md, harness/hooks/telemetry_hook.py, harness/bin/workflow_marker.py, analytics/app.py, analytics/frontend/src/App.jsx, tests/test_brief_telemetry.py, analytics/tests/test_brief_dashboard.py
+- Workflow run 49bafb302bb6593c complete and archived at spec v4: brief marker, fact_write event, amend reason, importer fields, API (`brief_only_runs`, `briefs`, `amend_reasons`, `before_approval`), dashboard cards, SKILL.md text and 0.49.0 migration; Test command run 6 passes (1375 harness, 397 analytics, 35 vitest); test-verifier invocation 2 passed; hand mutations M1–M12 all killed. Open advisories (non-blocking): K5 wording does not state that same-value occurrences are skipped; `+1` rejection is tested only on `--fact-questions` among the count flags.
+  - files: agent-docs/spec-logs/49bafb302bb6593c-brief-telemetry.md, harness/hooks/telemetry_hook.py, harness/bin/workflow_marker.py, analytics/app.py, analytics/frontend/src/App.jsx, tests/test_brief_telemetry.py, analytics/tests/test_brief_dashboard.py
 - Test suite telemetry leak fixed: `tests/telemetry_sandbox.py` sets `HARNESS_TELEMETRY_DIR` to a temp dir for every test process that imports `legacy_migrations`; a full `tests/run_parallel.py` run left the `~/.harness/telemetry` file count unchanged (1041 before and after). The 886 empty `*T-tmp*.session-lock` files were deleted.
   - files: tests/telemetry_sandbox.py, tests/legacy_migrations.py
 
 ### Next Step
-- Write the user-approved retrospective into the spec, set status complete, `spec_lifecycle.py archive --status complete`, emit `workflow_marker.py end --status complete`, commit.
-  - files: agent-docs/specs/49bafb302bb6593c-brief-telemetry.md
+- Run B: the rule-based transcript parser in todo b2373e0fdc356594, starting by checking that `brief` events from a real workflow run locate the brief turn by session_id and tool_use_id.
+  - files: agent-docs/todos/b2373e0fdc356594-brief-transcript-parser.md
 
 ### Constraints
 - "Brief telemtry는 지금으로서는 나만, 앞으로는 여러 사람의 기록을 digest해서 처리하여 insight를 추출하는 용도로 사용될거야. 내가 개인적으로 보고 파악하는데도 사용할거야. 그러니 둘 다 필요해. 대시보드까지 작업에 넣고"
@@ -39,8 +39,8 @@ commit: 38d9b7eedb6418b1d4298e9235cf94927134d46a
   - files: agent-docs/todos/b2373e0fdc356594-brief-transcript-parser.md
 
 ### Related
-- agent-docs/specs/49bafb302bb6593c-brief-telemetry.md
-  - files: agent-docs/specs/49bafb302bb6593c-brief-telemetry.md
+- agent-docs/spec-logs/49bafb302bb6593c-brief-telemetry.md
+  - files: agent-docs/spec-logs/49bafb302bb6593c-brief-telemetry.md
 - agent-docs/todos/b2373e0fdc356594-brief-transcript-parser.md
   - files: agent-docs/todos/b2373e0fdc356594-brief-transcript-parser.md
 - agent-docs/todos/e77323782c45bbfb-brief-telemetry-gaps.md
@@ -57,7 +57,7 @@ commit: 38d9b7eedb6418b1d4298e9235cf94927134d46a
 ### Changes
 - agent-docs/facts/67ac615b0c9ad3aa-consumers-brief-telemetry-personal-dashboard.md
 - agent-docs/facts/e06d861b6fec1853-roadmap-telemetry-multi-person-digest.md
-- agent-docs/specs/49bafb302bb6593c-brief-telemetry.md
+- agent-docs/spec-logs/49bafb302bb6593c-brief-telemetry.md
 - agent-docs/todos/b2373e0fdc356594-brief-transcript-parser.md
 - agent-docs/todos/index.md
 - agent-docs/todos/stale/e00f26d26c7ef940-tests-write-real-telemetry-dir.md: marked stale (leak fixed)
@@ -70,6 +70,7 @@ commit: 38d9b7eedb6418b1d4298e9235cf94927134d46a
 - .harness/, .claude/, .agents/: `harness.py update . --no-commit` (migration 0.49.0 confirmed with `y`)
 
 ### Commands
+- comment trim and retrospective per user request; Test command run 6 rc 0
 - Test command runs 1–5 saved under the session scratchpad as test-run-<n>.txt; run 5 rc 0
 - hand mutations: scratchpad `mutate.py` (12 mutants, all killed)
 - leak check: T-tmp lock count 879 → 886 across one suite run before the fix; 886 → 886 and total 1041 → 1041 after it
@@ -139,3 +140,7 @@ commit: 38d9b7eedb6418b1d4298e9235cf94927134d46a
 #### 8 — 2026-11-14T03:11:25Z
 
 > 승인
+
+#### 9 — 2026-11-14T04:37:49Z
+
+> 주석과 회고에서 이후에 복구가 어려워 참고할 가치가 있는 것만 남기고 제거. 이후 pr(한글로)

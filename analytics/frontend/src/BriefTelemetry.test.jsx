@@ -36,8 +36,6 @@ async function openDetail(detail, summary = baseSummary, runId = "run-full") {
   await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(`/api/runs/${runId}`));
 }
 
-// Smallest ancestor of an element that still contains every needle, so row-level checks do not
-// depend on the markup the card uses for its rows.
 function smallestContaining(element, needles) {
   for (let node = element; node && node !== document.body; node = node.parentElement) {
     if (needles.every((needle) => node.textContent.includes(needle))) return node;
