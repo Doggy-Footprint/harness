@@ -17,6 +17,8 @@ _FIELDS = {
     "seeds_detected", "fuzz_execs", "fuzz_violations", "mutants", "killed",
     "survived", "equivalent", "overturned",
     "rule", "tool_name", "match", "match_kind", "excerpt",
+    "stage", "reason", "fact_id", "dimension", "fact_questions", "user_decisions",
+    "split", "picks_differ",
 }
 
 

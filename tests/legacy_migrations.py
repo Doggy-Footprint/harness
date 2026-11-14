@@ -4,6 +4,8 @@ import re
 import unittest
 from pathlib import Path
 
+import telemetry_sandbox  # noqa: F401
+
 CUTOFF = (0, 40, 0)
 ENV = "HARNESS_LEGACY_MIGRATION_TESTS"
 

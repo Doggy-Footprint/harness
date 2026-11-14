@@ -116,3 +116,8 @@ File: 76ec93b79f7319f3-continue-on-retired-progress.md
 Summary: /continue-on without an argument fails when the previous session retired its progress to progress-logs before a PR
 Related Files: harness/bin/progress.py, harness/skills/continue-on/SKILL.md
 Related Symbols: resolve_target, cmd_show
+---
+File: e00f26d26c7ef940-tests-write-real-telemetry-dir.md
+Summary: Tests that run hooks without HARNESS_TELEMETRY_DIR leave empty .session-lock files named after temp repos in ~/.harness/telemetry; not started
+Related Files: harness/lib/session_metrics.py, harness/lib/telemetry.py, tests/test_telemetry.py, tests/test_workflow_markers.py
+Related Symbols: _state_lock, _state_prefix, _telemetry_directory

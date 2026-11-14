@@ -214,10 +214,12 @@ def workflow_start(run_id: str, spec: str, spec_version: int) -> bool:
     return False
 
 
-def workflow_phase(run_id: str, phase: str) -> bool:
+def workflow_phase(run_id: str, phase: str, reason: str | None = None) -> bool:
     workflow = active_workflow()
     if workflow is None or workflow["workflow_run_id"] != run_id:
         return False
+    if phase == "amend":
+        return _emit({}, "workflow_phase", phase=phase, **workflow, reason=reason)
     return _emit({}, "workflow_phase", phase=phase, **workflow)
 
 

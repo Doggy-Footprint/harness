@@ -4,6 +4,8 @@ exits 0 with empty stdout: a non-zero exit or stray output here would block or
 corrupt the calling agent's tool loop.
 """
 import json
+import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -17,11 +19,18 @@ import telemetry  # noqa: E402
 PATHS = config.load_paths()
 REPO_ROOT = config.REPO_ROOT
 SEED_SCRIPT = ".harness/bin/seed.py"
+MARKER_SCRIPT = ".harness/bin/workflow_marker.py"
+SEPARATOR_CHARS = ";&|()"
 # REPO_ROOT is symlink-resolved (config.py resolves __file__); tool_input
 # paths from the calling agent usually are not, so resolve() here too or
 # every spec/progress write silently drops on a symlinked worktree (e.g. macOS /tmp).
 SPECS_DIR = PATHS.specs.resolve()
 PROGRESS_DIR = PATHS.progress.resolve()
+FACTS_DIR = PATHS.facts.resolve()
+FACT_DIMENSIONS = {"load", "data", "concurrency", "environment", "consumers", "roadmap", "failure", "cost"}
+BRIEF_STAGES = {"understanding", "decision", "approval"}
+BRIEF_SPLITS = {"none", "proposed", "accepted", "declined"}
+BRIEF_COUNT_FLAGS = {"--fact-questions": "fact_questions", "--user-decisions": "user_decisions", "--picks-differ": "picks_differ"}
 
 
 def resolve_path(path_str: str) -> Path:
@@ -71,6 +80,13 @@ def apply_patch_paths(tool_input: dict) -> list:
     return paths
 
 
+def fact_fields(name: str) -> dict:
+    fact_id = name[:16] if re.match(r"[0-9a-f]{16}-", name) else None
+    segment = re.match(r"[0-9a-f]{16}-([^-]*)-", name)
+    dimension = segment.group(1) if segment and segment.group(1) in FACT_DIMENSIONS else None
+    return {"fact_id": fact_id, "dimension": dimension}
+
+
 def emit_path_write(payload: dict, path_str) -> None:
     if not path_str:
         return
@@ -79,6 +95,8 @@ def emit_path_write(payload: dict, path_str) -> None:
         telemetry.emit(payload, "spec_write", spec=path.stem, version=parse_spec_version(path))
     elif path.parent == PROGRESS_DIR and path.suffix == ".md":
         telemetry.emit(payload, "progress_write", file=path.name)
+    elif path.parent == FACTS_DIR and path.suffix == ".md" and path.name not in ("index.md", "stale.md"):
+        telemetry.emit(payload, "fact_write", **fact_fields(path.name))
 
 
 def bash_exit_code(tool_response):
@@ -89,6 +107,86 @@ def bash_exit_code(tool_response):
     if isinstance(value, bool) or not isinstance(value, int):
         return None
     return value
+
+
+def is_separator(token: str) -> bool:
+    return bool(token) and all(char in SEPARATOR_CHARS for char in token)
+
+
+def is_count(value: str) -> bool:
+    return re.fullmatch(r"[0-9]+", value) is not None
+
+
+def parse_brief_args(args: list):
+    values = {}
+    if len(args) % 2:
+        return None
+    for flag, value in zip(args[0::2], args[1::2]):
+        if flag in values:
+            return None
+        values[flag] = value
+    if not {"--run-id", "--stage", "--round"} <= values.keys():
+        return None
+    if not values.keys() <= {"--run-id", "--stage", "--round", "--split", *BRIEF_COUNT_FLAGS}:
+        return None
+    if re.fullmatch(r"[0-9a-f]{16}", values["--run-id"]) is None:
+        return None
+    if values["--stage"] not in BRIEF_STAGES:
+        return None
+    if not is_count(values["--round"]) or int(values["--round"]) < 1:
+        return None
+    fields = {
+        "workflow_run_id": values["--run-id"],
+        "spec": None,
+        "stage": values["--stage"],
+        "round": int(values["--round"]),
+    }
+    for flag, key in BRIEF_COUNT_FLAGS.items():
+        value = values.get(flag)
+        if value is not None and not is_count(value):
+            return None
+        fields[key] = None if value is None else int(value)
+    split = values.get("--split")
+    if split is not None and split not in BRIEF_SPLITS:
+        return None
+    fields["split"] = split
+    return {key: fields[key] for key in (
+        "workflow_run_id", "spec", "stage", "round", "fact_questions", "user_decisions", "split", "picks_differ",
+    )}
+
+
+def brief_occurrences(command: str) -> list:
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=SEPARATOR_CHARS)
+    lexer.whitespace_split = True
+    try:
+        tokens = list(lexer)
+    except ValueError:
+        return []
+    found = []
+    for i, token in enumerate(tokens):
+        if token != MARKER_SCRIPT and not token.endswith("/" + MARKER_SCRIPT):
+            continue
+        if i + 1 >= len(tokens) or tokens[i + 1] != "brief":
+            continue
+        end = i + 2
+        while end < len(tokens) and not is_separator(tokens[end]):
+            end += 1
+        try:
+            fields = parse_brief_args(tokens[i + 2:end])
+        except ValueError:
+            # int() refuses digit strings beyond sys.get_int_max_str_digits().
+            fields = None
+        if fields is not None:
+            found.append(fields)
+    return found
+
+
+def emit_briefs(payload: dict, tool_input: dict, tool_response) -> None:
+    exit_code = bash_exit_code(tool_response)
+    if exit_code is not None and exit_code != 0:
+        return
+    for fields in brief_occurrences(hook_shared.shell_command(tool_input)):
+        telemetry.emit(payload, "brief", **fields)
 
 
 def handle_bash(payload: dict, tool_input: dict, tool_response) -> None:
@@ -109,6 +207,10 @@ def handle_post_tool_use(payload: dict) -> None:
     tool_input = payload.get("tool_input") or {}
     tool_response = payload.get("tool_response")
     if tool_name == "Bash":
+        try:
+            emit_briefs(payload, tool_input, tool_response)
+        except Exception:
+            pass
         handle_bash(payload, tool_input, tool_response)
     elif tool_name in ("Write", "Edit"):
         emit_path_write(payload, tool_input.get("file_path"))

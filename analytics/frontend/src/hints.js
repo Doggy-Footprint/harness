@@ -88,6 +88,30 @@ export const HINTS = {
     en: "Main dispatched test-implementer with a prompt that tells it to run tests.",
     ko: "main이 테스트를 실행하라는 지시가 담긴 프롬프트로 test-implementer를 호출했습니다.",
   },
+  brief: {
+    en: "Workflow-approach brief rounds of this run (understanding, decision, approval), recorded by the brief marker. Session and tool use IDs point to the turn that holds the brief text.",
+    ko: "이 런의 workflow-approach 브리프 라운드(이해, 결정, 승인)로, brief 마커가 기록합니다. 세션 ID와 tool use ID로 브리프 본문이 담긴 턴을 찾을 수 있습니다.",
+  },
+  brief_stage: { en: "Brief stage: understanding, decision, or approval.", ko: "브리프 단계입니다: understanding(이해), decision(결정), approval(승인)." },
+  brief_round: { en: "Round number within that stage, counting from 1.", ko: "해당 단계 안에서 몇 번째 라운드인지를 1부터 센 번호입니다." },
+  brief_fact_questions: { en: "Fact questions asked in that round.", ko: "그 라운드에서 사용자에게 물은 사실 질문 수입니다." },
+  brief_user_decisions: { en: "User decisions over the whole task so far, as the decision cap counts them.", ko: "지금까지 작업 전체에서 사용자가 정한 결정 수로, 결정 상한과 같은 방식으로 셉니다." },
+  brief_split: { en: "Task split state: none, proposed, accepted, or declined.", ko: "작업 분할 상태입니다: none(없음), proposed(제안), accepted(수락), declined(거절)." },
+  brief_picks_differ: { en: "On the approval brief, decisions where the user's choice differs from the agent's recorded pick.", ko: "승인 브리프에서 사용자의 선택이 에이전트가 미리 적어 둔 선택과 다른 결정 수입니다." },
+  brief_session_id: { en: "Session that holds the brief turn.", ko: "브리프 턴이 담긴 세션입니다." },
+  brief_tool_use_id: { en: "Tool call that recorded the brief marker, inside that session.", ko: "그 세션 안에서 brief 마커를 기록한 도구 호출입니다." },
+  amend_reasons: { en: "Amendment and correction markers of this run, counted by reason.", ko: "이 런의 수정(amend) 마커를 사유별로 센 값입니다." },
+  amend_intent_mismatch: { en: "Amendment forced by an intent mismatch found after approval.", ko: "승인 후 발견된 의도 불일치 때문에 불가피했던 수정입니다." },
+  amend_brief_change: { en: "Other amendment that changes a brief item.", ko: "그 밖에 브리프 항목을 바꾸는 수정입니다." },
+  amend_contract_change: { en: "Amendment that changes only the contract.", ko: "계약 부분만 바꾸는 수정입니다." },
+  amend_correction: { en: "Correction batch that does not change the spec.", ko: "스펙을 바꾸지 않는 수정 배치입니다." },
+  amend_unspecified: { en: "Amend markers without a known reason.", ko: "사유가 없거나 알 수 없는 수정 마커입니다." },
+  brief_only_runs: {
+    en: "Runs with brief rounds but no workflow start yet. Click a run ID for its brief rounds.",
+    ko: "브리프 라운드는 있지만 아직 워크플로가 시작되지 않은 런입니다. 런 ID를 누르면 브리프 라운드가 열립니다.",
+  },
+  brief_rounds: { en: "Brief events recorded for the run.", ko: "이 런에 기록된 브리프 이벤트 수입니다." },
+  brief_last_stage: { en: "Stage of the latest brief event.", ko: "가장 최근 브리프 이벤트의 단계입니다." },
 };
 
 export function detectLang() {
