@@ -4,6 +4,9 @@ import sqlite3
 # events.run_id became nullable (FR4) and a transcript_cache table was added
 # (FR6); bump so pre-existing sqlite files (run_id NOT NULL, no cache table)
 # get their derived events/sources recreated instead of failing inserts.
+#
+# brief_parse is created with IF NOT EXISTS instead of a bump, which would drop
+# events/sources of existing databases.
 SCHEMA_VERSION = 2
 
 
@@ -33,6 +36,11 @@ def initialize(connection: sqlite3.Connection) -> None:
     CREATE TABLE IF NOT EXISTS transcript_cache (
       path TEXT PRIMARY KEY, size INTEGER NOT NULL, mtime REAL NOT NULL,
       client TEXT NOT NULL, data TEXT
+    );
+    CREATE TABLE IF NOT EXISTS brief_parse (
+      session_id TEXT NOT NULL, tool_use_id TEXT NOT NULL, path TEXT NOT NULL,
+      size INTEGER NOT NULL, mtime REAL NOT NULL, data TEXT,
+      PRIMARY KEY(session_id, tool_use_id)
     );
     """)
     connection.commit()

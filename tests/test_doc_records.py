@@ -238,7 +238,7 @@ class TestMigration0290(DocRecordsTestCase):
         self.assertIn("keep agent-docs/adr/ untouched", result.stdout)
         self.assertNotIn("agent-docs/rejections/", result.stdout)
         self.assertEqual(record.read_text(), "# X\n")
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.49.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.49.1")
         block = (repo / ".harness" / "instructions" / "harness-block.md").read_text()
         self.assertNotIn("## Try-n-Fail Rule", block)
         self.assertIn("## Try-n-Fail Rule", (repo / ".harness" / "instructions" / "try-n-fail.md").read_text())

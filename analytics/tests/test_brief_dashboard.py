@@ -11,10 +11,10 @@ from analytics.app import create_app
 PRICES = ("models:\n  known-model:\n    input: 1\n    output: 1\n    cache_read: 1\n"
           "    cache_write_5m: 1\n    cache_write_1h: 1\n")
 BRIEF_ENTRY_KEYS = {"stage", "round", "fact_questions", "user_decisions", "split", "picks_differ",
-                    "ts", "session_id", "tool_use_id"}
+                    "ts", "session_id", "tool_use_id", "parsed"}
 REASONS = ("intent_mismatch", "brief_change", "contract_change", "correction")
 AMEND_KEYS = set(REASONS) | {"unspecified"}
-NEW_SUMMARY_KEYS = {"brief_only_runs"}
+NEW_SUMMARY_KEYS = {"brief_only_runs", "brief_questions"}
 NEW_DETAIL_KEYS = {"briefs", "amend_reasons"}
 
 
@@ -127,10 +127,10 @@ class TestBriefOnlyRunsAndDetail(DashboardCase):
         self.assertEqual(detail["briefs"], [
             {"stage": "decision", "round": 2, "fact_questions": 2, "user_decisions": 1,
              "split": "proposed", "picks_differ": None, "ts": ts(5), "session_id": "claude-9",
-             "tool_use_id": "toolu_b"},
+             "tool_use_id": "toolu_b", "parsed": None},
             {"stage": "understanding", "round": 1, "fact_questions": 0, "user_decisions": 0,
              "split": "none", "picks_differ": 0, "ts": ts(3), "session_id": "claude-1",
-             "tool_use_id": "toolu_a"},
+             "tool_use_id": "toolu_a", "parsed": None},
         ])
         for entry in detail["briefs"]:
             self.assertEqual(set(entry), BRIEF_ENTRY_KEYS)

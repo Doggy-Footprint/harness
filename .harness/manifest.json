@@ -1,8 +1,8 @@
 {
-  "version": "0.49.0",
+  "version": "0.49.1",
   "files": {
     ".harness/config.default.json": "04aab9383dd877c1cea87ab9a9a1682da9f5de5e5d01fc2e9d871d9f2bb710c7",
-    ".harness/VERSION": "1c7f777c218b03f67bee54115cff1b9ca2abf8c3d04605903cf0701dedd6cece",
+    ".harness/VERSION": "152af70022180ee00a67bdc00a7422ec3b7ea9dd2f1b1d6da1ecff112af6138c",
     ".harness/instructions/index-and-staleness.md": "f25c4f2be74342e621dd1a536eaabfe06dd6d75c3b510c5cea339823c27d303b",
     ".harness/instructions/progress.md": "ea2d6af3c43b74a0e031bee19f7eb99561ee67b9e6e3bf27a7285716f29d951c",
     ".harness/instructions/try-n-fail.md": "c5ea1c085e6746cf69018d7674705d1a76c73ccc3995f421b718031f5245ae01",
@@ -44,7 +44,7 @@
     ".harness/git/pre-commit": "800a04bade79925c304fabe1b0fe8e3ae64a9aed5f699347bde2cf3ada1461a3",
     ".harness/git/verify_rules.py": "a4a9c6f4b54f3a4351ba7ef8c2a9a7f76357733454fb3c5d75605e96c7eb2ce6",
     ".harness/skills/continue-on/SKILL.md": "6075286c951c61f7c20018f5b76f4439a6606ad966502ecc04ec82bf7fec279d",
-    ".harness/skills/workflow-approach/SKILL.md": "5aab117b27b470a6e157cd94e50d4a47d0615959cd3256279de6f6d6ebf8dde4",
+    ".harness/skills/workflow-approach/SKILL.md": "0ef00a06a70925776be0634f9e326c468ddaef7bb9631e3b30d660c93322fdc9",
     ".claude/agents/code-explorer.md": "36950610e12c2ab903d1e56290a5cf99465f642f6808ae6a057271c4da5e2cce",
     ".codex/agents/code-explorer.toml": "0eb24e43b786c214ef1b6f410eda07f58c0ce47e130590014a60bfcc79ea7555",
     ".claude/agents/implementer.md": "47da9554962f1c91097c0ed323b86141a46583226ee9c9c3dad1e2679fa813f2",
@@ -56,7 +56,7 @@
     ".claude/agents/test-verifier.md": "11fb9f2a50593792b7631feb9e28636ec2271871b9e05fa6418d06ff56177b9f",
     ".codex/agents/test-verifier.toml": "674c49fe1f269166c0e70278f47d1d46ec9f0fad8c1c3ab0415d21b59b0d654a",
     ".agents/skills/continue-on/SKILL.md": "6075286c951c61f7c20018f5b76f4439a6606ad966502ecc04ec82bf7fec279d",
-    ".agents/skills/workflow-approach/SKILL.md": "5aab117b27b470a6e157cd94e50d4a47d0615959cd3256279de6f6d6ebf8dde4",
+    ".agents/skills/workflow-approach/SKILL.md": "0ef00a06a70925776be0634f9e326c468ddaef7bb9631e3b30d660c93322fdc9",
     ".github/workflows/harness-comment-warning.yml": "be0bb60cbfcb8e3eb7b16241f21fab8f3c763b8fcc1dfc57d434331523364e8a"
   }
 }

@@ -111,6 +111,15 @@ export const HINTS = {
     ko: "브리프 라운드는 있지만 아직 워크플로가 시작되지 않은 런입니다. 런 ID를 누르면 브리프 라운드가 열립니다.",
   },
   brief_rounds: { en: "Brief events recorded for the run.", ko: "이 런에 기록된 브리프 이벤트 수입니다." },
+  brief_questions: {
+    en: "Fact and decision questions parsed from brief turns of all runs, newest first. Click a run ID to open it.",
+    ko: "모든 런의 브리프 턴에서 추출한 사실 질문과 결정 질문이며 최신순입니다. 런 ID를 누르면 해당 런이 열립니다.",
+  },
+  brief_question_kind: { en: "Whether the question is a fact question or a decision question.", ko: "사실 질문인지 결정 질문인지 나타냅니다." },
+  brief_question_text: { en: "The question as written in the brief.", ko: "브리프에 적힌 그대로의 질문입니다." },
+  brief_questions_list: { en: "Fact and decision questions found in this brief turn.", ko: "이 브리프 턴에서 찾은 사실 질문과 결정 질문입니다." },
+  brief_understanding: { en: "The understanding section of this brief turn, as written.", ko: "이 브리프 턴의 이해 내용 섹션을 적힌 그대로 보여줍니다." },
+  brief_original_text: { en: "Full text of the brief turn from the transcript. Click to open.", ko: "트랜스크립트에 있는 브리프 턴의 전체 텍스트입니다. 눌러서 펼칩니다." },
   brief_last_stage: { en: "Stage of the latest brief event.", ko: "가장 최근 브리프 이벤트의 단계입니다." },
 };
 
