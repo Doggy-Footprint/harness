@@ -1041,6 +1041,15 @@ def migrate_brief_fact_questions(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_brief_picks_and_cap(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "workflow-approach: before the decision round the agent writes its own pick for each user decision to "
+        "<run-id>-picks.md outside the repository, and the approval brief compares the user's choice with that file",
+        "workflow-approach: the cap of 3 user decisions counts every round of the task and each separately chosen part",
+        "no existing files change",
+    ]
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -1119,6 +1128,11 @@ MIGRATIONS = (
         parse_version("0.47.0"),
         "brief asks fact questions and holds user decisions without recommendation; record facts in agent-docs/facts/",
         migrate_brief_fact_questions,
+    ),
+    (
+        parse_version("0.48.0"),
+        "brief records the agent's picks before the decision round; the decision cap counts the whole task",
+        migrate_brief_picks_and_cap,
     ),
 )
 
