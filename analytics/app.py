@@ -1,3 +1,4 @@
+import json
 import os
 import sqlite3
 import sys
@@ -9,6 +10,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
+from .brief_parser import locate_brief_turn, parse_brief_text
 from .compliance import evaluate
 from .importer import import_pending
 from .pricing import calculate_cost, calculate_codex_cost, load_prices
@@ -217,6 +219,76 @@ def _briefs(events):
     return [{key: event.get(key) for key in _BRIEF_FIELDS} for event in events]
 
 
+def _read_records(path: str):
+    try:
+        text = Path(path).read_bytes().decode("utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    records = []
+    for line in text.split("\n"):
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(record, dict):
+            records.append(record)
+    return records
+
+
+class _BriefParser:
+    def __init__(self, connection, lock):
+        self.connection = connection
+        self.lock = lock
+        self.records: dict[str, list | None] = {}
+        with lock:
+            rows = connection.execute("SELECT path FROM transcript_cache WHERE client = 'claude' ORDER BY path").fetchall()
+        self.paths: dict[str, str] = {}
+        for row in rows:
+            path = Path(row["path"])
+            if path.parent.name != "subagents":
+                self.paths.setdefault(path.stem, row["path"])
+
+    def parse(self, event):
+        try:
+            return self._parse(event)
+        except Exception:
+            return None
+
+    def _parse(self, event):
+        session_id, tool_use_id = event.get("session_id"), event.get("tool_use_id")
+        if event.get("client") != "claude" or not isinstance(session_id, str) or not session_id \
+                or not isinstance(tool_use_id, str) or not tool_use_id:
+            return None
+        path = self.paths.get(session_id)
+        if path is None:
+            return None
+        try:
+            stat = os.stat(path)
+        except OSError:
+            return None
+        with self.lock:
+            row = self.connection.execute(
+                "SELECT path, size, mtime, data FROM brief_parse WHERE session_id=? AND tool_use_id=?",
+                (session_id, tool_use_id)).fetchone()
+        if row and row["path"] == path and row["size"] == stat.st_size and row["mtime"] == stat.st_mtime:
+            return json.loads(row["data"]) if row["data"] is not None else None
+        if path not in self.records:
+            self.records[path] = _read_records(path)
+        records = self.records[path]
+        if records is None:
+            return None
+        text = locate_brief_turn(records, tool_use_id)
+        parsed = None if text is None else {"text": text, **parse_brief_text(text)}
+        with self.lock:
+            self.connection.execute(
+                "INSERT OR REPLACE INTO brief_parse(session_id, tool_use_id, path, size, mtime, data) VALUES(?,?,?,?,?,?)",
+                (session_id, tool_use_id, path, stat.st_size, stat.st_mtime, None if parsed is None else json.dumps(parsed)))
+            self.connection.commit()
+        return parsed
+
+
 def _amend_reasons(events):
     counts = {reason: 0 for reason in _AMEND_REASONS}
     counts["unspecified"] = 0
@@ -310,6 +382,7 @@ def create_app(database_path: Path, telemetry_dir: Path, price_path: Path, trans
             sessions = cached_sessions(connection)
         grouped: dict[str, list[dict]] = {}
         briefs: dict[str, list[dict]] = {}
+        brief_events: list[dict] = []
         for row in rows:
             event = event_dict(row)
             run_id = event.get("workflow_run_id")
@@ -320,6 +393,7 @@ def create_app(database_path: Path, telemetry_dir: Path, price_path: Path, trans
             # from the groups; brief events are reported separately.
             if event.get("event") == "brief":
                 briefs.setdefault(run_id, []).append(event)
+                brief_events.append(event)
                 continue
             if event.get("event") == "fact_write":
                 continue
@@ -336,7 +410,7 @@ def create_app(database_path: Path, telemetry_dir: Path, price_path: Path, trans
                 if event.get("spec_version") is None:
                     event["spec_version"] = run_spec_version
         sessions_by_key = {(session.get("client"), session.get("session_id")): session for session in sessions}
-        return grouped, sessions_by_key, sessions, briefs
+        return grouped, sessions_by_key, sessions, briefs, brief_events
 
     def candidates():
         with lock:
@@ -363,7 +437,7 @@ def create_app(database_path: Path, telemetry_dir: Path, price_path: Path, trans
 
     @app.get("/api/summary")
     def summary():
-        grouped, sessions_by_key, sessions, briefs = runs()
+        grouped, sessions_by_key, sessions, briefs, brief_events = runs()
         details = [detail(key, value, sessions, sessions_by_key) for key, value in grouped.items()]
         completed = [item for item in details if item["status"] != "in_progress"]
         costs = [item["linked_cost_usd"] for item in details]
@@ -374,6 +448,15 @@ def create_app(database_path: Path, telemetry_dir: Path, price_path: Path, trans
         for run_class in run_classes.values():
             classification_runs[run_class] += 1
         classification = {"runs": classification_runs, "sessions": _classify_sessions(grouped, sessions_by_key, run_classes)}
+        parser = _BriefParser(connection, lock)
+        brief_questions = []
+        for event in brief_events:
+            parsed = parser.parse(event)
+            for question in (parsed or {}).get("questions", []):
+                brief_questions.append({"run_id": event.get("workflow_run_id"), "stage": event.get("stage"), "round": event.get("round"),
+                                        "ts": event.get("ts"), "kind": question["kind"], "text": question["text"]})
+        with_ts = sorted((q for q in brief_questions if q["ts"] is not None), key=lambda q: q["ts"], reverse=True)
+        brief_questions = with_ts + [q for q in brief_questions if q["ts"] is None]
         return {"runs": len(details), "completed_runs": len(completed), "compliant_runs": sum(item["compliant"] is True for item in completed),
                 "handoff_runs": sum(item["status"] == "handoff" for item in details),
                 "verifier_rounds": sum(item["verifier_rounds"] for item in details), "verifier_retries": sum(item["verifier_retries"] for item in details),
@@ -384,18 +467,20 @@ def create_app(database_path: Path, telemetry_dir: Path, price_path: Path, trans
                 "workflow": {"runs": workflow_runs},
                 "non_workflow": _non_workflow_section(sessions, workflow_keys, prices),
                 "classification": classification, "harness_hacking": _harness_hacking(candidates()),
-                "brief_only_runs": _brief_only_runs(briefs, grouped)}
+                "brief_only_runs": _brief_only_runs(briefs, grouped), "brief_questions": brief_questions}
 
     @app.get("/api/runs/{run_id}")
     def run(run_id: str):
-        grouped, sessions_by_key, sessions, briefs = runs()
+        grouped, sessions_by_key, sessions, briefs, brief_events = runs()
         if run_id not in grouped and run_id not in briefs:
             raise HTTPException(status_code=404, detail="run not found")
         events = grouped.get(run_id, [])
         result = detail(run_id, events, sessions, sessions_by_key)
         if run_id not in grouped:
             result["status"] = "before_approval"
-        result["briefs"] = _briefs(briefs.get(run_id, []))
+        run_briefs = briefs.get(run_id, [])
+        parser = _BriefParser(connection, lock)
+        result["briefs"] = [{**entry, "parsed": parser.parse(event)} for entry, event in zip(_briefs(run_briefs), run_briefs)]
         result["amend_reasons"] = _amend_reasons(events)
         result["harness_hacking"] = _harness_hacking([e for e in candidates() if e.get("workflow_run_id") == run_id])
         return result

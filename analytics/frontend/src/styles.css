@@ -139,3 +139,8 @@ button.ghost:hover { color: var(--text); }
 
 td.nowrap { white-space: nowrap; }
 td.excerpt { max-width: 480px; white-space: pre-wrap; word-break: break-all; font-size: 12px; }
+
+.brief-entry { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border); }
+.brief-parsed h3 { font-size: 13px; margin: 8px 0 4px; }
+.brief-questions { margin: 0; padding-left: 18px; }
+.brief-text { white-space: pre-wrap; margin: 4px 0; }

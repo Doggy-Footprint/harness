@@ -244,6 +244,29 @@ function HarnessHacking({ data }) {
 
 const AMEND_REASONS = ["intent_mismatch", "brief_change", "contract_change", "correction", "unspecified"];
 
+function ParsedBrief({ parsed }) {
+  if (!parsed) return <p className="muted brief-missing">Brief text not found.</p>;
+  const questions = parsed.questions ?? [];
+  return (
+    <div className="brief-parsed">
+      <Tip as="h3" hint="brief_questions_list">Questions</Tip>
+      {questions.length === 0 ? <p className="muted">No questions found.</p> : (
+        <ul className="brief-questions">
+          {questions.map((question, i) => (
+            <li key={i}><span className={`badge badge-${question.kind === "fact" ? "neutral" : "warn"}`}>{question.kind}</span> {question.text}</li>
+          ))}
+        </ul>
+      )}
+      <Tip as="h3" hint="brief_understanding">Understanding</Tip>
+      {parsed.understanding == null ? <p className="muted">No understanding section.</p> : <p className="brief-text" style={{ whiteSpace: "pre-wrap" }}>{parsed.understanding}</p>}
+      <details>
+        <Tip as="summary" hint="brief_original_text">Original text</Tip>
+        <p className="brief-text" style={{ whiteSpace: "pre-wrap" }}>{parsed.text}</p>
+      </details>
+    </div>
+  );
+}
+
 function BriefCard({ briefs, amendReasons }) {
   return (
     <section aria-label="Brief" className="card">
@@ -275,6 +298,11 @@ function BriefCard({ briefs, amendReasons }) {
           </table>
         </div>
       )}
+      {briefs.map((item, i) => (
+        <div key={i} className="brief-entry">
+          <ParsedBrief parsed={item.parsed} />
+        </div>
+      ))}
       <Tip as="h2" hint="amend_reasons">Amend reasons</Tip>
       <ul className="legend">
         {AMEND_REASONS.map(reason => (
@@ -313,6 +341,37 @@ function BriefOnlyRuns({ runs, onSelect }) {
             </tbody>
           </table>
         </nav>
+      )}
+    </div>
+  );
+}
+
+function BriefQuestions({ rows, onSelect }) {
+  return (
+    <div className="card">
+      <div className="card-head"><Tip as="h2" hint="brief_questions">Brief questions</Tip><span className="muted">{rows.length}</span></div>
+      {rows.length === 0 ? (
+        <p className="muted">No brief questions.</p>
+      ) : (
+        <div className="table-wrap">
+          <table className="runs">
+            <thead><tr><Tip as="th" hint="run_id">Run</Tip><Tip as="th" hint="brief_stage">Stage</Tip><Tip as="th" hint="brief_question_kind">Kind</Tip><Tip as="th" hint="brief_question_text">Question</Tip></tr></thead>
+            <tbody>
+              {rows.map((row, i) => (
+                <tr key={i}>
+                  <td>
+                    <a className="mono" href={`/runs/${encodeURIComponent(row.run_id)}`} onClick={(event) => { event.preventDefault(); onSelect(row.run_id); }}>
+                      {row.run_id}
+                    </a>
+                  </td>
+                  <td>{row.stage ?? ""}</td>
+                  <td>{row.kind}</td>
+                  <td>{row.text}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
@@ -429,6 +488,7 @@ function WorkflowSummary({ summary, onSelect }) {
         )}
       </div>
       <BriefOnlyRuns runs={summary.brief_only_runs ?? []} onSelect={onSelect} />
+      <BriefQuestions rows={summary.brief_questions ?? []} onSelect={onSelect} />
     </section>
   );
 }

@@ -557,12 +557,12 @@ class TestMigration0410(InstallerTestCase):
         repo, manifest_path = self.install_0400()
         agents_before = (repo / "AGENTS.md").read_bytes()
 
-        result = run_installer("update", str(repo), "--no-ci", "--no-commit", input="y\n" * 8, exact=True)
+        result = run_installer("update", str(repo), "--no-ci", "--no-commit", input="y\n" * 9, exact=True)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         announced = re.findall(r"^migration (\d+\.\d+\.\d+):", result.stdout, re.MULTILINE)
-        self.assertEqual(announced[-1], "0.49.0")
-        self.assertEqual(announced, ["0.41.0", "0.42.0", "0.43.0", "0.44.0", "0.45.0", "0.47.0", "0.48.0", "0.49.0"])
+        self.assertEqual(announced[-1], "0.49.1")
+        self.assertEqual(announced, ["0.41.0", "0.42.0", "0.43.0", "0.44.0", "0.45.0", "0.47.0", "0.48.0", "0.49.0", "0.49.1"])
         self.assertIn(f"migration 0.41.0: {S6_LABEL}", result.stdout)
         start = result.stdout.index("migration 0.41.0:")
         positions = []
@@ -571,7 +571,7 @@ class TestMigration0410(InstallerTestCase):
             positions.append(result.stdout.index(line, start))
         self.assertEqual(positions, sorted(positions))
         self.assertEqual((repo / "AGENTS.md").read_bytes(), agents_before)
-        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.49.0")
+        self.assertEqual(json.loads(manifest_path.read_text())["version"], "0.49.1")
         for name in MOVED.values():
             self.assertTrue((repo / INSTRUCTIONS / name).is_file(), name)
         block_headings = [h for h, _ in split_sections(read_block(repo))]

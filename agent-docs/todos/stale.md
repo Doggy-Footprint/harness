@@ -126,3 +126,8 @@ File: e77323782c45bbfb-brief-telemetry-gaps.md
 Summary: Telemetry records nothing before approval (brief rounds, fact questions, user decisions, split, picks differing), no event for agent-docs/facts writes, and no reason on amend; not started
 Related Files: harness/lib/telemetry.py, harness/bin/workflow_marker.py, harness/hooks/telemetry_hook.py, harness/skills/workflow-approach/SKILL.md, analytics/compliance.py, analytics/importer.py
 Related Symbols: workflow_phase, workflow_start, emit_path_write, evaluate, _WORKFLOW_EVENTS
+---
+File: b2373e0fdc356594-brief-transcript-parser.md
+Summary: Second half of run 49bafb302bb6593c: rule-based transcript parser and dashboard view for brief decision axes and understanding, located by the brief event pointer; user rejected extra parser fields; not started
+Related Files: analytics/transcripts.py, analytics/app.py, analytics/importer.py, analytics/frontend/src/App.jsx, harness/hooks/telemetry_hook.py
+Related Symbols: index_transcripts, cached_sessions, emit_path_write

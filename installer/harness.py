@@ -1063,6 +1063,14 @@ def migrate_brief_telemetry(target: Path, dry_run: bool) -> list[str]:
     ]
 
 
+def migrate_literal_marker_arguments(target: Path, dry_run: bool) -> list[str]:
+    return [
+        "workflow-approach: the skill now asks for every workflow marker argument to be written as a literal "
+        "value, because the telemetry hook does not expand shell variables",
+        "no existing files change",
+    ]
+
+
 MIGRATIONS = (
     (parse_version("0.3.0"), "archive stale records", migrate_stale_records),
     (parse_version("0.4.0"), "format stale index archives", migrate_stale_index_logs),
@@ -1151,6 +1159,11 @@ MIGRATIONS = (
         parse_version("0.49.0"),
         "record brief rounds, fact writes, and amend reasons in telemetry",
         migrate_brief_telemetry,
+    ),
+    (
+        parse_version("0.49.1"),
+        "workflow-approach asks for literal marker arguments",
+        migrate_literal_marker_arguments,
     ),
 )
 
