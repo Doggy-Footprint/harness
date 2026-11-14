@@ -3,7 +3,7 @@ session: a57c23b5-f803-408b-848a-ef0b960b7dde
 before: none
 previous: none
 branch: feat/brief-telemetry
-commit: 15f3875d80a7994fb1aad2ab44afb58e98270c48
+commit: acdbe6a5caa806f6436aef6c6e8afc075c876756
 ---
 
 # Brief telemetry gaps and test telemetry leak
@@ -21,7 +21,7 @@ commit: 15f3875d80a7994fb1aad2ab44afb58e98270c48
   - files: tests/telemetry_sandbox.py, tests/legacy_migrations.py
 
 ### Next Step
-- Open a PR for feat/brief-transcript-parser when the user asks (Korean description, as for PR #41).
+- PR https://github.com/Doggy-Footprint/harness/pull/42 opened from feat/brief-transcript-parser against master; not merged at this entry. Next: follow review on the PR.
   - files: none
 
 ### Constraints
@@ -186,3 +186,7 @@ commit: 15f3875d80a7994fb1aad2ab44afb58e98270c48
 #### 15 — 2026-11-14T12:44:05Z
 
 > 주석이랑 회고는 꼭 필요한 것만 남겨
+
+#### 16 — 2026-11-14T12:49:14Z
+
+> PR 열어
