@@ -1,0 +1,72 @@
+{
+  "id": "plan-quota",
+  "repo": "diwenne/openreply@c78b2d2f68c9764ef7a7dde51dfa5bfa99304a09",
+  "task": "워크스페이스에 요금제를 붙여줘. Free는 한 달에 보낼 수 있는 DM 수에 한도가 있고, Pro는 Stripe로 결제하면 한도가 풀리는 식으로.",
+  "hidden_context": [
+    "The user operates OpenReply as a hosted service for 38 agency workspaces; it is not a single self-hosted instance. Nobody pays today.",
+    "Median workspace sends about 2,000 DMs a month; the top five send 40,000 to 90,000 during launches. Sending is bursty: one viral post can produce 10,000 comments in a day.",
+    "Pricing is not settled. Sales wants Free at 1,000 DMs a month and Pro at 49 USD a month; the founder has not approved it.",
+    "There is no Stripe account yet. The company is registered in Canada and most agencies are in the US and Canada.",
+    "Three agencies were promised free use until the end of 2026 when they joined the beta.",
+    "Meta can rate-limit or revoke the app if many DMs fail or are delayed after a user comments; delayed DMs to a commenter hours later look like spam.",
+    "Agencies report DM totals to their own clients through shared report links.",
+    "The web app runs on Vercel; the worker is one always-on instance on Railway."
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "fact": "how many workspaces there are, how much they send, and how bursty sending is",
+      "settles": "where the quota is checked (enqueue or send) and whether the check must be atomic under bursts"
+    },
+    {
+      "id": "U2",
+      "fact": "the plan limits and prices, and whether they are settled",
+      "settles": "whether limits live in code, config, or a database table editable without a deploy"
+    },
+    {
+      "id": "U3",
+      "fact": "whether a Stripe account exists and where the business and customers are (tax)",
+      "settles": "whether this task includes Stripe Checkout and tax handling or stops at an internal plan flag"
+    },
+    {
+      "id": "U4",
+      "fact": "promises already made to existing workspaces (free beta until a date)",
+      "settles": "whether plans need an override or expiry per workspace"
+    },
+    {
+      "id": "U5",
+      "fact": "what Meta tolerates when DMs are dropped or delayed",
+      "settles": "what happens to a comment that arrives after the quota is used up"
+    }
+  ],
+  "repo_answerable": [
+    {
+      "id": "R1",
+      "question": "whether workspaces exist and own the Instagram accounts and automations",
+      "evidence": "prisma/schema.prisma model Workspace, InstagramAccount.workspaceId"
+    },
+    {
+      "id": "R2",
+      "question": "where DMs are enqueued and sent",
+      "evidence": "lib/queue/dm-worker.ts; webhook handler under app/api"
+    },
+    {
+      "id": "R3",
+      "question": "whether any billing or quota code exists",
+      "evidence": "no stripe or quota code in lib/ or app/"
+    }
+  ],
+  "dont_care": [
+    "names of plan constants",
+    "wording of the upgrade banner",
+    "test file naming"
+  ],
+  "expected_user_decisions": [
+    "what happens to a comment once the Free quota is used up (skip, queue to next month, send anyway and bill)",
+    "calendar month or rolling 30-day window",
+    "what a workspace keeps after downgrading or a failed payment (automations paused or kept)",
+    "whether existing workspaces start on Free or Pro",
+    "whether follow-gate retries and failed sends count toward the quota"
+  ],
+  "notes": "Decision cap case: the task holds more than three product trade-offs the user owns; the skill should recommend splitting and propose a cut."
+}

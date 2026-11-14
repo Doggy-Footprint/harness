@@ -1,0 +1,146 @@
+{
+  "id": "mail-backfill-facts",
+  "repo": "trycompai/crm@c9473b82e3b4bfd5d0598bbdf7c1f36f3d2d68f0",
+  "task": "새로 들어온 영업 담당자가 메일함을 연결하면 지난 메일도 CRM에 들어오게 해줘. 지금은 연결한 뒤에 온 메일만 들어와서 처음엔 CRM이 텅 비어 있어.",
+  "hidden_context": [
+    "This is the company's own install of the CRM, one workspace. apps/api, apps/app and apps/agent run on Vercel Pro; Postgres is a 10 GB plan with 2.4 GB used.",
+    "There are 14 reps. 12 use Google Workspace and 2 use Microsoft 365 (Outlook) since an acquisition in August. Three new reps start next month, then about one a month.",
+    "A rep's mailbox holds 3 to 6 years of mail, 30,000 to 150,000 messages. Sales wants the last 12 months, because the sales cycle is 6 to 9 months; older mail is noise to them.",
+    "A new rep should see their history within a day or two of connecting; nobody needs it within minutes.",
+    "The Context plan is 25,000 credits a month and about 19,000 are used. A 12-month backfill of one rep's mailbox would bring in roughly 800 to 1,500 new contacts. The founder does not want the monthly bill to rise for this feature.",
+    "Reps' work mailboxes also hold recruiting threads with candidates, personal threads, and threads with outside legal counsel. At onboarding, reps were promised that only mail with customers and prospects enters the CRM, and legal asks that Gmail threads labelled 'Private' never enter. These rules are requirements for this feature; changing the forward sync is out of scope.",
+    "A workspace-scope team agent reacts to every contact.created event: it posts the new contact to the #new-leads Slack channel and creates a follow-up task for the owner. The sales manager reads #new-leads every morning.",
+    "Next quarter two partner companies will self-host the CRM with docker compose and a system cron that calls the internal endpoints once an hour; they want the same backfill."
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "fact": "how far back the needed history goes and how large the reps' mailboxes are",
+      "settles": "the backfill window, and whether the import must be paced across many runs and resume where it stopped"
+    },
+    {
+      "id": "U2",
+      "fact": "the research credit budget and how much of it is left",
+      "settles": "whether contacts created by the backfill queue agent research at once, at a capped rate, or not at all"
+    },
+    {
+      "id": "U3",
+      "fact": "which mail must never enter the CRM (private, recruiting, legal threads) and what reps were promised",
+      "settles": "whether the backfill filters by label or folder, asks each rep to opt in, or shows the rep what will be imported first"
+    },
+    {
+      "id": "U4",
+      "fact": "what on this install reacts to new contacts and activity (team agents, Slack posts, follow-up tasks) and who reads it",
+      "settles": "whether backfilled records emit the usual CRM events, emit them marked as backfilled, or emit none"
+    },
+    {
+      "id": "U5",
+      "fact": "which mail providers the reps use",
+      "settles": "whether this task builds the Outlook path too or only Gmail"
+    },
+    {
+      "id": "U6",
+      "fact": "where installs run now and are planned to run, and how often their cron fires",
+      "settles": "whether the backfill rides on the five-minute sync tick or needs pacing that also works with hourly or daily triggers"
+    }
+  ],
+  "minor_unknowns": [
+    {
+      "id": "M1",
+      "fact": "how soon after connecting a new rep needs the history",
+      "reason": "a day or two is fine and the pacing is already settled by U1 and U6; an assumption is the expected form and a question is tolerated"
+    }
+  ],
+  "repo_answerable": [
+    {
+      "id": "R1",
+      "question": "whether the sync imports any past mail today",
+      "evidence": "docs/environment.md:179-181 (forward-only; Gmail records the current historyId and imports nothing); apps/api/src/google/gmail-sync.service.ts start()"
+    },
+    {
+      "id": "R2",
+      "question": "whether importing a message twice, or one the forward sync also sees, creates duplicate rows",
+      "evidence": "packages/db/prisma/schema.prisma:1343 rfcMessageId @unique; docs/api.md:190-194"
+    },
+    {
+      "id": "R3",
+      "question": "whether old messages would move lastActivityAt backwards",
+      "evidence": "apps/api/src/crm/activity-stamp.service.ts:27-30 updates only rows whose lastActivityAt is null or older"
+    },
+    {
+      "id": "R4",
+      "question": "whether contacts created from mail queue agent research, and what a lookup costs",
+      "evidence": "apps/api/src/mailbox/mailbox-match.service.ts:292 contactCreated (identify task, budget 4); apps/api/src/backfill/backfill.service.ts auto sweep (MAX_PER_RUN 500); docs/agent.md:225-227 (a person enrich is 20 Context credits)"
+    },
+    {
+      "id": "R5",
+      "question": "which addresses on a thread are skipped (own domains, suppressed, machine, automated)",
+      "evidence": "docs/api.md:198-215; apps/api/src/mailbox/participants.ts"
+    },
+    {
+      "id": "R6",
+      "question": "how long one sync tick may run, how many Gmail messages it reads, and how often it runs on Vercel",
+      "evidence": "apps/api/src/sync/mailbox-sync.service.ts:13 (60 s); apps/api/src/google/gmail-sync.service.ts:28 (120 messages); apps/api/vercel.json (*/5); docs/environment.md:183-187 (on Hobby it becomes daily)"
+    },
+    {
+      "id": "R7",
+      "question": "whether contacts created by the sync emit a contact.created event",
+      "evidence": "apps/api/src/mailbox/mailbox-match.service.ts:248-258"
+    },
+    {
+      "id": "R9",
+      "question": "whether a backfill existed before and why it was removed",
+      "evidence": "docs/plan/gmail-calendar-plan.md:69 and 574-597 (no backfill by design; removed the chunk loop, backfilledTo, BACKFILLING, GMAIL_BACKFILL_DAYS and the progress UI); packages/db/prisma/migrations/20260731210000_forward_only_sync"
+    },
+    {
+      "id": "R8",
+      "question": "whether there is more than one workspace or tenant",
+      "evidence": "docs/api.md:34-40 (single tenant, one singleton workspace)"
+    }
+  ],
+  "dont_care": [
+    "names of internal functions or files",
+    "test file naming",
+    "log message wording",
+    "wording of the progress shown to the rep"
+  ],
+  "settled_without_fact": [
+    {
+      "decision": "deduplicating imported messages",
+      "reason": "rfcMessageId is already unique (packages/db/prisma/schema.prisma:1343), so re-reading a message is harmless whatever the facts"
+    }
+  ],
+  "seed_facts": [
+    {
+      "file": "3f1a9c0d7b2e4a61-environment-mail-providers.md",
+      "relevant": true,
+      "text": "dimension: environment\nfact: 12 of the 14 reps use Google Workspace mailboxes; 2 use Microsoft 365 (Outlook) since the August acquisition.\nsource: user, 2026-10-02\nasked for: whether calendar sync had to cover Outlook\nre-check: ask sales ops for the current mailbox provider list"
+    },
+    {
+      "file": "8c4d2e19a0f7b356-environment-cron-cadence.md",
+      "relevant": true,
+      "text": "dimension: environment\nfact: The company install runs on Vercel Pro, where the internal cron endpoints fire every five minutes; two partner companies will self-host next quarter with a system cron that calls them once an hour.\nsource: user, 2026-10-20\nasked for: whether calendar sync could rely on five-minute ticks\nre-check: read apps/api/vercel.json and ask about the partner rollout date"
+    },
+    {
+      "file": "a1b2c3d4e5f60718-load-contacts-list-size.md",
+      "relevant": false,
+      "text": "dimension: load\nfact: The largest saved contacts view holds about 9,000 contacts.\nsource: user, 2026-09-14\nasked for: the page size of the contacts table\nre-check: count rows in the largest saved view"
+    },
+    {
+      "file": "5e6f7a8b9c0d1e2f-roadmap-mobile-app.md",
+      "relevant": false,
+      "text": "dimension: roadmap\nfact: A React Native app for reps is planned for 2027 Q2.\nsource: user, 2026-09-30\nasked for: whether the tRPC router needed a versioned public surface\nre-check: ask the founder about the mobile roadmap"
+    },
+    {
+      "file": "0f1e2d3c4b5a6978-environment-docs-site-host.md",
+      "relevant": false,
+      "text": "dimension: environment\nfact: The public documentation site is built and hosted on Netlify, separately from the app.\nsource: user, 2026-08-11\nasked for: where the docs build runs\nre-check: check the Netlify project settings"
+    },
+    {
+      "file": "7d6c5b4a39281706-cost-image-quota.md",
+      "relevant": false,
+      "text": "dimension: cost\nfact: The marketing site's Vercel image optimization quota is 5,000 source images a month.\nsource: user, 2026-09-03\nasked for: whether product screenshots on the marketing site could use next/image\nre-check: read the Vercel usage page"
+    }
+  ],
+  "notes": "Same task and hidden context as mail-backfill; agent-docs/facts/ holds two recorded facts that settle U5 and U6 and four unrelated ones."
+}
