@@ -30,6 +30,9 @@ commit: eacc298bd6624aab9db6c9c4429c303aeeb7d903
 - evaluation/brief_facts/runs.md lists every measurement of this and the previous session (kind, skills compared, runner and model, cases and runs, results, cost); outputs stay in session scratchpads
   - files: evaluation/brief_facts/runs.md
 
+- branch fix/spec is pushed and PR #40 (https://github.com/Doggy-Footprint/harness/pull/40) is open against master with a Korean title and description
+  - files: none
+
 ### Next Step
 - the understanding round still misses hidden facts that later rounds or the simulated user surface (log-retention: the planned CSV export; mail-backfill: the partners' hourly cron pacing); the first-message scorer score.py measures this and was not re-run on 0.48.0
   - files: evaluation/brief_facts/score.py, harness/skills/workflow-approach/SKILL.md
