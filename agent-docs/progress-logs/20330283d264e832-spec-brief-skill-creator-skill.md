@@ -3,7 +3,7 @@ session: 13e4ceef-b5dc-4493-b345-88b38b127184
 before: none
 previous: none
 branch: fix/spec
-commit: eacc298bd6624aab9db6c9c4429c303aeeb7d903
+commit: 40078a67b4015352344c64edf927ac9a5583f928
 ---
 
 # Brief dialogue evaluation; pre-committed picks and a whole-task decision cap (0.48.0)
@@ -160,3 +160,15 @@ commit: eacc298bd6624aab9db6c9c4429c303aeeb7d903
 #### 10 — 2026-11-14T01:01:52Z
 
 > 커밋하고 PR
+
+#### 11 — 2026-11-14T01:03:19Z
+
+> 지금 형상에 맞춰서 Telemetry 손 볼 부분 있어?
+
+#### 12 — 2026-11-14T01:04:53Z
+
+> 찾으면 고치지말고 todo에 남겨놔. 이 세션에 의존적인 정보는 빼고 객관적으로 재확인한다는 가정으로
+
+#### 13 — 2026-11-14T01:06:22Z
+
+> 커밋만 해
