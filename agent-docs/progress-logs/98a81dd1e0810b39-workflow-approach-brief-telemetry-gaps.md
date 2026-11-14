@@ -3,7 +3,7 @@ session: a57c23b5-f803-408b-848a-ef0b960b7dde
 before: none
 previous: none
 branch: feat/brief-telemetry
-commit: abeb279978eb9019a57e281aa1cf794555f985d3
+commit: ba8371a30185421045dab149bbe1bb324d4cb4cd
 ---
 
 # Brief telemetry gaps and test telemetry leak
@@ -11,16 +11,18 @@ commit: abeb279978eb9019a57e281aa1cf794555f985d3
 ## Next Session
 
 ### State
-- PR https://github.com/Doggy-Footprint/harness/pull/41 opened from feat/brief-telemetry against master; not merged at this entry.
+- PR https://github.com/Doggy-Footprint/harness/pull/41 merged into master (ba8371a).
   - files: none
+- Run B (workflow run 1b81d06b91eeb079) on branch feat/brief-transcript-parser: spec v1 approved and active; implementer finished F1–F12 (analytics/brief_parser.py, store `brief_parse` table, API `parsed` and `brief_questions`, dashboard cards, SKILL literal-argument sentence, 0.49.1 migration); test-implementer running. A v2 amendment of F4 (item lines: bold-numbered lines take precedence in a section; a bold lead is the item text) is proposed to the user and awaits approval, because hand-listing R1 on the five real briefs predicted v1 precision 50% (column-0 explanation bullets under `**N. …**` decision questions).
+  - files: agent-docs/specs/1b81d06b91eeb079-brief-transcript-parser.md, analytics/brief_parser.py, analytics/app.py
 - Workflow run 49bafb302bb6593c complete and archived at spec v4: brief marker, fact_write event, amend reason, importer fields, API (`brief_only_runs`, `briefs`, `amend_reasons`, `before_approval`), dashboard cards, SKILL.md text and 0.49.0 migration; Test command run 6 passes (1375 harness, 397 analytics, 35 vitest); test-verifier invocation 2 passed; hand mutations M1–M12 all killed. Open advisories (non-blocking): K5 wording does not state that same-value occurrences are skipped; `+1` rejection is tested only on `--fact-questions` among the count flags.
   - files: agent-docs/spec-logs/49bafb302bb6593c-brief-telemetry.md, harness/hooks/telemetry_hook.py, harness/bin/workflow_marker.py, analytics/app.py, analytics/frontend/src/App.jsx, tests/test_brief_telemetry.py, analytics/tests/test_brief_dashboard.py
 - Test suite telemetry leak fixed: `tests/telemetry_sandbox.py` sets `HARNESS_TELEMETRY_DIR` to a temp dir for every test process that imports `legacy_migrations`; a full `tests/run_parallel.py` run left the `~/.harness/telemetry` file count unchanged (1041 before and after). The 886 empty `*T-tmp*.session-lock` files were deleted.
   - files: tests/telemetry_sandbox.py, tests/legacy_migrations.py
 
 ### Next Step
-- Run B: the rule-based transcript parser in todo b2373e0fdc356594, starting by checking that `brief` events from a real workflow run locate the brief turn by session_id and tool_use_id.
-  - files: agent-docs/todos/b2373e0fdc356594-brief-transcript-parser.md
+- Get the user's answer on the F4 amendment, amend the spec to v2 (emit `amend --reason brief_change`), send the F4/C6/O4 delta to both roles, run the Test command, then R1 (expected lists already written to the session scratchpad `1b81d06b91eeb079-r1.md`, outside the repo) and the verifier.
+  - files: agent-docs/specs/1b81d06b91eeb079-brief-transcript-parser.md
 
 ### Constraints
 - "Brief telemtry는 지금으로서는 나만, 앞으로는 여러 사람의 기록을 digest해서 처리하여 insight를 추출하는 용도로 사용될거야. 내가 개인적으로 보고 파악하는데도 사용할거야. 그러니 둘 다 필요해. 대시보드까지 작업에 넣고"
@@ -39,14 +41,18 @@ commit: abeb279978eb9019a57e281aa1cf794555f985d3
   - files: analytics/requirements.txt
 - Extra transcript-parser fields (assumption list, dimension tokens, reply latency, parse status, and others) were proposed and rejected by the user: the session id and tool_use_id pointer lets the original text be recovered.
   - files: agent-docs/todos/b2373e0fdc356594-brief-transcript-parser.md
+- A `workflow_marker.py brief --run-id $RID ...` call left no `brief` telemetry line: the PostToolUse hook tokenizes the command text with shlex and does not expand shell variables, so `$RID` fails the 16-hex run-id check. Marker arguments must be literal.
+  - files: harness/hooks/telemetry_hook.py
 
 ### Related
+- agent-docs/specs/1b81d06b91eeb079-brief-transcript-parser.md
+  - files: agent-docs/specs/1b81d06b91eeb079-brief-transcript-parser.md
 - agent-docs/spec-logs/49bafb302bb6593c-brief-telemetry.md
   - files: agent-docs/spec-logs/49bafb302bb6593c-brief-telemetry.md
 - agent-docs/todos/b2373e0fdc356594-brief-transcript-parser.md
   - files: agent-docs/todos/b2373e0fdc356594-brief-transcript-parser.md
-- agent-docs/todos/e77323782c45bbfb-brief-telemetry-gaps.md
-  - files: agent-docs/todos/e77323782c45bbfb-brief-telemetry-gaps.md
+- agent-docs/todos/stale/e77323782c45bbfb-brief-telemetry-gaps.md
+  - files: agent-docs/todos/stale/e77323782c45bbfb-brief-telemetry-gaps.md
 - agent-docs/todos/stale/e00f26d26c7ef940-tests-write-real-telemetry-dir.md
   - files: agent-docs/todos/stale/e00f26d26c7ef940-tests-write-real-telemetry-dir.md
 - agent-docs/facts/67ac615b0c9ad3aa-consumers-brief-telemetry-personal-dashboard.md
@@ -146,3 +152,18 @@ commit: abeb279978eb9019a57e281aa1cf794555f985d3
 #### 9 — 2026-11-14T04:37:49Z
 
 > 주석과 회고에서 이후에 복구가 어려워 참고할 가치가 있는 것만 남기고 제거. 이후 pr(한글로)
+
+#### 10 — 2026-11-14T09:16:27Z
+
+> 브렌치 바꿔서 스펙 작성해
+
+#### 11 — 2026-11-14T11:43:20Z
+
+> 1. 물어보는 내용의 방향성에 대한 파악, 유저에게 말하는 내용들이 의도한 것이 맞는지
+> 2. ㄴㄴ
+> 3. 일단 한국어랑 영어
+> 4. 여러 사람의 기록을 모으는 것은 미래에 할 일임. (todo에 있지?)
+
+#### 12 — 2026-11-14T11:50:15Z
+
+> 승인
